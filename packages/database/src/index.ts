@@ -1,14 +1,18 @@
-import { z } from 'zod';
-
-export const battleSchema = z.object({
-  id: z.string().uuid(),
-  systemId: z.number(),
-  spaceType: z.enum(['kspace', 'jspace', 'pochven']),
-  startTime: z.date(),
-  endTime: z.date(),
-  totalKills: z.number(),
-  totalIskDestroyed: z.bigint(),
-  zkillRelatedUrl: z.string().url(),
-});
-
-export type BattleRecord = z.infer<typeof battleSchema>;
+export { createDb, createPool, type DatabaseClient } from './client';
+export { loadDatabaseConfig, type DatabaseConfig } from './env';
+export { BattleRepository } from './repositories/battle-repository';
+export type { Database } from './schema';
+export {
+  BattleInsertSchema,
+  BattleKillmailInsertSchema,
+  BattleParticipantInsertSchema,
+  SpaceTypeSchema,
+  type BattleInsert,
+  type BattleKillmailInsert,
+  type BattleParticipantInsert,
+  type BattleRecord,
+  type BattleKillmailRecord,
+  type BattleParticipantRecord,
+  type BattleWithDetails,
+  type SpaceType,
+} from './types';

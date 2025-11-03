@@ -9,10 +9,18 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx scripts/migrate.ts",
+    "migrate:make": "tsx scripts/migrate-make.ts"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
+    "kysely": "^0.27.2",
+    "pg": "^8.11.5",
     "zod": "^3.22.4"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "pg-mem": "^3.0.5",
+    "tsx": "^4.7.0"
+  }
 }

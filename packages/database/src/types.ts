@@ -1,0 +1,74 @@
+import { z } from 'zod';
+import type { SpaceType } from './schema';
+
+export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
+
+export const BattleInsertSchema = z.object({
+  id: z.string().uuid(),
+  systemId: z.number().int(),
+  spaceType: SpaceTypeSchema,
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+  totalKills: z.number().int().nonnegative(),
+  totalIskDestroyed: z.bigint().nonnegative(),
+  zkillRelatedUrl: z.string().url(),
+});
+
+export type BattleInsert = z.infer<typeof BattleInsertSchema>;
+
+export const BattleKillmailInsertSchema = z.object({
+  battleId: z.string().uuid(),
+  killmailId: z.number().int().nonnegative(),
+  zkbUrl: z.string().url(),
+  occurredAt: z.coerce.date(),
+  victimAllianceId: z.number().int().nonnegative().nullable(),
+  attackerAllianceIds: z.array(z.number().int().nonnegative()),
+  iskValue: z.bigint().nonnegative().nullable(),
+  sideId: z.number().int().nonnegative().nullable(),
+});
+
+export type BattleKillmailInsert = z.infer<typeof BattleKillmailInsertSchema>;
+
+export const BattleParticipantInsertSchema = z.object({
+  battleId: z.string().uuid(),
+  characterId: z.number().int().nonnegative(),
+  allianceId: z.number().int().nonnegative().nullable(),
+  corpId: z.number().int().nonnegative().nullable(),
+  shipTypeId: z.number().int().nonnegative().nullable(),
+  sideId: z.number().int().nonnegative().nullable(),
+  isVictim: z.boolean(),
+});
+
+export type BattleParticipantInsert = z.infer<typeof BattleParticipantInsertSchema>;
+
+export interface BattleRecord extends BattleInsert {
+  createdAt: Date;
+}
+
+export interface BattleKillmailRecord {
+  battleId: string;
+  killmailId: number;
+  zkbUrl: string;
+  occurredAt: Date;
+  victimAllianceId: number | null;
+  attackerAllianceIds: number[];
+  iskValue: bigint | null;
+  sideId: number | null;
+}
+
+export interface BattleParticipantRecord {
+  battleId: string;
+  characterId: number;
+  allianceId: number | null;
+  corpId: number | null;
+  shipTypeId: number | null;
+  sideId: number | null;
+  isVictim: boolean;
+}
+
+export interface BattleWithDetails extends BattleRecord {
+  killmails: BattleKillmailRecord[];
+  participants: BattleParticipantRecord[];
+}
+
+export type { SpaceType };

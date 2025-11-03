@@ -16,7 +16,9 @@
     "lint": "pnpm exec eslint . --max-warnings=0",
     "test": "pnpm exec vitest run --coverage",
     "test:watch": "pnpm exec vitest",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "pnpm -r run typecheck",
+    "db:migrate": "pnpm --filter @battlescope/database run migrate",
+    "db:migrate:make": "pnpm --filter @battlescope/database run migrate:make --"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
