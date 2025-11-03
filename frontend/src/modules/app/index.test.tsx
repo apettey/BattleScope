@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type * as BattlesApi from '../battles/api';
-import { App } from './index';
+import type * as BattlesApi from '../battles/api.js';
+import { App } from './index.js';
 
 type BattlesApiModule = typeof BattlesApi;
 
@@ -14,7 +14,7 @@ vi.mock('../battles/api', async () => {
   } as BattlesApiModule;
 });
 
-import { fetchBattles, fetchBattleDetail } from '../battles/api';
+import { fetchBattles, fetchBattleDetail } from '../battles/api.js';
 
 const sampleSummary = {
   id: '5f2e5e02-0d75-4a47-8618-6c526d5e62c8',
@@ -66,8 +66,8 @@ const sampleDetail = {
 };
 
 describe('App', () => {
-  const mockedFetchBattles = fetchBattles as unknown as vi.Mock;
-  const mockedFetchBattleDetail = fetchBattleDetail as unknown as vi.Mock;
+  const mockedFetchBattles = fetchBattles as unknown as Mock;
+  const mockedFetchBattleDetail = fetchBattleDetail as unknown as Mock;
 
   beforeEach(() => {
     mockedFetchBattles.mockReset();

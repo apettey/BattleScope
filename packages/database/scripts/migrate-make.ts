@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 const migrationsDir = path.resolve(__dirname, '../migrations');
 
 const template = (name: string) => `import { type Kysely } from 'kysely';
-import type { Database } from '../src/schema';
+import type { Database } from '../src/schema.js';
 
 export async function up(db: Kysely<Database>): Promise<void> {
   // TODO: implement migration ${name}

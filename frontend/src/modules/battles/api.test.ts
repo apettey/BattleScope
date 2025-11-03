@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchBattles, fetchBattleDetail, BattleSummarySchema, BattleDetailSchema } from './api';
+import { fetchBattles, fetchBattleDetail, BattleSummarySchema, BattleDetailSchema } from './api.js';
 
 const sampleSummary = {
   id: '5f2e5e02-0d75-4a47-8618-6c526d5e62c8',

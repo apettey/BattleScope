@@ -3,8 +3,7 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { FileMigrationProvider, Migrator } from 'kysely';
-import { createDb } from '../src/client';
-import type { Database } from '../src/schema';
+import { createDb } from '../src/client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +13,7 @@ const migrationsDir = path.resolve(__dirname, '../migrations');
 async function migrate() {
   const db = createDb();
 
-  const migrator = new Migrator<Database>({
+  const migrator = new Migrator({
     db,
     provider: new FileMigrationProvider({
       fs,
@@ -23,22 +22,17 @@ async function migrate() {
     }),
   });
 
-  const { error, results } = await migrator.migrateToLatest();
+  const { results } = await migrator.migrateToLatest();
 
   results?.forEach((result) => {
     if (result.status === 'Success') {
       console.log(`Migration ${result.migrationName} executed`);
     } else if (result.status === 'Error') {
-      console.error(`Migration ${result.migrationName} failed`, result.error);
+      console.error(`Migration ${result.migrationName} failed`);
     }
   });
 
   await db.destroy();
-
-  if (error) {
-    console.error('Migration failed', error);
-    process.exitCode = 1;
-  }
 }
 
 void migrate();

@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { KillmailRepository } from '@battlescope/database';
-import { IngestionService } from '../src/service';
-import { MockKillmailSource } from '../src/source';
-import { createTestDb } from './helpers';
+import { IngestionService } from '../src/service.js';
+import { MockKillmailSource } from '../src/source.js';
+import { createTestDb } from './helpers.js';
 
 const reference = {
   killmailId: 9001,

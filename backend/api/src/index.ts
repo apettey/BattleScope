@@ -1,7 +1,7 @@
-import pino from 'pino';
+import { pino } from 'pino';
 import { BattleRepository, createDb } from '@battlescope/database';
-import { loadConfig } from './config';
-import { buildServer } from './server';
+import { loadConfig } from './config.js';
+import { buildServer } from './server.js';
 
 const logger = pino({ name: 'api-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 

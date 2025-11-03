@@ -1,20 +1,20 @@
 import { sql } from 'kysely';
 import type { SpaceType } from '@battlescope/shared';
-import type { DatabaseClient } from '../client';
+import type { DatabaseClient } from '../client.js';
 import type {
   BattleInsert,
   BattleKillmailInsert,
   BattleParticipantInsert,
   BattleRecord,
   BattleWithDetails,
-} from '../types';
+} from '../types.js';
 import {
   BattleInsertSchema,
   BattleKillmailInsertSchema,
   BattleParticipantInsertSchema,
   KillmailEnrichmentSchema,
-} from '../types';
-import { serializeBigInt, toBigInt } from './utils';
+} from '../types.js';
+import { serializeBigInt, serializeBigIntRequired, toBigInt } from './utils.js';
 
 export interface BattleFilters {
   spaceType?: SpaceType;
@@ -46,7 +46,7 @@ export class BattleRepository {
         startTime: battle.startTime,
         endTime: battle.endTime,
         totalKills: battle.totalKills,
-        totalIskDestroyed: serializeBigInt(battle.totalIskDestroyed),
+        totalIskDestroyed: serializeBigIntRequired(battle.totalIskDestroyed),
         zkillRelatedUrl: battle.zkillRelatedUrl,
       })
       .returningAll()
@@ -81,12 +81,12 @@ export class BattleRepository {
       )
       .onConflict((oc) =>
         oc.columns(['battleId', 'killmailId']).doUpdateSet((eb) => ({
-          zkbUrl: eb.ref('excluded.zkb_url'),
-          occurredAt: eb.ref('excluded.occurred_at'),
-          victimAllianceId: eb.ref('excluded.victim_alliance_id'),
-          attackerAllianceIds: eb.ref('excluded.attacker_alliance_ids'),
-          iskValue: eb.ref('excluded.isk_value'),
-          sideId: eb.ref('excluded.side_id'),
+          zkbUrl: eb.ref('excluded.zkbUrl'),
+          occurredAt: eb.ref('excluded.occurredAt'),
+          victimAllianceId: eb.ref('excluded.victimAllianceId'),
+          attackerAllianceIds: eb.ref('excluded.attackerAllianceIds'),
+          iskValue: eb.ref('excluded.iskValue'),
+          sideId: eb.ref('excluded.sideId'),
         })),
       )
       .execute();
@@ -116,10 +116,10 @@ export class BattleRepository {
       )
       .onConflict((oc) =>
         oc.columns(['battleId', 'characterId', 'shipTypeId']).doUpdateSet((eb) => ({
-          allianceId: eb.ref('excluded.alliance_id'),
-          corpId: eb.ref('excluded.corp_id'),
-          sideId: eb.ref('excluded.side_id'),
-          isVictim: eb.ref('excluded.is_victim'),
+          allianceId: eb.ref('excluded.allianceId'),
+          corpId: eb.ref('excluded.corpId'),
+          sideId: eb.ref('excluded.sideId'),
+          isVictim: eb.ref('excluded.isVictim'),
         })),
       )
       .execute();
@@ -236,7 +236,7 @@ export class BattleRepository {
         .select('battleId')
         .where('battleId', 'is not', null)
         .where(
-          sql`("killmail_events"."victim_alliance_id" = ${allianceId} OR ${allianceId} = ANY("killmail_events"."attacker_alliance_ids"))`,
+          sql<boolean>`("killmail_events"."victim_alliance_id" = ${allianceId} OR ${allianceId} = ANY("killmail_events"."attacker_alliance_ids"))`,
         );
       query = query.where('id', 'in', allianceSubquery);
     }
@@ -248,7 +248,7 @@ export class BattleRepository {
         .select('battleId')
         .where('battleId', 'is not', null)
         .where(
-          sql`("killmail_events"."victim_corp_id" = ${corpId} OR ${corpId} = ANY("killmail_events"."attacker_corp_ids"))`,
+          sql<boolean>`("killmail_events"."victim_corp_id" = ${corpId} OR ${corpId} = ANY("killmail_events"."attacker_corp_ids"))`,
         );
       query = query.where('id', 'in', corpSubquery);
     }
@@ -260,7 +260,7 @@ export class BattleRepository {
         .select('battleId')
         .where('battleId', 'is not', null)
         .where(
-          sql`("killmail_events"."victim_character_id" = ${characterId} OR ${characterId} = ANY("killmail_events"."attacker_character_ids"))`,
+          sql<boolean>`("killmail_events"."victim_character_id" = ${characterId} OR ${characterId} = ANY("killmail_events"."attacker_character_ids"))`,
         );
       query = query.where('id', 'in', characterSubquery);
     }

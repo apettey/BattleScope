@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BattleRepository, KillmailRepository } from '@battlescope/database';
-import { ClusteringEngine } from '../src/engine';
-import { ClustererService } from '../src/service';
-import { createTestDb } from './helpers';
+import { ClusteringEngine } from '../src/engine.js';
+import { ClustererService } from '../src/service.js';
+import { createTestDb } from './helpers.js';
 
 const baseReference = {
   systemId: 30000142,

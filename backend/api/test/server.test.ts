@@ -7,7 +7,7 @@ import {
   KillmailRepository,
   createInMemoryDatabase,
 } from '@battlescope/database';
-import { buildServer } from '../src/server';
+import { buildServer } from '../src/server.js';
 
 const createBattle = async (
   battleRepository: BattleRepository,

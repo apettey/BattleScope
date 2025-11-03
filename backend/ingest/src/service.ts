@@ -1,8 +1,8 @@
 import type { KillmailRepository, KillmailEventInsert } from '@battlescope/database';
 import type { KillmailReference } from '@battlescope/shared';
 import { trace } from '@opentelemetry/api';
-import pino from 'pino';
-import type { KillmailSource } from './source';
+import { pino } from 'pino';
+import type { KillmailSource } from './source.js';
 
 export type IngestionResult = 'stored' | 'duplicate' | 'empty';
 

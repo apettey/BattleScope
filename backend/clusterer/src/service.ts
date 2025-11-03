@@ -1,7 +1,7 @@
 import type { BattleRepository, KillmailRepository } from '@battlescope/database';
 import { trace } from '@opentelemetry/api';
-import pino from 'pino';
-import type { ClusteringEngine } from './engine';
+import { pino } from 'pino';
+import type { ClusteringEngine } from './engine.js';
 
 const tracer = trace.getTracer('battlescope.clusterer.service');
 

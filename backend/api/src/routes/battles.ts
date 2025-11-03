@@ -3,7 +3,7 @@ import { trace } from '@opentelemetry/api';
 import { z } from 'zod';
 import { SpaceTypeSchema } from '@battlescope/database';
 import type { BattleRepository, BattleFilters, BattleCursor } from '@battlescope/database';
-import { toBattleDetailResponse, toBattleSummaryResponse } from '../types';
+import { toBattleDetailResponse, toBattleSummaryResponse } from '../types.js';
 
 const tracer = trace.getTracer('battlescope.api.battles');
 
@@ -83,7 +83,7 @@ const handleListRequest = async (
 
   let cursor: BattleCursor | undefined;
   if (query.cursor) {
-    cursor = decodeCursor(query.cursor);
+    cursor = decodeCursor(query.cursor) ?? undefined;
     if (!cursor) {
       return reply.status(400).send({ message: 'Invalid cursor' });
     }

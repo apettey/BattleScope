@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { BattleRepository } from '../src/repositories/battle-repository';
-import { createTestDatabase, type TestDatabase } from './test-db';
+import { BattleRepository } from '../src/repositories/battle-repository.js';
+import { createTestDatabase, type TestDatabase } from './test-db.js';
 
 let testDb: TestDatabase | undefined;
 let repository: BattleRepository;

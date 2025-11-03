@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 import type { BattleRepository, DatabaseClient } from '@battlescope/database';
-import { registerBattleRoutes } from './routes/battles';
+import { registerBattleRoutes } from './routes/battles.js';
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;

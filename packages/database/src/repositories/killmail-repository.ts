@@ -1,7 +1,7 @@
-import type { DatabaseClient } from '../client';
-import type { KillmailEventInsert, KillmailEventRecord } from '../types';
-import { KillmailEventSchema } from '../types';
-import { serializeBigInt, toBigInt } from './utils';
+import type { DatabaseClient } from '../client.js';
+import type { KillmailEventInsert, KillmailEventRecord } from '../types.js';
+import { KillmailEventSchema } from '../types.js';
+import { serializeBigInt, toBigInt } from './utils.js';
 
 const isUniqueViolation = (error: unknown): boolean => {
   if (!error || typeof error !== 'object') {

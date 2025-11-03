@@ -1,10 +1,10 @@
-export { createDb, createPool, type DatabaseClient } from './client';
-export { loadDatabaseConfig, type DatabaseConfig } from './env';
-export { BattleRepository } from './repositories/battle-repository';
-export type { BattleFilters, BattleCursor } from './repositories/battle-repository';
-export { KillmailRepository } from './repositories/killmail-repository';
-export { KillmailEnrichmentRepository } from './repositories/killmail-enrichment-repository';
-export type { Database } from './schema';
+export { createDb, createPool, type DatabaseClient } from './client.js';
+export { loadDatabaseConfig, type DatabaseConfig } from './env.js';
+export { BattleRepository } from './repositories/battle-repository.js';
+export type { BattleFilters, BattleCursor } from './repositories/battle-repository.js';
+export { KillmailRepository } from './repositories/killmail-repository.js';
+export { KillmailEnrichmentRepository } from './repositories/killmail-enrichment-repository.js';
+export type { Database } from './schema.js';
 export {
   BattleInsertSchema,
   BattleKillmailInsertSchema,
@@ -23,5 +23,5 @@ export {
   type KillmailEventRecord,
   type KillmailEnrichmentRecord,
   KillmailEnrichmentStatusSchema,
-} from './types';
-export { createInMemoryDatabase, type InMemoryDatabase } from './testing';
+} from './types.js';
+export { createInMemoryDatabase, type InMemoryDatabase } from './testing.js';

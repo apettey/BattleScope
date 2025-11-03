@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 export { ENRICHMENT_QUEUE_NAME } from '@battlescope/shared';
 import { ENRICHMENT_QUEUE_NAME, type EnrichmentJobPayload } from '@battlescope/shared';
 

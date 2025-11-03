@@ -1,8 +1,8 @@
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely';
 import { Pool, types } from 'pg';
 import type { PoolConfig } from 'pg';
-import { loadDatabaseConfig } from './env';
-import type { Database } from './schema';
+import { loadDatabaseConfig } from './env.js';
+import type { Database } from './schema.js';
 
 const parseBigInt = (value: string | null) => (value === null ? null : BigInt(value));
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { KillmailEnrichmentRepository } from '@battlescope/database';
-import { KillmailEnrichmentService } from '../src/enrichment-service';
+import { KillmailEnrichmentService } from '../src/enrichment-service.js';
 
 type MockSpan = {
   setAttribute: (key: string, value: unknown) => void;

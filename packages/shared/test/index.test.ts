@@ -1,4 +1,4 @@
-import { assertEnv, buildZKillRelatedUrl, deriveSpaceType, projectName } from '../src/index';
+import { assertEnv, buildZKillRelatedUrl, deriveSpaceType, projectName } from '../src/index.js';
 
 describe('shared package', () => {
   it('exports project name', () => {

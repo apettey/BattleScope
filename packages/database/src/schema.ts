@@ -77,7 +77,7 @@ export interface KillmailEnrichmentsTable {
   >;
   error: string | null;
   fetchedAt: ColumnType<Date | null, Date | null, Date | null>;
-  updatedAt: ColumnType<Date, Date | undefined, never>;
+  updatedAt: ColumnType<Date, Date | undefined, Date | undefined>;
   createdAt: ColumnType<Date, Date | undefined, never>;
 }
 

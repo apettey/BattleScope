@@ -31,7 +31,7 @@ export const createHealthServer = ({
     };
 
     try {
-      await db.executeQuery(sql`select 1`);
+      await sql<number>`select 1`.execute(db);
     } catch (error) {
       checks.database = 'error';
     }

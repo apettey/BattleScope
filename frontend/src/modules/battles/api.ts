@@ -57,6 +57,7 @@ const BattlesListResponseSchema = z.object({
 
 export type BattleSummary = z.infer<typeof BattleSummarySchema>;
 export type BattleDetail = z.infer<typeof BattleDetailSchema>;
+export type KillmailDetail = z.infer<typeof KillmailDetailSchema>;
 export type BattlesListResponse = z.infer<typeof BattlesListResponseSchema>;
 
 const defaultFetch: typeof fetch = (...args) => fetch(...args);

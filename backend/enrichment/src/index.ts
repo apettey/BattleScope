@@ -1,14 +1,18 @@
-export { ENRICHMENT_QUEUE_NAME, createEnrichmentQueue, enqueueKillmailEnrichment } from './queue';
-export type { EnrichmentJobData } from './queue';
+export {
+  ENRICHMENT_QUEUE_NAME,
+  createEnrichmentQueue,
+  enqueueKillmailEnrichment,
+} from './queue.js';
+export type { EnrichmentJobData } from './queue.js';
 
 import { createDb, KillmailEnrichmentRepository } from '@battlescope/database';
-import IORedis from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 import { QueueEvents, Worker } from 'bullmq';
-import pino from 'pino';
-import { loadConfig } from './config';
-import { KillmailEnrichmentService, ZKillboardSource } from './enrichment-service';
-import { createHealthServer } from './health';
-import { ENRICHMENT_QUEUE_NAME, type EnrichmentJobData } from './queue';
+import { pino } from 'pino';
+import { loadConfig } from './config.js';
+import { KillmailEnrichmentService, ZKillboardSource } from './enrichment-service.js';
+import { createHealthServer } from './health.js';
+import { ENRICHMENT_QUEUE_NAME, type EnrichmentJobData } from './queue.js';
 
 const logger = pino({ name: 'enrichment-worker', level: process.env.LOG_LEVEL ?? 'info' });
 

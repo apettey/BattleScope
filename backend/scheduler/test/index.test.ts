@@ -1,4 +1,4 @@
-import { start } from '../src/index';
+import { start } from '../src/index.js';
 
 describe('scheduler placeholder', () => {
   it('starts without throwing', async () => {

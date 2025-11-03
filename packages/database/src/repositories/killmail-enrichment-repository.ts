@@ -1,12 +1,12 @@
 import { sql } from 'kysely';
-import type { DatabaseClient } from '../client';
+import type { DatabaseClient } from '../client.js';
 import {
   KillmailEnrichmentSchema,
   KillmailEnrichmentStatusSchema,
   type KillmailEnrichmentRecord,
-} from '../types';
+} from '../types.js';
 
-const nowSql = sql`now()`;
+const nowSql = sql<Date>`now()`;
 
 export class KillmailEnrichmentRepository {
   constructor(private readonly db: DatabaseClient) {}

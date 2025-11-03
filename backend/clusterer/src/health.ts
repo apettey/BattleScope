@@ -6,7 +6,7 @@ export const createHealthServer = (db: DatabaseClient) => {
   const app = Fastify({ logger: false });
 
   app.get('/healthz', async () => {
-    await db.executeQuery(sql`select 1`);
+    await sql<number>`select 1`.execute(db);
     return { status: 'ok' };
   });
 

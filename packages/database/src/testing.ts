@@ -2,8 +2,8 @@ import { promises as fs } from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely';
-import { newDb } from 'pg-mem';
-import type { Database } from './schema';
+import { newDb, DataType } from 'pg-mem';
+import type { Database } from './schema.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +18,7 @@ export const createInMemoryDatabase = async (): Promise<InMemoryDatabase> => {
   const mem = newDb({ autoCreateForeignKeyIndices: true });
   mem.public.registerFunction({
     name: 'now',
-    returns: 'timestamp',
+    returns: DataType.timestamptz,
     implementation: () => new Date(),
   });
 

@@ -1,12 +1,12 @@
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 import { createDb, KillmailRepository } from '@battlescope/database';
 import { ENRICHMENT_QUEUE_NAME, assertEnv, type EnrichmentJobPayload } from '@battlescope/shared';
-import { loadConfig } from './config';
-import { IngestionService, type KillmailEnrichmentProducer } from './service';
-import { MockKillmailSource, ZKillboardRedisQSource } from './source';
-import { createHealthServer } from './health';
-import pino from 'pino';
+import { loadConfig } from './config.js';
+import { IngestionService, type KillmailEnrichmentProducer } from './service.js';
+import { MockKillmailSource, ZKillboardRedisQSource } from './source.js';
+import { createHealthServer } from './health.js';
+import { pino } from 'pino';
 
 const logger = pino({ name: 'ingest-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 

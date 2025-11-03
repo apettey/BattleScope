@@ -1,4 +1,4 @@
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino({ name: 'scheduler-service', level: process.env.LOG_LEVEL ?? 'info' });
 

@@ -5,7 +5,8 @@ import {
   formatIsk,
   type BattleSummary,
   type BattleDetail,
-} from '../api';
+  type KillmailDetail,
+} from '../api.js';
 
 interface FetchError {
   message: string;
@@ -43,13 +44,13 @@ export const BattlesView = () => {
     detailAbortRef.current = controller;
 
     fetchBattleDetail(battleId, { signal: controller.signal })
-      .then((detail) => {
+      .then((detail: BattleDetail) => {
         if (controller.signal.aborted) {
           return;
         }
         setSelectedBattle(detail);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -68,7 +69,7 @@ export const BattlesView = () => {
     setListError(null);
 
     fetchBattles({ limit: 10, signal: controller.signal })
-      .then((response) => {
+      .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -78,7 +79,7 @@ export const BattlesView = () => {
           loadBattle(response.items[0].id);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
         }
@@ -114,12 +115,12 @@ export const BattlesView = () => {
     setListError(null);
 
     fetchBattles({ cursor: nextCursor })
-      .then((response) => {
+      .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
         setNextCursor(response.nextCursor ?? null);
         setBattles((current) => {
           const existingIds = new Set(current.map((battle) => battle.id));
           const merged = [...current];
-          response.items.forEach((item) => {
+          response.items.forEach((item: BattleSummary) => {
             if (!existingIds.has(item.id)) {
               merged.push(item);
             }
@@ -127,7 +128,7 @@ export const BattlesView = () => {
           return merged;
         });
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         setListError(toError(error));
       })
       .finally(() => {
@@ -217,7 +218,7 @@ export const BattlesView = () => {
               <section aria-labelledby="killmail-heading">
                 <h4 id="killmail-heading">Killmails</h4>
                 <ul style={{ paddingLeft: 0, listStyle: 'none' }}>
-                  {selectedBattle.killmails.map((killmail) => (
+                  {selectedBattle.killmails.map((killmail: KillmailDetail) => (
                     <li
                       key={killmail.killmailId}
                       style={{

@@ -1,9 +1,9 @@
 import { BattleRepository, KillmailRepository, createDb } from '@battlescope/database';
-import { loadConfig } from './config';
-import { ClusteringEngine } from './engine';
-import { ClustererService } from './service';
-import { createHealthServer } from './health';
-import pino from 'pino';
+import { loadConfig } from './config.js';
+import { ClusteringEngine } from './engine.js';
+import { ClustererService } from './service.js';
+import { createHealthServer } from './health.js';
+import { pino } from 'pino';
 
 const logger = pino({ name: 'clusterer-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 
