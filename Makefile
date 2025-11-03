@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make ci
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make ci compose-up compose-down compose-logs
 
 install:
 	pnpm install
@@ -48,3 +48,12 @@ endif
 	pnpm run db:migrate:make $(NAME)
 
 ci: install-ci format-check lint typecheck test build
+
+compose-up:
+	docker compose up --build
+
+compose-down:
+	docker compose down --remove-orphans
+
+compose-logs:
+	docker compose logs -f

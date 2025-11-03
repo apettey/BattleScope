@@ -1,0 +1,170 @@
+version: '3.9'
+
+services:
+  pnpm-install:
+    image: node:20-bullseye
+    container_name: battlescope-pnpm-install
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm && pnpm install"
+    volumes:
+      - .:/workspace
+    restart: "no"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: battlescope-postgres
+    environment:
+      POSTGRES_DB: battlescope
+      POSTGRES_USER: battlescope
+      POSTGRES_PASSWORD: battlescope
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: battlescope-redis
+    ports:
+      - '6379:6379'
+
+  api:
+    image: node:20-bullseye
+    container_name: battlescope-api
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/api dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      HOST: 0.0.0.0
+      PORT: 3000
+      LOG_LEVEL: info
+    volumes:
+      - .:/workspace
+    ports:
+      - '3000:3000'
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+
+  ingest:
+    image: node:20-bullseye
+    container_name: battlescope-ingest
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/ingest dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      ZKILLBOARD_REDISQ_URL: https://redisq.zkillboard.com/listen.php
+      ZKILLBOARD_REDISQ_ID: battlescope-local
+      PORT: 3002
+      LOG_LEVEL: info
+    volumes:
+      - .:/workspace
+    ports:
+      - '3002:3002'
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  clusterer:
+    image: node:20-bullseye
+    container_name: battlescope-clusterer
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/clusterer dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      PORT: 3003
+      LOG_LEVEL: info
+    volumes:
+      - .:/workspace
+    ports:
+      - '3003:3003'
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+
+  enrichment:
+    image: node:20-bullseye
+    container_name: battlescope-enrichment
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/enrichment dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      HOST: 0.0.0.0
+      PORT: 3004
+      LOG_LEVEL: info
+    volumes:
+      - .:/workspace
+    ports:
+      - '3004:3004'
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  scheduler:
+    image: node:20-bullseye
+    container_name: battlescope-scheduler
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/scheduler dev"
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+    volumes:
+      - .:/workspace
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+
+  frontend:
+    image: node:20-bullseye
+    container_name: battlescope-frontend
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm --filter @battlescope/frontend dev -- --host 0.0.0.0 --port 3001"
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://api:3000
+    volumes:
+      - .:/workspace
+    ports:
+      - '3001:3001'
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+
+volumes:
+  postgres-data:
