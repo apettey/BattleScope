@@ -8,8 +8,16 @@ export async function up(db: Kysely<Database>): Promise<void> {
     .addColumn('system_id', 'integer', (col) => col.notNull())
     .addColumn('occurred_at', 'timestamptz', (col) => col.notNull())
     .addColumn('victim_alliance_id', 'integer')
+    .addColumn('victim_corp_id', 'integer')
+    .addColumn('victim_character_id', 'bigint')
     .addColumn('attacker_alliance_ids', sql`integer[]`, (col) =>
       col.notNull().defaultTo(sql`ARRAY[]::integer[]`),
+    )
+    .addColumn('attacker_corp_ids', sql`integer[]`, (col) =>
+      col.notNull().defaultTo(sql`ARRAY[]::integer[]`),
+    )
+    .addColumn('attacker_character_ids', sql`bigint[]`, (col) =>
+      col.notNull().defaultTo(sql`ARRAY[]::bigint[]`),
     )
     .addColumn('isk_value', 'numeric')
     .addColumn('zkb_url', 'text', (col) => col.notNull())

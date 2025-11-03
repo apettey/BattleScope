@@ -1,3 +1,5 @@
+import { sql } from 'kysely';
+import type { SpaceType } from '@battlescope/shared';
 import type { DatabaseClient } from '../client';
 import type {
   BattleInsert,
@@ -12,6 +14,21 @@ import {
   BattleParticipantInsertSchema,
 } from '../types';
 import { serializeBigInt, toBigInt } from './utils';
+
+export interface BattleFilters {
+  spaceType?: SpaceType;
+  systemId?: number;
+  allianceId?: number;
+  corpId?: number;
+  characterId?: bigint;
+  since?: Date;
+  until?: Date;
+}
+
+export interface BattleCursor {
+  startTime: Date;
+  id: string;
+}
 
 export class BattleRepository {
   constructor(private readonly db: DatabaseClient) {}
@@ -125,6 +142,23 @@ export class BattleRepository {
       .orderBy('occurredAt', 'asc')
       .execute();
 
+    const killmailEvents = await this.db
+      .selectFrom('killmail_events')
+      .select([
+        'killmailId',
+        'victimCorpId',
+        'victimCharacterId',
+        'attackerCorpIds',
+        'attackerCharacterIds',
+      ])
+      .where('battleId', '=', id)
+      .execute();
+
+    const eventByKillmailId = new Map<number, (typeof killmailEvents)[number]>();
+    killmailEvents.forEach((event) => {
+      eventByKillmailId.set(event.killmailId, event);
+    });
+
     const participants = await this.db
       .selectFrom('battle_participants')
       .selectAll()
@@ -134,11 +168,101 @@ export class BattleRepository {
     return {
       ...battle,
       totalIskDestroyed: toBigInt(battle.totalIskDestroyed) ?? 0n,
-      killmails: killmails.map((killmail) => ({
-        ...killmail,
-        iskValue: toBigInt(killmail.iskValue),
-      })),
+      killmails: killmails.map((killmail) => {
+        const event = eventByKillmailId.get(killmail.killmailId);
+        const attackerCharacters = event?.attackerCharacterIds ?? [];
+        return {
+          ...killmail,
+          victimCorpId: event?.victimCorpId ?? null,
+          victimCharacterId: toBigInt(event?.victimCharacterId) ?? null,
+          attackerCorpIds: event?.attackerCorpIds ?? [],
+          attackerCharacterIds: attackerCharacters
+            .map((value) => toBigInt(value))
+            .filter((value): value is bigint => value !== null),
+          iskValue: toBigInt(killmail.iskValue),
+        };
+      }),
       participants,
     } satisfies BattleWithDetails;
+  }
+
+  async listBattles(
+    filters: BattleFilters,
+    limit: number,
+    cursor?: BattleCursor,
+  ): Promise<BattleRecord[]> {
+    let query = this.db.selectFrom('battles').selectAll();
+
+    if (filters.spaceType) {
+      query = query.where('spaceType', '=', filters.spaceType);
+    }
+
+    if (filters.systemId) {
+      query = query.where('systemId', '=', filters.systemId);
+    }
+
+    if (filters.since) {
+      query = query.where('startTime', '>=', filters.since);
+    }
+
+    if (filters.until) {
+      query = query.where('startTime', '<=', filters.until);
+    }
+
+    if (filters.allianceId) {
+      const allianceId = filters.allianceId;
+      const allianceSubquery = this.db
+        .selectFrom('killmail_events')
+        .select('battleId')
+        .where('battleId', 'is not', null)
+        .where(
+          sql`("killmail_events"."victim_alliance_id" = ${allianceId} OR ${allianceId} = ANY("killmail_events"."attacker_alliance_ids"))`,
+        );
+      query = query.where('id', 'in', allianceSubquery);
+    }
+
+    if (filters.corpId) {
+      const corpId = filters.corpId;
+      const corpSubquery = this.db
+        .selectFrom('killmail_events')
+        .select('battleId')
+        .where('battleId', 'is not', null)
+        .where(
+          sql`("killmail_events"."victim_corp_id" = ${corpId} OR ${corpId} = ANY("killmail_events"."attacker_corp_ids"))`,
+        );
+      query = query.where('id', 'in', corpSubquery);
+    }
+
+    if (filters.characterId) {
+      const characterId = filters.characterId;
+      const characterSubquery = this.db
+        .selectFrom('killmail_events')
+        .select('battleId')
+        .where('battleId', 'is not', null)
+        .where(
+          sql`("killmail_events"."victim_character_id" = ${characterId} OR ${characterId} = ANY("killmail_events"."attacker_character_ids"))`,
+        );
+      query = query.where('id', 'in', characterSubquery);
+    }
+
+    if (cursor) {
+      query = query.where((eb) =>
+        eb.or([
+          eb('startTime', '<', cursor.startTime),
+          eb.and([eb('startTime', '=', cursor.startTime), eb('id', '<', cursor.id)]),
+        ]),
+      );
+    }
+
+    const rows = await query
+      .orderBy('startTime', 'desc')
+      .orderBy('id', 'desc')
+      .limit(limit)
+      .execute();
+
+    return rows.map((row) => ({
+      ...row,
+      totalIskDestroyed: toBigInt(row.totalIskDestroyed) ?? 0n,
+    }));
   }
 }

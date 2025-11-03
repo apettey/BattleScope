@@ -1,22 +1,31 @@
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import { ZodError } from 'zod';
+import type { BattleRepository, DatabaseClient } from '@battlescope/database';
+import { registerBattleRoutes } from './routes/battles';
 
-export const buildServer = (): FastifyInstance => {
+interface BuildServerOptions {
+  battleRepository: BattleRepository;
+  db: DatabaseClient;
+}
+
+export const buildServer = ({ battleRepository, db }: BuildServerOptions) => {
   const app = Fastify({ logger: true });
 
-  app.get('/healthz', async () => ({ status: 'ok' }));
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof ZodError) {
+      return reply.status(400).send({ message: 'Invalid request', issues: error.issues });
+    }
+
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    return reply.status(statusCode).send({ message: error.message });
+  });
+
+  app.get('/healthz', async () => {
+    await db.selectFrom('battles').select('id').limit(1).execute();
+    return { status: 'ok' };
+  });
+
+  registerBattleRoutes(app, battleRepository);
 
   return app;
 };
-
-export const start = async (): Promise<void> => {
-  const app = buildServer();
-  await app.listen({ port: Number(process.env.PORT ?? 3000), host: '0.0.0.0' });
-};
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  start().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
-}

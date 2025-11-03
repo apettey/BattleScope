@@ -34,7 +34,11 @@ export class KillmailRepository {
           systemId: record.systemId,
           occurredAt: record.occurredAt,
           victimAllianceId: record.victimAllianceId,
+          victimCorpId: record.victimCorpId,
+          victimCharacterId: serializeBigInt(record.victimCharacterId),
           attackerAllianceIds: record.attackerAllianceIds,
+          attackerCorpIds: record.attackerCorpIds,
+          attackerCharacterIds: record.attackerCharacterIds.map((id) => id.toString()),
           iskValue: serializeBigInt(record.iskValue),
           zkbUrl: record.zkbUrl,
           fetchedAt: record.fetchedAt,
@@ -60,6 +64,10 @@ export class KillmailRepository {
 
     return rows.map((row) => ({
       ...row,
+      victimCharacterId: toBigInt(row.victimCharacterId),
+      attackerCharacterIds: row.attackerCharacterIds
+        .map((value) => toBigInt(value))
+        .filter((value): value is bigint => value !== null),
       iskValue: toBigInt(row.iskValue),
     }));
   }

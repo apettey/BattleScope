@@ -1,6 +1,7 @@
 export { createDb, createPool, type DatabaseClient } from './client';
 export { loadDatabaseConfig, type DatabaseConfig } from './env';
 export { BattleRepository } from './repositories/battle-repository';
+export type { BattleFilters, BattleCursor } from './repositories/battle-repository';
 export { KillmailRepository } from './repositories/killmail-repository';
 export type { Database } from './schema';
 export {

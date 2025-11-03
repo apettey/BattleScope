@@ -16,9 +16,13 @@ interface RedisQKillmail {
       killmail_time: string;
       victim: {
         alliance_id?: number | null;
+        corporation_id?: number | null;
+        character_id?: number | null;
       };
       attackers: Array<{
         alliance_id?: number | null;
+        corporation_id?: number | null;
+        character_id?: number | null;
       }>;
     };
     zkb: {
@@ -28,11 +32,21 @@ interface RedisQKillmail {
   } | null;
 }
 
-const uniqueAllianceIds = (attackers: Array<{ alliance_id?: number | null }>): number[] => {
-  const ids = attackers
-    .map((attacker) => attacker.alliance_id)
-    .filter((value): value is number => typeof value === 'number');
+const uniqueNumberIds = (values: Array<number | null | undefined>): number[] => {
+  const ids = values.filter((value): value is number => typeof value === 'number');
   return Array.from(new Set(ids));
+};
+
+const uniqueBigIntIds = (values: Array<number | bigint | null | undefined>): bigint[] => {
+  const set = new Set<bigint>();
+  values.forEach((value) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      set.add(BigInt(value));
+    } else if (typeof value === 'bigint') {
+      set.add(value);
+    }
+  });
+  return Array.from(set);
 };
 
 const toKillmailReference = (payload: RedisQKillmail['package']): KillmailReference => {
@@ -52,8 +66,17 @@ const toKillmailReference = (payload: RedisQKillmail['package']): KillmailRefere
 
   const victimAllianceId =
     typeof killmail.victim?.alliance_id === 'number' ? killmail.victim.alliance_id : null;
+  const victimCorpId =
+    typeof killmail.victim?.corporation_id === 'number' ? killmail.victim.corporation_id : null;
+  const victimCharacterId =
+    typeof killmail.victim?.character_id === 'number' ? BigInt(killmail.victim.character_id) : null;
 
-  const attackers = uniqueAllianceIds(killmail.attackers ?? []);
+  const attackers = killmail.attackers ?? [];
+  const attackerAllianceIds = uniqueNumberIds(attackers.map((attacker) => attacker.alliance_id));
+  const attackerCorpIds = uniqueNumberIds(attackers.map((attacker) => attacker.corporation_id));
+  const attackerCharacterIds = uniqueBigIntIds(
+    attackers.map((attacker) => attacker.character_id ?? null),
+  );
   const iskValueRaw = zkb?.totalValue ?? null;
   const iskValue = iskValueRaw !== null ? BigInt(Math.round(iskValueRaw)) : null;
 
@@ -64,7 +87,11 @@ const toKillmailReference = (payload: RedisQKillmail['package']): KillmailRefere
     systemId: killmail.solar_system_id,
     occurredAt,
     victimAllianceId,
-    attackerAllianceIds: attackers,
+    victimCorpId,
+    victimCharacterId,
+    attackerAllianceIds,
+    attackerCorpIds,
+    attackerCharacterIds,
     iskValue,
     zkbUrl: url,
   };

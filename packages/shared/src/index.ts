@@ -39,7 +39,11 @@ export interface KillmailReference {
   systemId: number;
   occurredAt: Date;
   victimAllianceId: number | null;
+  victimCorpId: number | null;
+  victimCharacterId: bigint | null;
   attackerAllianceIds: number[];
+  attackerCorpIds: number[];
+  attackerCharacterIds: bigint[];
   iskValue: bigint | null;
   zkbUrl: string;
 }

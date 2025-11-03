@@ -51,7 +51,11 @@ export interface BattleKillmailRecord {
   zkbUrl: string;
   occurredAt: Date;
   victimAllianceId: number | null;
+  victimCorpId: number | null;
+  victimCharacterId: bigint | null;
   attackerAllianceIds: number[];
+  attackerCorpIds: number[];
+  attackerCharacterIds: bigint[];
   iskValue: bigint | null;
   sideId: number | null;
 }
@@ -76,7 +80,11 @@ export const KillmailEventSchema = z.object({
   systemId: z.number().int().nonnegative(),
   occurredAt: z.coerce.date(),
   victimAllianceId: z.number().int().nonnegative().nullable(),
-  attackerAllianceIds: z.array(z.number().int().nonnegative()),
+  victimCorpId: z.number().int().nonnegative().nullable(),
+  victimCharacterId: z.bigint().nonnegative().nullable(),
+  attackerAllianceIds: z.array(z.number().int().nonnegative()).default([]),
+  attackerCorpIds: z.array(z.number().int().nonnegative()).default([]),
+  attackerCharacterIds: z.array(z.bigint().nonnegative()).default([]),
   iskValue: z.bigint().nonnegative().nullable(),
   zkbUrl: z.string().url(),
   fetchedAt: z.coerce.date().optional(),
@@ -89,7 +97,11 @@ export interface KillmailEventRecord {
   systemId: number;
   occurredAt: Date;
   victimAllianceId: number | null;
+  victimCorpId: number | null;
+  victimCharacterId: bigint | null;
   attackerAllianceIds: number[];
+  attackerCorpIds: number[];
+  attackerCharacterIds: bigint[];
   iskValue: bigint | null;
   zkbUrl: string;
   fetchedAt: Date;

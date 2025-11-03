@@ -9,7 +9,11 @@ const reference = {
   systemId: 30000142,
   occurredAt: new Date('2024-05-01T12:00:00Z'),
   victimAllianceId: 99001234,
+  victimCorpId: 12345,
+  victimCharacterId: 777_888_999n,
   attackerAllianceIds: [99004567, 99002345],
+  attackerCorpIds: [45678],
+  attackerCharacterIds: [111_222_333n],
   iskValue: 750_000_000n,
   zkbUrl: 'https://zkillboard.com/kill/9001/',
 };

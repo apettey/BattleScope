@@ -7,7 +7,11 @@ import { createTestDb } from './helpers';
 const baseReference = {
   systemId: 30000142,
   victimAllianceId: 99001234,
+  victimCorpId: 12345,
+  victimCharacterId: 555_666_777n,
   attackerAllianceIds: [99004567],
+  attackerCorpIds: [98765],
+  attackerCharacterIds: [222_333_444n],
   iskValue: 100_000_000n,
   zkbUrl: 'https://zkillboard.com/kill/1/',
 };

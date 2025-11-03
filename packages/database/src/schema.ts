@@ -43,7 +43,19 @@ export interface KillmailEventsTable {
   systemId: number;
   occurredAt: ColumnType<Date, Date, Date>;
   victimAllianceId: number | null;
+  victimCorpId: number | null;
+  victimCharacterId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
   attackerAllianceIds: number[];
+  attackerCorpIds: number[];
+  attackerCharacterIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
   iskValue: ColumnType<
     bigint | null,
     string | number | bigint | null,
