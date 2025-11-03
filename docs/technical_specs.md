@@ -6,6 +6,7 @@
 - **Frameworks:**
   - **API:** Fastify (HTTP), Zod (validation), OpenAPI generator (typed client)
   - **Workers:** Bare Node.js or BullMQ (for background queues)
+  - **Frontend:** React 18 + Vite SPA consuming typed clients from `@battlescope/shared`
 - **Database:** PostgreSQL 15
 - **Cache/Queue (optional):** Redis 7 (BullMQ, cache)
 - **Containerization:** Docker (multi-stage build)
@@ -29,9 +30,17 @@
 | **scheduler** | CronJob | Maintenance, re-clustering, indexing |
 | **db** | Stateful | PostgreSQL (persistent) |
 | **redis** | Stateful | Optional cache/queue |
-| **frontend** | Deployment | Optional Next.js UI |
+| **frontend** | Deployment | React/Vite UI for statistics, real-time kill feed, and rules configuration |
 
 Each service runs as its own Deployment with a ConfigMap for parameters and Secrets for credentials.
+
+### Frontend Client
+
+- **Home:** Displays total battle reports, recent battle delta, and top alliances/corps derived from the aggregated stats endpoint.
+- **Recent Kills:** Streams killmail summaries partitioned by space type (kspace, jspace, pochven) over Server-Sent Events with automatic reconnection and a timed polling fallback.
+- **Rules:** Presents form controls for minimum pilot thresholds, tracked alliance/corp allowlists, and ignore-unlisted toggles; persists through ruleset APIs with optimistic UI feedback.
+- **Shared Types:** Consumes generated clients from `@battlescope/shared` to stay aligned with backend schemas.
+- **Authentication:** Deliberately deferred—UI must signal that access is currently open and that login will arrive in the next iteration.
 
 ---
 
@@ -63,6 +72,15 @@ Each service runs as its own Deployment with a ConfigMap for parameters and Secr
 - `corp_id`, `alliance_id`
 - `side_id`
 - `is_victim` (bool)
+
+**rulesets**
+- `id` (uuid, pk)
+- `min_pilots` (int, default configurable via env)
+- `tracked_alliance_ids` (int[] nullable)
+- `tracked_corp_ids` (int[] nullable)
+- `ignore_unlisted` (bool, default false)
+- `created_at`, `updated_at` (timestamptz)
+- `updated_by` (text, optional human identifier until auth lands)
 
 ---
 
@@ -106,10 +124,28 @@ for (const system of systems) {
 | `GET /battles/{id}` | Get detailed battle info |
 | `GET /characters/{id}/battles` | Battles involving a character |
 | `GET /alliances/{id}/battles` | Battles involving an alliance |
+| `GET /stats/summary` | Aggregated totals for battles, alliances, and corporations powering the homepage |
+| `GET /killmails/recent` | Pollable recent killmail list filtered by space type |
+| `GET /killmails/stream` | Server-Sent Events stream pushing killmail summaries by space type |
+| `GET /rulesets/current` | Fetch the active ruleset controlling ingestion focus and UI defaults |
+| `PUT /rulesets/current` | Update the ruleset (validated via Zod, audited for future auth) |
 | `GET /healthz` | Health probe |
 
 All responses are JSON with cursor-based pagination.  
 Schemas validated via Zod and auto-exported to OpenAPI.
+
+### Streaming Endpoint
+
+- Protocol: Server-Sent Events under `text/event-stream` with retry hints.
+- Message payload: compact killmail summary (`killmail_id`, `space_type`, `timestamp`, tracked alliance/corp hits).
+- Filters: query params `space_type` (multi-value) and optional `tracked_only=true` to respect active ruleset.
+- Fallback: UI should downgrade to `GET /killmails/recent` if the stream disconnects repeatedly.
+
+### Ruleset API Notes
+
+- Requests must pass schema validation (min pilots ≥ 1, allowlists capped to 250 entries each).
+- Until authentication is shipped, write operations remain unauthenticated but must surface clear UI warnings and produce structured audit logs for every change.
+- Persist audit metadata (timestamp, client tag, diff) so future RBAC can reference historical changes.
 
 ---
 

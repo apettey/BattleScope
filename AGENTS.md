@@ -76,6 +76,7 @@ All application code lives in a single repository, with the React frontend under
 
 ### 3.7 Frontend MVP Ownership
 - **Scope:** deliver a minimal React UI that enables searching, filtering, and traversing battle data, matching the MVP expectations in the product and technical specs.
+- **Styling:** build the MVP with Tailwind CSS, keeping components extremely basic yet usable so the team can iterate quickly without heavy design overhead.
 - **Scaffolding:** maintain the React (e.g., Next.js or Remix) frontend workspace inside `/frontend`, wiring shared types and API client generation so UI components consume the same contracts verified by backend tests.
 - **Contract-driven mocks:** build fixtures from API contract tests (`/packages/api` snapshots) and expose them to the frontend for local development and smoke testing while the backend evolves.
 - **Future test criteria:** define acceptance criteria for promoting the UI from smoke checks to automated component/e2e suites once the search/traversal flows stabilize, and record the plan in `docs/frontend_mvp.md`.

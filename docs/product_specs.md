@@ -22,6 +22,7 @@ This enables performant historical and tactical insights while maintaining low s
 | **3. Queryable Metadata** | Enable flexible filtering (space type, corporation, alliance, character, time). |
 | **4. Efficient Enrichment** | Allow on-demand retrieval of detailed killmail data when needed. |
 | **5. Publicly Verifiable** | Each record references canonical zKillboard and ESI links for transparency. |
+| **6. Frontend Situational Awareness** | Deliver real-time battle intelligence via the web UI (home stats, kill feed, rules controls) while authentication remains out of scope for this iteration. |
 
 ---
 
@@ -35,6 +36,7 @@ This enables performant historical and tactical insights while maintaining low s
 | **Side** | A distinct group within a battle (based on attacker/victim overlap and alliance correlation). |
 | **Space Type** | K-space (known), J-space (wormhole), or Poch-space (Triglavian). |
 | **Source Link** | Permanent zKillboard “related kills” URL or similar canonical link. |
+| **Ruleset** | Configurable filters (alliances, corporations, minimum pilots) that drive ingestion focus and UI behaviour; killmails outside the allowlist are ignored when active. |
 
 ---
 
@@ -135,6 +137,15 @@ This enables performant historical and tactical insights while maintaining low s
 | F8 | Fetch extended data on-demand (lazy fetch via zKB API) | Medium |
 | F9 | Filter by alliance, corporation, or character | Medium |
 | F10 | Detect and merge overlapping battle clusters | Low |
+| F11 | Provide aggregated statistics for total battles and top alliances/corps to power the homepage dashboard | Medium |
+| F12 | Expose a streaming-friendly recent killmail feed segmented by space type for the Recent Kills page | Medium |
+| F13 | Offer read/write APIs for rulesets (min pilots, tracked alliances/corps, ignore-unlisted toggle) surfaced in the Rules UI | High |
+
+### Frontend MVP Experience
+
+- **Home:** Present total battle reports and tracked alliance/corp counts with contextual metadata from F11; refresh periodically without requiring login.
+- **Recent Kills:** Auto-update a list of recent killmails by space type (kspace, jspace, pochven) using the streaming feed from F12 with graceful fallback polling.
+- **Rules:** Allow operators to configure minimum pilot thresholds and tracked alliances/corps, persisting changes through F13 while signalling that authentication will arrive in a future iteration.
 
 ---
 
@@ -206,11 +217,13 @@ This enables performant historical and tactical insights while maintaining low s
 ✅ zKillboard related URL generation  
 ✅ Space type derivation  
 ✅ Battle storage without full killmail payloads  
+⏳ Frontend surfaces: Home statistics, streaming Recent Kills feed, and Rules configuration (authentication deferred)
 
 ---
 
 ## 10. Future Enhancements
 
+- User authentication and role-based access for Rules management
 - Doctrine/fleet composition inference (via ship role mapping)
 - Player or alliance performance stats
 - ESI integration for character lookup
