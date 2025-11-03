@@ -61,7 +61,6 @@ services:
       pnpm --filter @battlescope/api dev"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
       HOST: 0.0.0.0
@@ -87,7 +86,6 @@ services:
       pnpm --filter @battlescope/ingest dev"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
       ZKILLBOARD_REDISQ_URL: https://zkillredisq.stream/listen.php
@@ -118,7 +116,6 @@ services:
       pnpm --filter @battlescope/clusterer dev"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       PORT: 3003
       LOG_LEVEL: info
@@ -144,7 +141,6 @@ services:
       pnpm --filter @battlescope/enrichment dev"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
       HOST: 0.0.0.0
@@ -174,7 +170,6 @@ services:
       pnpm --filter @battlescope/scheduler dev"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       LOG_LEVEL: info
     volumes:
       - .:/workspace
@@ -193,10 +188,9 @@ services:
     working_dir: /workspace
     command: >
       bash -lc "corepack enable pnpm &&
-      pnpm --filter @battlescope/frontend dev -- --host 0.0.0.0 --port 3001"
+      pnpm --filter @battlescope/frontend dev --host 0.0.0.0 --port 3001"
     environment:
       NODE_ENV: development
-      HOSTNAME: localhost
       VITE_API_BASE_URL: http://api:3000
     volumes:
       - .:/workspace
