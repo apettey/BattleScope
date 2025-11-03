@@ -1,6 +1,9 @@
+import { Queue } from 'bullmq';
+import IORedis from 'ioredis';
 import { createDb, KillmailRepository } from '@battlescope/database';
+import { ENRICHMENT_QUEUE_NAME, assertEnv, type EnrichmentJobPayload } from '@battlescope/shared';
 import { loadConfig } from './config';
-import { IngestionService } from './service';
+import { IngestionService, type KillmailEnrichmentProducer } from './service';
 import { MockKillmailSource, ZKillboardRedisQSource } from './source';
 import { createHealthServer } from './health';
 import pino from 'pino';
@@ -12,7 +15,22 @@ export const start = async (): Promise<void> => {
   const db = createDb();
   const repository = new KillmailRepository(db);
   const source = new ZKillboardRedisQSource(config.redisqUrl, config.redisqQueueId);
-  const service = new IngestionService(repository, source);
+  const redisUrl = assertEnv('REDIS_URL');
+  const enrichmentQueue = new Queue<EnrichmentJobPayload>(ENRICHMENT_QUEUE_NAME, {
+    connection: new IORedis(redisUrl, { connectionName: 'ingest-enrichment-producer' }),
+    defaultJobOptions: {
+      removeOnComplete: 1_000,
+      removeOnFail: 1_000,
+    },
+  });
+
+  const enrichmentProducer: KillmailEnrichmentProducer = {
+    enqueue: async (killmailId: number) => {
+      await enrichmentQueue.add('enrich-killmail', { killmailId });
+    },
+  };
+
+  const service = new IngestionService(repository, source, enrichmentProducer);
   const healthServer = createHealthServer(db);
 
   const abortController = new AbortController();
@@ -24,6 +42,7 @@ export const start = async (): Promise<void> => {
     abortController.abort();
     logger.info('Shutting down ingestion service');
     await healthServer.close();
+    await enrichmentQueue.close();
     await db.destroy();
   };
 

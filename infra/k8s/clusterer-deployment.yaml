@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clusterer
+  namespace: battlescope
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clusterer
+  template:
+    metadata:
+      labels:
+        app: clusterer
+    spec:
+      containers:
+        - name: clusterer
+          image: ghcr.io/your-org/battlescope-clusterer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3003
+          env:
+            - name: PORT
+              value: "3003"
+          envFrom:
+            - secretRef:
+                name: battlescope-secrets
+            - configMapRef:
+                name: battlescope-config
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clusterer
+  namespace: battlescope
+spec:
+  selector:
+    app: clusterer
+  ports:
+    - name: http
+      port: 3003
+      targetPort: http

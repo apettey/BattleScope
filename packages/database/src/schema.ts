@@ -67,9 +67,20 @@ export interface KillmailEventsTable {
   battleId: string | null;
 }
 
+export interface KillmailEnrichmentsTable {
+  killmailId: number;
+  status: string;
+  payload: ColumnType<Record<string, unknown> | null, Record<string, unknown> | null, Record<string, unknown> | null>;
+  error: string | null;
+  fetchedAt: ColumnType<Date | null, Date | null, Date | null>;
+  updatedAt: ColumnType<Date, Date | undefined, never>;
+  createdAt: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface Database {
   battles: BattlesTable;
   battle_killmails: BattleKillmailsTable;
   battle_participants: BattleParticipantsTable;
   killmail_events: KillmailEventsTable;
+  killmail_enrichments: KillmailEnrichmentsTable;
 }

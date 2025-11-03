@@ -12,6 +12,7 @@ import {
   BattleInsertSchema,
   BattleKillmailInsertSchema,
   BattleParticipantInsertSchema,
+  KillmailEnrichmentSchema,
 } from '../types';
 import { serializeBigInt, toBigInt } from './utils';
 
@@ -159,6 +160,24 @@ export class BattleRepository {
       eventByKillmailId.set(event.killmailId, event);
     });
 
+    const enrichmentByKillmailId = new Map<number, ReturnType<typeof KillmailEnrichmentSchema.parse>>();
+    if (killmails.length > 0) {
+      const enrichmentRows = await this.db
+        .selectFrom('killmail_enrichments')
+        .selectAll()
+        .where(
+          'killmailId',
+          'in',
+          killmails.map((killmail) => killmail.killmailId) as number[],
+        )
+        .execute();
+
+      enrichmentRows.forEach((row) => {
+        const enrichment = KillmailEnrichmentSchema.parse(row);
+        enrichmentByKillmailId.set(row.killmailId, enrichment);
+      });
+    }
+
     const participants = await this.db
       .selectFrom('battle_participants')
       .selectAll()
@@ -171,6 +190,7 @@ export class BattleRepository {
       killmails: killmails.map((killmail) => {
         const event = eventByKillmailId.get(killmail.killmailId);
         const attackerCharacters = event?.attackerCharacterIds ?? [];
+        const enrichment = enrichmentByKillmailId.get(killmail.killmailId) ?? null;
         return {
           ...killmail,
           victimCorpId: event?.victimCorpId ?? null,
@@ -180,6 +200,7 @@ export class BattleRepository {
             .map((value) => toBigInt(value))
             .filter((value): value is bigint => value !== null),
           iskValue: toBigInt(killmail.iskValue),
+          enrichment,
         };
       }),
       participants,

@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import {
   BattleRepository,
+  KillmailEnrichmentRepository,
   KillmailRepository,
   createInMemoryDatabase,
 } from '@battlescope/database';
@@ -64,11 +65,14 @@ const createBattle = async (
 describe('API battles routes', () => {
   let app: FastifyInstance;
   let db: Awaited<ReturnType<typeof createInMemoryDatabase>>;
+  let firstBattleId: string;
+  let secondBattleId: string;
 
   beforeAll(async () => {
     db = await createInMemoryDatabase();
     const battleRepository = new BattleRepository(db.db);
     const killmailRepository = new KillmailRepository(db.db);
+    const enrichmentRepository = new KillmailEnrichmentRepository(db.db);
 
     const baseKillmail = {
       killmailId: 1001,
@@ -84,10 +88,16 @@ describe('API battles routes', () => {
       zkbUrl: 'https://zkillboard.com/kill/1001/',
     };
 
-    const battleId = randomUUID();
-    await createBattle(battleRepository, killmailRepository, battleId, baseKillmail);
+    firstBattleId = randomUUID();
+    await createBattle(battleRepository, killmailRepository, firstBattleId, baseKillmail);
 
-    const secondBattleId = randomUUID();
+    await enrichmentRepository.markSucceeded(
+      baseKillmail.killmailId,
+      { source: 'fixture' },
+      new Date('2024-05-01T10:01:00Z'),
+    );
+
+    secondBattleId = randomUUID();
     await killmailRepository.insert({
       killmailId: 2001,
       systemId: 30000111,
@@ -127,6 +137,7 @@ describe('API battles routes', () => {
     ]);
 
     await killmailRepository.markAsProcessed([2001], secondBattleId);
+    await enrichmentRepository.markFailed(2001, 'timeout');
 
     app = buildServer({ battleRepository, db: db.db });
     await app.ready();
@@ -178,6 +189,31 @@ describe('API battles routes', () => {
       zkbUrl: expect.stringContaining('/kill/'),
       iskValue: expect.any(String),
       attackerCharacterIds: expect.arrayContaining([expect.any(String)]),
+    });
+  });
+
+  it('includes killmail enrichment metadata', async () => {
+    const response = await app.inject({ method: 'GET', url: `/battles/${firstBattleId}` });
+    expect(response.statusCode).toBe(200);
+    const detail = response.json();
+    const enrichment = detail.killmails[0].enrichment;
+    expect(enrichment).toMatchObject({
+      status: 'succeeded',
+      error: null,
+      payload: { source: 'fixture' },
+    });
+    expect(enrichment?.updatedAt).toEqual(expect.any(String));
+    expect(new Date(enrichment?.updatedAt as string).toString()).not.toBe('Invalid Date');
+  });
+
+  it('surfaces enrichment failures for killmails without payload', async () => {
+    const response = await app.inject({ method: 'GET', url: `/battles/${secondBattleId}` });
+    expect(response.statusCode).toBe(200);
+    const detail = response.json();
+    expect(detail.killmails[0].enrichment).toMatchObject({
+      status: 'failed',
+      error: 'timeout',
+      payload: null,
     });
   });
 });

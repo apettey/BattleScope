@@ -180,11 +180,21 @@ This enables performant historical and tactical insights while maintaining low s
       "killmail_id": 12457890,
       "zkb_url": "https://zkillboard.com/kill/12457890/",
       "isk_value": 380000000,
-      "timestamp": "2025-11-03T18:43:00Z"
+      "timestamp": "2025-11-03T18:43:00Z",
+      "enrichment": {
+        "status": "succeeded",
+        "payload": { "source": "zkill" },
+        "error": null,
+        "fetched_at": "2025-11-03T18:45:00Z",
+        "updated_at": "2025-11-03T18:45:05Z",
+        "created_at": "2025-11-03T18:44:30Z"
+      }
     }
   ]
 }
 ```
+
+> `enrichment.status` tracks the worker lifecycle (`pending`, `processing`, `succeeded`, `failed`) while keeping detailed payloads optional. Producers should requeue killmails when failures persist to guarantee eventual consistency.
 
 ---
 

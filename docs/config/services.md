@@ -30,3 +30,11 @@ Environment variables are validated on startup via Zod; missing required values 
 - `CLUSTER_BATCH_SIZE` (default `500`)
 - `CLUSTER_INTERVAL_MS` (default `10000`)
 - `PORT` (default `3003`): Health endpoint port when the clusterer service runs standalone.
+
+## Enrichment Service
+
+- `REDIS_URL` (required): Connection string for the BullMQ queue backend.
+- `ENRICHMENT_CONCURRENCY` (default `5`): Max concurrent jobs processed per worker.
+- `ENRICHMENT_THROTTLE_MS` (default `0`): Delay applied between upstream zKillboard fetches.
+- `HOST` (default `0.0.0.0`) and `PORT` (default `3004`): HTTP listener for `/healthz`.
+- `LOG_LEVEL` (default `info`): Pino log level shared across backend services.

@@ -58,6 +58,7 @@ export interface BattleKillmailRecord {
   attackerCharacterIds: bigint[];
   iskValue: bigint | null;
   sideId: number | null;
+  enrichment: KillmailEnrichmentRecord | null;
 }
 
 export interface BattleParticipantRecord {
@@ -110,3 +111,17 @@ export interface KillmailEventRecord {
 }
 
 export type { SpaceType };
+
+export const KillmailEnrichmentStatusSchema = z.enum(['pending', 'processing', 'succeeded', 'failed']);
+
+export const KillmailEnrichmentSchema = z.object({
+  killmailId: z.number().int().nonnegative(),
+  status: KillmailEnrichmentStatusSchema,
+  payload: z.record(z.any()).nullable().optional(),
+  error: z.string().nullable().optional(),
+  fetchedAt: z.coerce.date().nullable().optional(),
+  updatedAt: z.coerce.date(),
+  createdAt: z.coerce.date(),
+});
+
+export type KillmailEnrichmentRecord = z.infer<typeof KillmailEnrichmentSchema>;

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enrichment
+  namespace: battlescope
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enrichment
+  template:
+    metadata:
+      labels:
+        app: enrichment
+    spec:
+      containers:
+        - name: enrichment
+          image: ghcr.io/your-org/battlescope-enrichment:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3004
+          env:
+            - name: PORT
+              value: "3004"
+            - name: HOST
+              value: "0.0.0.0"
+          envFrom:
+            - secretRef:
+                name: battlescope-secrets
+            - configMapRef:
+                name: battlescope-config
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enrichment
+  namespace: battlescope
+spec:
+  selector:
+    app: enrichment
+  ports:
+    - name: http
+      port: 3004
+      targetPort: http

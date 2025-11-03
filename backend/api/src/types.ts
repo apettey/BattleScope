@@ -34,6 +34,14 @@ export interface BattleDetailResponse extends BattleSummaryResponse {
     attackerCharacterIds: string[];
     iskValue: string | null;
     zkbUrl: string;
+    enrichment: {
+      status: string;
+      payload: Record<string, unknown> | null;
+      error: string | null;
+      fetchedAt: string | null;
+      updatedAt: string;
+      createdAt: string;
+    } | null;
   }>;
   participants: Array<BattleParticipantRecord>;
 }
@@ -49,6 +57,18 @@ const toKillmailResponse = (killmail: BattleKillmailRecord) => ({
   attackerCharacterIds: (killmail.attackerCharacterIds ?? []).map((id) => id.toString()),
   iskValue: formatBigInt(killmail.iskValue ?? null),
   zkbUrl: killmail.zkbUrl,
+  enrichment: killmail.enrichment
+    ? {
+        status: killmail.enrichment.status,
+        payload: killmail.enrichment.payload ?? null,
+        error: killmail.enrichment.error ?? null,
+        fetchedAt: killmail.enrichment.fetchedAt
+          ? formatDate(killmail.enrichment.fetchedAt)
+          : null,
+        updatedAt: formatDate(killmail.enrichment.updatedAt),
+        createdAt: formatDate(killmail.enrichment.createdAt),
+      }
+    : null,
 });
 
 export const toBattleSummaryResponse = (battle: BattleRecord): BattleSummaryResponse => ({

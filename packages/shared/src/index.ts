@@ -1,4 +1,8 @@
 export const projectName = 'BattleScope';
+export const ENRICHMENT_QUEUE_NAME = 'killmail-enrichment';
+export interface EnrichmentJobPayload {
+  killmailId: number;
+}
 
 export const assertEnv = (key: string, defaultValue?: string): string => {
   const value = process.env[key] ?? defaultValue;

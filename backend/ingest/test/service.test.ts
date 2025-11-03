@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { KillmailRepository } from '@battlescope/database';
 import { IngestionService } from '../src/service';
 import { MockKillmailSource } from '../src/source';
@@ -32,9 +32,11 @@ describe('IngestionService', () => {
   });
 
   it('stores killmail references and deduplicates', async () => {
+    const enqueue = vi.fn().mockResolvedValue(undefined);
     const service = new IngestionService(
       repository,
       new MockKillmailSource([reference, reference]),
+      { enqueue },
     );
 
     const first = await service.processNext();
@@ -44,6 +46,8 @@ describe('IngestionService', () => {
     expect(first).toBe('stored');
     expect(second).toBe('duplicate');
     expect(third).toBe('empty');
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue).toHaveBeenCalledWith(reference.killmailId);
 
     const remaining = await repository.fetchUnprocessed();
     expect(remaining).toHaveLength(1);

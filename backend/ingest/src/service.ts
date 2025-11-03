@@ -8,6 +8,10 @@ export type IngestionResult = 'stored' | 'duplicate' | 'empty';
 
 const tracer = trace.getTracer('battlescope.ingest.service');
 
+export interface KillmailEnrichmentProducer {
+  enqueue(killmailId: number): Promise<void>;
+}
+
 export class IngestionService {
   private readonly logger = pino({
     name: 'ingest-service',
@@ -17,6 +21,7 @@ export class IngestionService {
   constructor(
     private readonly repository: KillmailRepository,
     private readonly source: KillmailSource,
+    private readonly enrichmentProducer?: KillmailEnrichmentProducer,
   ) {}
 
   private toEvent(reference: KillmailReference): KillmailEventInsert {
@@ -52,6 +57,18 @@ export class IngestionService {
         if (stored) {
           this.logger.info({ killmailId: reference.killmailId }, 'Stored killmail reference');
           span.addEvent('stored');
+          if (this.enrichmentProducer) {
+            try {
+              await this.enrichmentProducer.enqueue(reference.killmailId);
+              span.addEvent('enrichment.enqueued');
+            } catch (error) {
+              this.logger.warn(
+                { err: error, killmailId: reference.killmailId },
+                'Failed to enqueue enrichment job',
+              );
+              span.addEvent('enrichment.enqueue.failed');
+            }
+          }
           return 'stored';
         }
 

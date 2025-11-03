@@ -3,6 +3,7 @@ export { loadDatabaseConfig, type DatabaseConfig } from './env';
 export { BattleRepository } from './repositories/battle-repository';
 export type { BattleFilters, BattleCursor } from './repositories/battle-repository';
 export { KillmailRepository } from './repositories/killmail-repository';
+export { KillmailEnrichmentRepository } from './repositories/killmail-enrichment-repository';
 export type { Database } from './schema';
 export {
   BattleInsertSchema,
@@ -20,5 +21,7 @@ export {
   type SpaceType,
   type KillmailEventInsert,
   type KillmailEventRecord,
+  type KillmailEnrichmentRecord,
+  KillmailEnrichmentStatusSchema,
 } from './types';
 export { createInMemoryDatabase, type InMemoryDatabase } from './testing';
