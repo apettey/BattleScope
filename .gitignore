@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+build/
+.turbo/
+
+# testing
+coverage/
+.nyc_output/
+
+# editor
+.idea/
+.vscode/
+
+# environment
+.env
+.env.*
+
+# misc
+*.log
+.DS_Store

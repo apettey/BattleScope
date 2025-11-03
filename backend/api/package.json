@@ -1,0 +1,26 @@
+{
+  "name": "@battlescope/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/shared": "workspace:*",
+    "fastify": "^4.26.2",
+    "pino": "^8.17.0"
+  },
+  "devDependencies": {
+    "@fastify/type-provider-typebox": "^4.0.0",
+    "tsx": "^4.7.0"
+  }
+}

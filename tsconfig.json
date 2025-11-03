@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/database" },
+    { "path": "./backend/ingest" },
+    { "path": "./backend/clusterer" },
+    { "path": "./backend/api" },
+    { "path": "./backend/enrichment" },
+    { "path": "./backend/scheduler" },
+    { "path": "./frontend" }
+  ]
+}
