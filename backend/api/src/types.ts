@@ -62,9 +62,7 @@ const toKillmailResponse = (killmail: BattleKillmailRecord) => ({
         status: killmail.enrichment.status,
         payload: killmail.enrichment.payload ?? null,
         error: killmail.enrichment.error ?? null,
-        fetchedAt: killmail.enrichment.fetchedAt
-          ? formatDate(killmail.enrichment.fetchedAt)
-          : null,
+        fetchedAt: killmail.enrichment.fetchedAt ? formatDate(killmail.enrichment.fetchedAt) : null,
         updatedAt: formatDate(killmail.enrichment.updatedAt),
         createdAt: formatDate(killmail.enrichment.createdAt),
       }

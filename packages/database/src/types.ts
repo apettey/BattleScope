@@ -112,7 +112,12 @@ export interface KillmailEventRecord {
 
 export type { SpaceType };
 
-export const KillmailEnrichmentStatusSchema = z.enum(['pending', 'processing', 'succeeded', 'failed']);
+export const KillmailEnrichmentStatusSchema = z.enum([
+  'pending',
+  'processing',
+  'succeeded',
+  'failed',
+]);
 
 export const KillmailEnrichmentSchema = z.object({
   killmailId: z.number().int().nonnegative(),

@@ -8,7 +8,9 @@ export interface KillmailEnrichmentSource {
 }
 
 export class ZKillboardSource implements KillmailEnrichmentSource {
-  constructor(private readonly userAgent = 'BattleScope-Enrichment/1.0 (+https://battlescope.app)') {}
+  constructor(
+    private readonly userAgent = 'BattleScope-Enrichment/1.0 (+https://battlescope.app)',
+  ) {}
 
   async fetchKillmail(killmailId: number): Promise<Record<string, unknown>> {
     const response = await fetch(`https://zkillboard.com/api/killID/${killmailId}/`, {

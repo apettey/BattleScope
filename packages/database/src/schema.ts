@@ -70,7 +70,11 @@ export interface KillmailEventsTable {
 export interface KillmailEnrichmentsTable {
   killmailId: number;
   status: string;
-  payload: ColumnType<Record<string, unknown> | null, Record<string, unknown> | null, Record<string, unknown> | null>;
+  payload: ColumnType<
+    Record<string, unknown> | null,
+    Record<string, unknown> | null,
+    Record<string, unknown> | null
+  >;
   error: string | null;
   fetchedAt: ColumnType<Date | null, Date | null, Date | null>;
   updatedAt: ColumnType<Date, Date | undefined, never>;

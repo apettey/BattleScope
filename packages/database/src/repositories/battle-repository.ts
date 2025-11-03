@@ -160,16 +160,15 @@ export class BattleRepository {
       eventByKillmailId.set(event.killmailId, event);
     });
 
-    const enrichmentByKillmailId = new Map<number, ReturnType<typeof KillmailEnrichmentSchema.parse>>();
+    const enrichmentByKillmailId = new Map<
+      number,
+      ReturnType<typeof KillmailEnrichmentSchema.parse>
+    >();
     if (killmails.length > 0) {
       const enrichmentRows = await this.db
         .selectFrom('killmail_enrichments')
         .selectAll()
-        .where(
-          'killmailId',
-          'in',
-          killmails.map((killmail) => killmail.killmailId) as number[],
-        )
+        .where('killmailId', 'in', killmails.map((killmail) => killmail.killmailId) as number[])
         .execute();
 
       enrichmentRows.forEach((row) => {

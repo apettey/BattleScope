@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  fetchBattles,
-  fetchBattleDetail,
-  BattleSummarySchema,
-  BattleDetailSchema,
-} from './api';
+import { fetchBattles, fetchBattleDetail, BattleSummarySchema, BattleDetailSchema } from './api';
 
 const sampleSummary = {
   id: '5f2e5e02-0d75-4a47-8618-6c526d5e62c8',
@@ -57,12 +52,14 @@ const sampleDetail = {
 
 describe('battles api', () => {
   it('parses battle list responses', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({ items: [sampleSummary], nextCursor: 'cursor-1' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ items: [sampleSummary], nextCursor: 'cursor-1' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
 
     const result = await fetchBattles({ fetchFn });
     expect(result.nextCursor).toBe('cursor-1');
@@ -93,9 +90,9 @@ describe('battles api', () => {
   });
 
   it('throws on non-200 responses', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(
-      new Response('nope', { status: 500, statusText: 'boom' }),
-    );
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(new Response('nope', { status: 500, statusText: 'boom' }));
 
     await expect(fetchBattles({ fetchFn })).rejects.toThrow(/Request failed/);
   });

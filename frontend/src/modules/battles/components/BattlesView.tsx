@@ -151,9 +151,7 @@ export const BattlesView = () => {
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
         <aside style={{ minWidth: '18rem', flex: '1 1 18rem' }}>
           <h3>Battle Feed</h3>
-          {battles.length === 0 && !listLoading && !listError && (
-            <p>No battles available yet.</p>
-          )}
+          {battles.length === 0 && !listLoading && !listError && <p>No battles available yet.</p>}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {battles.map((battle) => {
               const isSelected = battle.id === selectedBattleId;
@@ -186,11 +184,7 @@ export const BattlesView = () => {
             })}
           </ul>
           <div style={{ marginTop: '1rem' }}>
-            <button
-              type="button"
-              onClick={handleLoadMore}
-              disabled={!nextCursor || loadingMore}
-            >
+            <button type="button" onClick={handleLoadMore} disabled={!nextCursor || loadingMore}>
               {loadingMore ? 'Loading…' : nextCursor ? 'Load more battles' : 'No more results'}
             </button>
           </div>
@@ -203,7 +197,8 @@ export const BattlesView = () => {
           {!detailLoading && !detailError && selectedBattle && selectedSummary && (
             <div>
               <p>
-                <strong>Battle:</strong> {selectedSummary.spaceType} in system {selectedSummary.systemId}
+                <strong>Battle:</strong> {selectedSummary.spaceType} in system{' '}
+                {selectedSummary.systemId}
               </p>
               <p>
                 <strong>Window:</strong> {new Date(selectedSummary.startTime).toLocaleString()} →{' '}
@@ -256,9 +251,11 @@ export const BattlesView = () => {
               </section>
             </div>
           )}
-          {!detailLoading && !detailError && !selectedBattle && !listLoading && battles.length === 0 && (
-            <p>Select a battle to inspect details.</p>
-          )}
+          {!detailLoading &&
+            !detailError &&
+            !selectedBattle &&
+            !listLoading &&
+            battles.length === 0 && <p>Select a battle to inspect details.</p>}
         </article>
       </div>
     </section>

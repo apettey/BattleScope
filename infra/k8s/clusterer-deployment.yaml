@@ -22,7 +22,7 @@ spec:
               containerPort: 3003
           env:
             - name: PORT
-              value: "3003"
+              value: '3003'
           envFrom:
             - secretRef:
                 name: battlescope-secrets
