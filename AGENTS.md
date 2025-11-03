@@ -89,6 +89,7 @@ All application code lives in a single repository, with the React frontend under
 - **Environment variables only:** configure every service via environment variables loaded at runtime; avoid hardcoding secrets or service URLs in code.
 - **Documentation by domain:** keep configuration reference files per domain (e.g., `docs/config/otel.md`, `docs/config/grafana.md`, `docs/config/logging.md`, `docs/config/services.md`) detailing required env vars, default values, and sample `.env.example` snippets.
 - **Runtime validation:** add schema validation (e.g., Zod) on startup to fail fast when required environment variables are missing or malformed.
+- **Local orchestration:** whenever services or dependencies change, update the root `docker-compose.yml` to ensure all components required for local development (databases, Redis, workers, API, frontend) start together with sane defaults.
 
 ---
 
