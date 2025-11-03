@@ -5,14 +5,14 @@ import { MockKillmailSource } from '../src/source.js';
 import { createTestDb } from './helpers.js';
 
 const reference = {
-  killmailId: 9001,
-  systemId: 30000142,
+  killmailId: 9001n,
+  systemId: 30000142n,
   occurredAt: new Date('2024-05-01T12:00:00Z'),
-  victimAllianceId: 99001234,
-  victimCorpId: 12345,
+  victimAllianceId: 99001234n,
+  victimCorpId: 12345n,
   victimCharacterId: 777_888_999n,
-  attackerAllianceIds: [99004567, 99002345],
-  attackerCorpIds: [45678],
+  attackerAllianceIds: [99004567n, 99002345n],
+  attackerCorpIds: [45678n],
   attackerCharacterIds: [111_222_333n],
   iskValue: 750_000_000n,
   zkbUrl: 'https://zkillboard.com/kill/9001/',

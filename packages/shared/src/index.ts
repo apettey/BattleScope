@@ -1,7 +1,7 @@
 export const projectName = 'BattleScope';
 export const ENRICHMENT_QUEUE_NAME = 'killmail-enrichment';
 export interface EnrichmentJobPayload {
-  killmailId: number;
+  killmailId: string;
 }
 
 export const assertEnv = (key: string, defaultValue?: string): string => {
@@ -14,12 +14,14 @@ export const assertEnv = (key: string, defaultValue?: string): string => {
 
 export type SpaceType = 'kspace' | 'jspace' | 'pochven';
 
-export const deriveSpaceType = (systemId: number): SpaceType => {
-  if (systemId >= 32000000 && systemId < 33000000) {
+export const deriveSpaceType = (systemId: bigint | number): SpaceType => {
+  const value = typeof systemId === 'bigint' ? Number(systemId) : systemId;
+
+  if (value >= 32_000_000 && value < 33_000_000) {
     return 'pochven';
   }
 
-  if (systemId >= 31000000 && systemId < 32000000) {
+  if (value >= 31_000_000 && value < 32_000_000) {
     return 'jspace';
   }
 
@@ -28,25 +30,25 @@ export const deriveSpaceType = (systemId: number): SpaceType => {
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
-export const buildZKillRelatedUrl = (systemId: number, startTime: Date): string => {
+export const buildZKillRelatedUrl = (systemId: bigint | number, startTime: Date): string => {
   const year = startTime.getUTCFullYear();
   const month = pad(startTime.getUTCMonth() + 1);
   const day = pad(startTime.getUTCDate());
   const hours = pad(startTime.getUTCHours());
   const minutes = pad(startTime.getUTCMinutes());
 
-  return `https://zkillboard.com/related/${systemId}/${year}${month}${day}${hours}${minutes}/`;
+  return `https://zkillboard.com/related/${systemId.toString()}/${year}${month}${day}${hours}${minutes}/`;
 };
 
 export interface KillmailReference {
-  killmailId: number;
-  systemId: number;
+  killmailId: bigint;
+  systemId: bigint;
   occurredAt: Date;
-  victimAllianceId: number | null;
-  victimCorpId: number | null;
+  victimAllianceId: bigint | null;
+  victimCorpId: bigint | null;
   victimCharacterId: bigint | null;
-  attackerAllianceIds: number[];
-  attackerCorpIds: number[];
+  attackerAllianceIds: bigint[];
+  attackerCorpIds: bigint[];
   attackerCharacterIds: bigint[];
   iskValue: bigint | null;
   zkbUrl: string;

@@ -75,14 +75,14 @@ describe('API battles routes', () => {
     const enrichmentRepository = new KillmailEnrichmentRepository(db.db);
 
     const baseKillmail = {
-      killmailId: 1001,
-      systemId: 31000123,
+      killmailId: 1001n,
+      systemId: 31000123n,
       occurredAt: new Date('2024-05-01T10:00:00Z'),
-      victimAllianceId: 99001234,
-      victimCorpId: 12345,
+      victimAllianceId: 99001234n,
+      victimCorpId: 12345n,
       victimCharacterId: 700_000_001n,
-      attackerAllianceIds: [99002345],
-      attackerCorpIds: [67890],
+      attackerAllianceIds: [99002345n],
+      attackerCorpIds: [67890n],
       attackerCharacterIds: [800_000_002n],
       iskValue: 400_000_000n,
       zkbUrl: 'https://zkillboard.com/kill/1001/',
@@ -99,14 +99,14 @@ describe('API battles routes', () => {
 
     secondBattleId = randomUUID();
     await killmailRepository.insert({
-      killmailId: 2001,
-      systemId: 30000111,
+      killmailId: 2001n,
+      systemId: 30000111n,
       occurredAt: new Date('2024-05-02T15:00:00Z'),
-      victimAllianceId: 99003333,
-      victimCorpId: 54321,
+      victimAllianceId: 99003333n,
+      victimCorpId: 54321n,
       victimCharacterId: 700_000_100n,
-      attackerAllianceIds: [99004444],
-      attackerCorpIds: [11111],
+      attackerAllianceIds: [99004444n],
+      attackerCorpIds: [11111n],
       attackerCharacterIds: [800_000_200n],
       iskValue: 125_000_000n,
       zkbUrl: 'https://zkillboard.com/kill/2001/',
@@ -126,11 +126,11 @@ describe('API battles routes', () => {
     await battleRepository.upsertKillmails([
       {
         battleId: secondBattleId,
-        killmailId: 2001,
+        killmailId: 2001n,
         zkbUrl: 'https://zkillboard.com/kill/2001/',
         occurredAt: new Date('2024-05-02T15:00:00Z'),
-        victimAllianceId: 99003333,
-        attackerAllianceIds: [99004444],
+        victimAllianceId: 99003333n,
+        attackerAllianceIds: [99004444n],
         iskValue: 125_000_000n,
         sideId: null,
       },
@@ -169,7 +169,7 @@ describe('API battles routes', () => {
     const response = await app.inject({ method: 'GET', url: '/battles?allianceId=99001234' });
     const body = response.json();
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].systemId).toBe(31000123);
+    expect(body.items[0].systemId).toBe('31000123');
   });
 
   it('returns battles for a character', async () => {
@@ -179,16 +179,16 @@ describe('API battles routes', () => {
   });
 
   it('returns battle detail with killmail references', async () => {
-    const list = await app.inject({ method: 'GET', url: '/battles?limit=1' });
-    const battleId = list.json().items[0].id;
-
-    const response = await app.inject({ method: 'GET', url: `/battles/${battleId}` });
+    const response = await app.inject({ method: 'GET', url: `/battles/${firstBattleId}` });
     expect(response.statusCode).toBe(200);
     const detail = response.json();
-    expect(detail.killmails[0]).toMatchObject({
+    const killmail = detail.killmails.find((km: { killmailId: string }) => km.killmailId === '1001');
+    expect(killmail).toMatchObject({
+      killmailId: '1001',
       zkbUrl: expect.stringContaining('/kill/'),
       iskValue: expect.any(String),
       attackerCharacterIds: expect.arrayContaining([expect.any(String)]),
+      victimAllianceId: '99001234',
     });
   });
 

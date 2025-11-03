@@ -14,16 +14,16 @@ const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
   cursor: z.string().optional(),
   spaceType: SpaceTypeSchema.optional(),
-  systemId: z.coerce.number().int().optional(),
-  allianceId: z.coerce.number().int().optional(),
-  corpId: z.coerce.number().int().optional(),
+  systemId: z.coerce.bigint().optional(),
+  allianceId: z.coerce.bigint().optional(),
+  corpId: z.coerce.bigint().optional(),
   characterId: z.string().optional(),
   since: z.coerce.date().optional(),
   until: z.coerce.date().optional(),
 });
 
-const AllianceParamsSchema = z.object({ id: z.coerce.number().int() });
-const CorpParamsSchema = z.object({ id: z.coerce.number().int() });
+const AllianceParamsSchema = z.object({ id: z.coerce.bigint() });
+const CorpParamsSchema = z.object({ id: z.coerce.bigint() });
 const CharacterParamsSchema = z.object({ id: z.string() });
 const BattleParamsSchema = z.object({ id: z.string() });
 

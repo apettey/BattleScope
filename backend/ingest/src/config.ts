@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const ConfigSchema = z.object({
   pollIntervalMs: z.number().int().min(500).default(5000),
-  redisqUrl: z.string().url().default('https://redisq.zkillboard.com/listen.php'),
+  redisqUrl: z.string().url().default('https://zkillredisq.stream/listen.php'),
   redisqQueueId: z.string().optional(),
   port: z.number().int().min(0).max(65535).default(3002),
 });

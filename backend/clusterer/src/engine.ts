@@ -15,31 +15,29 @@ export interface ClusteringParameters {
 export interface BattlePlan {
   battle: BattleInsert;
   killmailInserts: BattleKillmailInsert[];
-  killmailIds: number[];
+  killmailIds: bigint[];
 }
 
 export interface ClusterResult {
   battles: BattlePlan[];
-  ignoredKillmailIds: number[];
+  ignoredKillmailIds: bigint[];
 }
 
 interface ClusterAccumulator {
-  systemId: number;
+  systemId: bigint;
   killmails: KillmailEventRecord[];
-  allianceIds: Set<number>;
+  allianceIds: Set<bigint>;
 }
 
 const minutesToMs = (minutes: number) => minutes * 60 * 1000;
 
-const getAllianceIds = (killmail: KillmailEventRecord): number[] => {
-  const ids = new Set<number>();
+const getAllianceIds = (killmail: KillmailEventRecord): bigint[] => {
+  const ids = new Set<bigint>();
   if (killmail.victimAllianceId) {
     ids.add(killmail.victimAllianceId);
   }
   for (const id of killmail.attackerAllianceIds ?? []) {
-    if (typeof id === 'number') {
-      ids.add(id);
-    }
+    ids.add(id);
   }
   return Array.from(ids);
 };
@@ -47,7 +45,7 @@ const getAllianceIds = (killmail: KillmailEventRecord): number[] => {
 const sumIsk = (killmails: KillmailEventRecord[]): bigint =>
   killmails.reduce((total, killmail) => total + (killmail.iskValue ?? 0n), 0n);
 
-const toBattlePlan = (systemId: number, killmails: KillmailEventRecord[]): BattlePlan => {
+const toBattlePlan = (systemId: bigint, killmails: KillmailEventRecord[]): BattlePlan => {
   const sorted = [...killmails].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
   const startTime = sorted[0].occurredAt;
   const endTime = sorted[sorted.length - 1].occurredAt;
@@ -59,7 +57,7 @@ const toBattlePlan = (systemId: number, killmails: KillmailEventRecord[]): Battl
     spaceType: deriveSpaceType(systemId),
     startTime,
     endTime,
-    totalKills: sorted.length,
+    totalKills: BigInt(sorted.length),
     totalIskDestroyed: sumIsk(sorted),
     zkillRelatedUrl: buildZKillRelatedUrl(systemId, startTime),
   };
@@ -96,7 +94,7 @@ export class ClusteringEngine {
       return { battles: [], ignoredKillmailIds: [] };
     }
 
-    const grouped = new Map<number, KillmailEventRecord[]>();
+    const grouped = new Map<bigint, KillmailEventRecord[]>();
     for (const killmail of killmails) {
       const group = grouped.get(killmail.systemId) ?? [];
       group.push(killmail);
@@ -104,7 +102,7 @@ export class ClusteringEngine {
     }
 
     const battles: BattlePlan[] = [];
-    const ignoredKillmailIds: number[] = [];
+    const ignoredKillmailIds: bigint[] = [];
 
     for (const [systemId, events] of grouped.entries()) {
       events.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());

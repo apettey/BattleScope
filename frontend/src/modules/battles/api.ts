@@ -10,13 +10,13 @@ const KillmailEnrichmentSchema = z.object({
 });
 
 const KillmailDetailSchema = z.object({
-  killmailId: z.number().int(),
+  killmailId: z.string(),
   occurredAt: z.string(),
-  victimAllianceId: z.number().nullable(),
-  victimCorpId: z.number().nullable(),
+  victimAllianceId: z.string().nullable(),
+  victimCorpId: z.string().nullable(),
   victimCharacterId: z.string().nullable(),
-  attackerAllianceIds: z.array(z.number().int()),
-  attackerCorpIds: z.array(z.number().int()),
+  attackerAllianceIds: z.array(z.string()),
+  attackerCorpIds: z.array(z.string()),
   attackerCharacterIds: z.array(z.string()),
   iskValue: z.string().nullable(),
   zkbUrl: z.string().url(),
@@ -35,11 +35,11 @@ const BattleParticipantSchema = z.object({
 
 export const BattleSummarySchema = z.object({
   id: z.string().uuid(),
-  systemId: z.number().int(),
+  systemId: z.string(),
   spaceType: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  totalKills: z.number().int(),
+  totalKills: z.string(),
   totalIskDestroyed: z.string(),
   zkillRelatedUrl: z.string().url(),
 });
@@ -47,7 +47,15 @@ export const BattleSummarySchema = z.object({
 export const BattleDetailSchema = BattleSummarySchema.extend({
   createdAt: z.string(),
   killmails: z.array(KillmailDetailSchema),
-  participants: z.array(BattleParticipantSchema),
+  participants: z.array(
+    BattleParticipantSchema.extend({
+      characterId: z.string(),
+      allianceId: z.string().nullable(),
+      corpId: z.string().nullable(),
+      shipTypeId: z.string().nullable(),
+      sideId: z.string().nullable(),
+    }),
+  ),
 });
 
 const BattlesListResponseSchema = z.object({

@@ -32,11 +32,6 @@ interface RedisQKillmail {
   } | null;
 }
 
-const uniqueNumberIds = (values: Array<number | null | undefined>): number[] => {
-  const ids = values.filter((value): value is number => typeof value === 'number');
-  return Array.from(new Set(ids));
-};
-
 const uniqueBigIntIds = (values: Array<number | bigint | null | undefined>): bigint[] => {
   const set = new Set<bigint>();
   values.forEach((value) => {
@@ -65,26 +60,24 @@ const toKillmailReference = (payload: RedisQKillmail['package']): KillmailRefere
   }
 
   const victimAllianceId =
-    typeof killmail.victim?.alliance_id === 'number' ? killmail.victim.alliance_id : null;
+    typeof killmail.victim?.alliance_id === 'number' ? BigInt(killmail.victim.alliance_id) : null;
   const victimCorpId =
-    typeof killmail.victim?.corporation_id === 'number' ? killmail.victim.corporation_id : null;
+    typeof killmail.victim?.corporation_id === 'number' ? BigInt(killmail.victim.corporation_id) : null;
   const victimCharacterId =
     typeof killmail.victim?.character_id === 'number' ? BigInt(killmail.victim.character_id) : null;
 
   const attackers = killmail.attackers ?? [];
-  const attackerAllianceIds = uniqueNumberIds(attackers.map((attacker) => attacker.alliance_id));
-  const attackerCorpIds = uniqueNumberIds(attackers.map((attacker) => attacker.corporation_id));
-  const attackerCharacterIds = uniqueBigIntIds(
-    attackers.map((attacker) => attacker.character_id ?? null),
-  );
+  const attackerAllianceIds = uniqueBigIntIds(attackers.map((attacker) => attacker.alliance_id));
+  const attackerCorpIds = uniqueBigIntIds(attackers.map((attacker) => attacker.corporation_id));
+  const attackerCharacterIds = uniqueBigIntIds(attackers.map((attacker) => attacker.character_id));
   const iskValueRaw = zkb?.totalValue ?? null;
   const iskValue = iskValueRaw !== null ? BigInt(Math.round(iskValueRaw)) : null;
 
   const url = zkb?.url ?? `https://zkillboard.com/kill/${killmail.killmail_id}/`;
 
   return {
-    killmailId: killmail.killmail_id ?? payload.killID,
-    systemId: killmail.solar_system_id,
+    killmailId: BigInt(killmail.killmail_id ?? payload.killID),
+    systemId: BigInt(killmail.solar_system_id),
     occurredAt,
     victimAllianceId,
     victimCorpId,

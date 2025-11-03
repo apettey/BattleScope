@@ -5,12 +5,12 @@ import { ClustererService } from '../src/service.js';
 import { createTestDb } from './helpers.js';
 
 const baseReference = {
-  systemId: 30000142,
-  victimAllianceId: 99001234,
-  victimCorpId: 12345,
+  systemId: 30000142n,
+  victimAllianceId: 99001234n,
+  victimCorpId: 12345n,
   victimCharacterId: 555_666_777n,
-  attackerAllianceIds: [99004567],
-  attackerCorpIds: [98765],
+  attackerAllianceIds: [99004567n],
+  attackerCorpIds: [98765n],
   attackerCharacterIds: [222_333_444n],
   iskValue: 100_000_000n,
   zkbUrl: 'https://zkillboard.com/kill/1/',
@@ -36,17 +36,17 @@ describe('ClustererService', () => {
 
   it('clusters killmails into battles meeting minimum size', async () => {
     await killmailRepository.insert({
-      killmailId: 1,
+      killmailId: 1n,
       occurredAt: new Date('2024-05-01T12:00:00Z'),
       fetchedAt: new Date('2024-05-01T12:05:00Z'),
       ...baseReference,
     });
     await killmailRepository.insert({
-      killmailId: 2,
+      killmailId: 2n,
       occurredAt: new Date('2024-05-01T12:04:00Z'),
       fetchedAt: new Date('2024-05-01T12:05:30Z'),
       ...baseReference,
-      attackerAllianceIds: [99002345],
+      attackerAllianceIds: [99002345n],
       zkbUrl: 'https://zkillboard.com/kill/2/',
     });
 
@@ -56,7 +56,7 @@ describe('ClustererService', () => {
 
     const battles = await testDb.db.selectFrom('battles').selectAll().execute();
     expect(battles).toHaveLength(1);
-    expect(battles[0].totalKills).toBe(2);
+    expect(BigInt(battles[0].totalKills)).toBe(2n);
 
     const events = await killmailRepository.fetchUnprocessed();
     expect(events).toHaveLength(0);
@@ -64,7 +64,7 @@ describe('ClustererService', () => {
 
   it('marks killmails below threshold as ignored without creating battles', async () => {
     await killmailRepository.insert({
-      killmailId: 3,
+      killmailId: 3n,
       occurredAt: new Date('2024-05-01T13:00:00Z'),
       fetchedAt: new Date('2024-05-01T13:05:00Z'),
       ...baseReference,

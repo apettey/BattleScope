@@ -28,7 +28,7 @@ export const createEnrichmentQueue = ({
 
 export const enqueueKillmailEnrichment = async (
   queue: Queue<EnrichmentJobData>,
-  killmailId: number,
+  killmailId: bigint,
 ): Promise<void> => {
-  await queue.add('enrich-killmail', { killmailId });
+  await queue.add('enrich-killmail', { killmailId: killmailId.toString() });
 };

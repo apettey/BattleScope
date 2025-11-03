@@ -5,18 +5,18 @@ import type {
   BattleParticipantRecord,
 } from '@battlescope/database';
 
-const formatBigInt = (value: bigint | null): string | null =>
-  value === null ? null : value.toString();
+const formatBigInt = (value: bigint | null | undefined): string | null =>
+  value === null || value === undefined ? null : value.toString();
 
 const formatDate = (value: Date): string => value.toISOString();
 
 export interface BattleSummaryResponse {
   id: string;
-  systemId: number;
+  systemId: string;
   spaceType: string;
   startTime: string;
   endTime: string;
-  totalKills: number;
+  totalKills: string;
   totalIskDestroyed: string;
   zkillRelatedUrl: string;
 }
@@ -24,13 +24,13 @@ export interface BattleSummaryResponse {
 export interface BattleDetailResponse extends BattleSummaryResponse {
   createdAt: string;
   killmails: Array<{
-    killmailId: number;
+    killmailId: string;
     occurredAt: string;
-    victimAllianceId: number | null;
-    victimCorpId: number | null;
+    victimAllianceId: string | null;
+    victimCorpId: string | null;
     victimCharacterId: string | null;
-    attackerAllianceIds: number[];
-    attackerCorpIds: number[];
+    attackerAllianceIds: string[];
+    attackerCorpIds: string[];
     attackerCharacterIds: string[];
     iskValue: string | null;
     zkbUrl: string;
@@ -43,19 +43,27 @@ export interface BattleDetailResponse extends BattleSummaryResponse {
       createdAt: string;
     } | null;
   }>;
-  participants: Array<BattleParticipantRecord>;
+  participants: Array<{
+    battleId: string;
+    characterId: string;
+    allianceId: string | null;
+    corpId: string | null;
+    shipTypeId: string | null;
+    sideId: string | null;
+    isVictim: boolean;
+  }>;
 }
 
 const toKillmailResponse = (killmail: BattleKillmailRecord) => ({
-  killmailId: killmail.killmailId,
+  killmailId: killmail.killmailId.toString(),
   occurredAt: formatDate(killmail.occurredAt),
-  victimAllianceId: killmail.victimAllianceId ?? null,
-  victimCorpId: killmail.victimCorpId ?? null,
-  victimCharacterId: formatBigInt(killmail.victimCharacterId ?? null),
-  attackerAllianceIds: killmail.attackerAllianceIds,
-  attackerCorpIds: killmail.attackerCorpIds ?? [],
+  victimAllianceId: formatBigInt(killmail.victimAllianceId),
+  victimCorpId: formatBigInt(killmail.victimCorpId),
+  victimCharacterId: formatBigInt(killmail.victimCharacterId),
+  attackerAllianceIds: (killmail.attackerAllianceIds ?? []).map((id) => id.toString()),
+  attackerCorpIds: (killmail.attackerCorpIds ?? []).map((id) => id.toString()),
   attackerCharacterIds: (killmail.attackerCharacterIds ?? []).map((id) => id.toString()),
-  iskValue: formatBigInt(killmail.iskValue ?? null),
+  iskValue: formatBigInt(killmail.iskValue),
   zkbUrl: killmail.zkbUrl,
   enrichment: killmail.enrichment
     ? {
@@ -71,11 +79,11 @@ const toKillmailResponse = (killmail: BattleKillmailRecord) => ({
 
 export const toBattleSummaryResponse = (battle: BattleRecord): BattleSummaryResponse => ({
   id: battle.id,
-  systemId: battle.systemId,
+  systemId: battle.systemId.toString(),
   spaceType: battle.spaceType,
   startTime: formatDate(battle.startTime),
   endTime: formatDate(battle.endTime),
-  totalKills: battle.totalKills,
+  totalKills: battle.totalKills.toString(),
   totalIskDestroyed: battle.totalIskDestroyed.toString(),
   zkillRelatedUrl: battle.zkillRelatedUrl,
 });
@@ -84,5 +92,13 @@ export const toBattleDetailResponse = (battle: BattleWithDetails): BattleDetailR
   ...toBattleSummaryResponse(battle),
   createdAt: formatDate(battle.createdAt),
   killmails: battle.killmails.map(toKillmailResponse),
-  participants: battle.participants,
+  participants: battle.participants.map((participant: BattleParticipantRecord) => ({
+    battleId: participant.battleId,
+    characterId: participant.characterId.toString(),
+    allianceId: formatBigInt(participant.allianceId),
+    corpId: formatBigInt(participant.corpId),
+    shipTypeId: formatBigInt(participant.shipTypeId),
+    sideId: formatBigInt(participant.sideId),
+    isVictim: participant.isVictim,
+  })),
 });

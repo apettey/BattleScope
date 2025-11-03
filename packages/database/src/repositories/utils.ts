@@ -14,3 +14,19 @@ export const toBigInt = (value: bigint | number | string | null | undefined): bi
 
   return BigInt(value);
 };
+
+export const serializeBigIntArray = (values: readonly bigint[]): string[] =>
+  values.map((value) => serializeBigIntRequired(value));
+
+export const toBigIntArray = (
+  values: readonly (bigint | number | string | null | undefined)[],
+): bigint[] => {
+  const result: bigint[] = [];
+  for (const value of values) {
+    const bigintValue = toBigInt(value);
+    if (bigintValue !== null) {
+      result.push(bigintValue);
+    }
+  }
+  return result;
+};

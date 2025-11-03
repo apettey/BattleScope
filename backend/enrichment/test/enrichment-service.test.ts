@@ -56,12 +56,12 @@ describe('KillmailEnrichmentService', () => {
       0,
     );
 
-    await service.process(123);
+    await service.process(123n);
 
-    expect(repositoryMocks.upsertPending).toHaveBeenCalledWith(123);
-    expect(repositoryMocks.markProcessing).toHaveBeenCalledWith(123);
+    expect(repositoryMocks.upsertPending).toHaveBeenCalledWith(123n);
+    expect(repositoryMocks.markProcessing).toHaveBeenCalledWith(123n);
     expect(repositoryMocks.markSucceeded).toHaveBeenCalledWith(
-      123,
+      123n,
       { foo: 'bar' },
       expect.any(Date),
     );
@@ -77,9 +77,9 @@ describe('KillmailEnrichmentService', () => {
       0,
     );
 
-    await expect(service.process(999)).rejects.toThrow('rate limit');
+    await expect(service.process(999n)).rejects.toThrow('rate limit');
 
-    expect(repositoryMocks.markFailed).toHaveBeenCalledWith(999, 'rate limit');
+    expect(repositoryMocks.markFailed).toHaveBeenCalledWith(999n, 'rate limit');
     expect(repositoryMocks.markSucceeded).not.toHaveBeenCalled();
   });
 
@@ -103,7 +103,7 @@ describe('KillmailEnrichmentService', () => {
     );
 
     const startTime = Date.now();
-    const promise = service.process(555);
+    const promise = service.process(555n);
     await vi.advanceTimersByTimeAsync(100);
     await promise;
 

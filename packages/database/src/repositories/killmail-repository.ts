@@ -1,7 +1,13 @@
 import type { DatabaseClient } from '../client.js';
 import type { KillmailEventInsert, KillmailEventRecord } from '../types.js';
 import { KillmailEventSchema } from '../types.js';
-import { serializeBigInt, toBigInt } from './utils.js';
+import {
+  serializeBigInt,
+  serializeBigIntArray,
+  serializeBigIntRequired,
+  toBigInt,
+  toBigIntArray,
+} from './utils.js';
 
 const isUniqueViolation = (error: unknown): boolean => {
   if (!error || typeof error !== 'object') {
@@ -30,15 +36,15 @@ export class KillmailRepository {
       await this.db
         .insertInto('killmail_events')
         .values({
-          killmailId: record.killmailId,
-          systemId: record.systemId,
+          killmailId: serializeBigIntRequired(record.killmailId),
+          systemId: serializeBigIntRequired(record.systemId),
           occurredAt: record.occurredAt,
-          victimAllianceId: record.victimAllianceId,
-          victimCorpId: record.victimCorpId,
+          victimAllianceId: serializeBigInt(record.victimAllianceId),
+          victimCorpId: serializeBigInt(record.victimCorpId),
           victimCharacterId: serializeBigInt(record.victimCharacterId),
-          attackerAllianceIds: record.attackerAllianceIds,
-          attackerCorpIds: record.attackerCorpIds,
-          attackerCharacterIds: record.attackerCharacterIds.map((id) => id.toString()),
+          attackerAllianceIds: serializeBigIntArray(record.attackerAllianceIds),
+          attackerCorpIds: serializeBigIntArray(record.attackerCorpIds),
+          attackerCharacterIds: serializeBigIntArray(record.attackerCharacterIds),
           iskValue: serializeBigInt(record.iskValue),
           zkbUrl: record.zkbUrl,
           fetchedAt: record.fetchedAt,
@@ -64,16 +70,20 @@ export class KillmailRepository {
 
     return rows.map((row) => ({
       ...row,
+      killmailId: toBigInt(row.killmailId) ?? 0n,
+      systemId: toBigInt(row.systemId) ?? 0n,
+      victimAllianceId: toBigInt(row.victimAllianceId),
+      victimCorpId: toBigInt(row.victimCorpId),
       victimCharacterId: toBigInt(row.victimCharacterId),
-      attackerCharacterIds: row.attackerCharacterIds
-        .map((value) => toBigInt(value))
-        .filter((value): value is bigint => value !== null),
+      attackerAllianceIds: row.attackerAllianceIds ? toBigIntArray(row.attackerAllianceIds) : [],
+      attackerCorpIds: row.attackerCorpIds ? toBigIntArray(row.attackerCorpIds) : [],
+      attackerCharacterIds: row.attackerCharacterIds ? toBigIntArray(row.attackerCharacterIds) : [],
       iskValue: toBigInt(row.iskValue),
     }));
   }
 
   async markAsProcessed(
-    killmailIds: readonly number[],
+    killmailIds: readonly bigint[],
     battleId: string | null,
     processedAt = new Date(),
   ): Promise<void> {
@@ -87,7 +97,11 @@ export class KillmailRepository {
         battleId,
         processedAt,
       })
-      .where('killmailId', 'in', killmailIds as number[])
+      .where(
+        'killmailId',
+        'in',
+        killmailIds.map((id) => serializeBigIntRequired(id)),
+      )
       .execute();
   }
 }

@@ -9,7 +9,7 @@ export type IngestionResult = 'stored' | 'duplicate' | 'empty';
 const tracer = trace.getTracer('battlescope.ingest.service');
 
 export interface KillmailEnrichmentProducer {
-  enqueue(killmailId: number): Promise<void>;
+  enqueue(killmailId: bigint): Promise<void>;
 }
 
 export class IngestionService {
@@ -50,8 +50,8 @@ export class IngestionService {
           return 'empty';
         }
 
-        span.setAttribute('killmail.id', reference.killmailId);
-        span.setAttribute('killmail.system', reference.systemId);
+        span.setAttribute('killmail.id', Number(reference.killmailId));
+        span.setAttribute('killmail.system', Number(reference.systemId));
 
         const stored = await this.repository.insert(this.toEvent(reference));
         if (stored) {

@@ -18,7 +18,7 @@ Environment variables are validated on startup via Zod; missing required values 
 ## Ingest Service
 
 - `INGEST_POLL_INTERVAL_MS` (default `5000`): Delay between RedisQ polling attempts.
-- `ZKILLBOARD_REDISQ_URL` (default `https://redisq.zkillboard.com/listen.php`)
+- `ZKILLBOARD_REDISQ_URL` (default `https://zkillredisq.stream/listen.php`)
 - `ZKILLBOARD_REDISQ_ID` / `ZKILLBOARD_QUEUE_ID` (optional queue affinity)
 - `PORT` (default `3002`): Health endpoint port when the ingest service runs standalone.
 

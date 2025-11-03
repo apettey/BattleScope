@@ -19,6 +19,7 @@ describe('shared package', () => {
     expect(deriveSpaceType(30000142)).toBe('kspace');
     expect(deriveSpaceType(31000142)).toBe('jspace');
     expect(deriveSpaceType(32000142)).toBe('pochven');
+    expect(deriveSpaceType(30000142n)).toBe('kspace');
   });
 
   it('builds related killboard urls', () => {

@@ -16,21 +16,21 @@ describe('KillmailEnrichmentRepository', () => {
   });
 
   it('upserts pending and success states', async () => {
-    await repository.upsertPending(123);
-    let record = await repository.find(123);
+    await repository.upsertPending(123n);
+    let record = await repository.find(123n);
     expect(record?.status).toBe('pending');
 
     const fetchedAt = new Date('2024-05-01T12:00:00Z');
-    await repository.markSucceeded(123, { value: 'payload' }, fetchedAt);
-    record = await repository.find(123);
+    await repository.markSucceeded(123n, { value: 'payload' }, fetchedAt);
+    record = await repository.find(123n);
     expect(record?.status).toBe('succeeded');
     expect(record?.payload).toEqual({ value: 'payload' });
     expect(record?.fetchedAt?.toISOString()).toBe(fetchedAt.toISOString());
   });
 
   it('marks failures', async () => {
-    await repository.markFailed(999, 'timeout');
-    const record = await repository.find(999);
+    await repository.markFailed(999n, 'timeout');
+    const record = await repository.find(999n);
     expect(record?.status).toBe('failed');
     expect(record?.error).toBe('timeout');
     expect(record?.payload).toBeNull();
@@ -38,15 +38,15 @@ describe('KillmailEnrichmentRepository', () => {
   });
 
   it('lists enrichments by status', async () => {
-    await repository.upsertPending(111);
-    await repository.markProcessing(111);
-    await repository.markSucceeded(222, { foo: 'bar' }, new Date('2024-01-01T00:00:00Z'));
-    await repository.markFailed(333, 'oops');
+    await repository.upsertPending(111n);
+    await repository.markProcessing(111n);
+    await repository.markSucceeded(222n, { foo: 'bar' }, new Date('2024-01-01T00:00:00Z'));
+    await repository.markFailed(333n, 'oops');
 
     const processing = await repository.listByStatus('processing');
-    expect(processing.map((item) => item.killmailId)).toContain(111);
+    expect(processing.map((item) => item.killmailId)).toContain(111n);
 
     const failed = await repository.listByStatus('failed');
-    expect(failed.map((item) => item.killmailId)).toContain(333);
+    expect(failed.map((item) => item.killmailId)).toContain(333n);
   });
 });

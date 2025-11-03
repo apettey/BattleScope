@@ -173,13 +173,13 @@ This enables performant historical and tactical insights while maintaining low s
 ```json
 {
   "battle_id": "BR-31000123-20251103",
-  "system_id": 31000123,
+  "system_id": "31000123",
   "space_type": "jspace",
   "killmails": [
     {
-      "killmail_id": 12457890,
+      "killmail_id": "12457890",
       "zkb_url": "https://zkillboard.com/kill/12457890/",
-      "isk_value": 380000000,
+      "isk_value": "380000000",
       "timestamp": "2025-11-03T18:43:00Z",
       "enrichment": {
         "status": "succeeded",

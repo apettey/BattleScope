@@ -1,15 +1,14 @@
-version: '3.9'
-
 services:
   pnpm-install:
     image: node:20-bullseye
     container_name: battlescope-pnpm-install
     working_dir: /workspace
     command: >
-      bash -lc "corepack enable pnpm && pnpm install"
+      bash -lc "corepack enable pnpm && pnpm install --frozen-lockfile"
     volumes:
       - .:/workspace
-    restart: "no"
+      - node_modules:/workspace/node_modules
+    restart: 'no'
 
   postgres:
     image: postgres:15-alpine
@@ -22,12 +21,36 @@ services:
       - '5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U battlescope -d battlescope']
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     container_name: battlescope-redis
     ports:
       - '6379:6379'
+
+  db-migrate:
+    image: node:20-bullseye
+    container_name: battlescope-db-migrate
+    working_dir: /workspace
+    command: >
+      bash -lc "corepack enable pnpm &&
+      pnpm run db:migrate"
+    environment:
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+    restart: 'no'
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+    depends_on:
+      pnpm-install:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
 
   api:
     image: node:20-bullseye
@@ -38,6 +61,7 @@ services:
       pnpm --filter @battlescope/api dev"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
       HOST: 0.0.0.0
@@ -45,13 +69,14 @@ services:
       LOG_LEVEL: info
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     ports:
       - '3000:3000'
     depends_on:
       pnpm-install:
         condition: service_completed_successfully
-      postgres:
-        condition: service_started
+      db-migrate:
+        condition: service_completed_successfully
 
   ingest:
     image: node:20-bullseye
@@ -62,21 +87,25 @@ services:
       pnpm --filter @battlescope/ingest dev"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
-      ZKILLBOARD_REDISQ_URL: https://redisq.zkillboard.com/listen.php
+      ZKILLBOARD_REDISQ_URL: https://zkillredisq.stream/listen.php
       ZKILLBOARD_REDISQ_ID: battlescope-local
       PORT: 3002
       LOG_LEVEL: info
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     ports:
       - '3002:3002'
     depends_on:
       pnpm-install:
         condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
 
@@ -89,18 +118,22 @@ services:
       pnpm --filter @battlescope/clusterer dev"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       PORT: 3003
       LOG_LEVEL: info
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     ports:
       - '3003:3003'
     depends_on:
       pnpm-install:
         condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
       postgres:
-        condition: service_started
+        condition: service_healthy
 
   enrichment:
     image: node:20-bullseye
@@ -111,6 +144,7 @@ services:
       pnpm --filter @battlescope/enrichment dev"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       REDIS_URL: redis://redis:6379/0
       HOST: 0.0.0.0
@@ -118,13 +152,16 @@ services:
       LOG_LEVEL: info
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     ports:
       - '3004:3004'
     depends_on:
       pnpm-install:
         condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
 
@@ -137,14 +174,18 @@ services:
       pnpm --filter @battlescope/scheduler dev"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       LOG_LEVEL: info
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     depends_on:
       pnpm-install:
         condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
       postgres:
-        condition: service_started
+        condition: service_healthy
 
   frontend:
     image: node:20-bullseye
@@ -155,16 +196,21 @@ services:
       pnpm --filter @battlescope/frontend dev -- --host 0.0.0.0 --port 3001"
     environment:
       NODE_ENV: development
+      HOSTNAME: localhost
       VITE_API_BASE_URL: http://api:3000
     volumes:
       - .:/workspace
+      - node_modules:/workspace/node_modules
     ports:
       - '3001:3001'
     depends_on:
       pnpm-install:
+        condition: service_completed_successfully
+      db-migrate:
         condition: service_completed_successfully
       api:
         condition: service_started
 
 volumes:
   postgres-data:
+  node_modules:

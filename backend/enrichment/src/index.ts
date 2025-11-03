@@ -8,7 +8,7 @@ export type { EnrichmentJobData } from './queue.js';
 import { createDb, KillmailEnrichmentRepository } from '@battlescope/database';
 import { Redis as IORedis } from 'ioredis';
 import { QueueEvents, Worker } from 'bullmq';
-import { pino } from 'pino';
+import pino from 'pino';
 import { loadConfig } from './config.js';
 import { KillmailEnrichmentService, ZKillboardSource } from './enrichment-service.js';
 import { createHealthServer } from './health.js';
@@ -33,8 +33,9 @@ export const start = async (): Promise<void> => {
     ENRICHMENT_QUEUE_NAME,
     async (job) => {
       const { killmailId } = job.data;
-      logger.debug({ killmailId, jobId: job.id }, 'Processing enrichment job');
-      await service.process(killmailId);
+      const killmailBigInt = BigInt(killmailId);
+      logger.debug({ killmailId: killmailBigInt.toString(), jobId: job.id }, 'Processing enrichment job');
+      await service.process(killmailBigInt);
     },
     {
       connection: new IORedis(config.redisUrl, { connectionName: 'enrichment-worker' }),

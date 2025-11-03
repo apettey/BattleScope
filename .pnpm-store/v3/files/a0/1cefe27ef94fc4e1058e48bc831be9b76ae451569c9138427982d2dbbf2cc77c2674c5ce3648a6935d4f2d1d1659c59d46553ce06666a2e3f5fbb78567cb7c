@@ -1,0 +1,23 @@
+{
+  "name": "@unrs/resolver-binding-win32-ia32-msvc",
+  "version": "1.11.1",
+  "cpu": [
+    "ia32"
+  ],
+  "main": "resolver.win32-ia32-msvc.node",
+  "files": [
+    "resolver.win32-ia32-msvc.node"
+  ],
+  "description": "UnRS Resolver Node API with PNP support",
+  "author": "JounQin <admin@1stg.me> (https://www.1stG.me)",
+  "homepage": "https://github.com/unrs/unrs-resolver#readme",
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": "git+https://github.com/unrs/unrs-resolver.git",
+  "os": [
+    "win32"
+  ]
+}

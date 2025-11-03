@@ -3,11 +3,11 @@ import type { SpaceType } from '@battlescope/shared';
 
 export interface BattlesTable {
   id: string;
-  systemId: number;
+  systemId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   spaceType: SpaceType;
   startTime: ColumnType<Date, Date, Date>;
   endTime: ColumnType<Date, Date, Date>;
-  totalKills: number;
+  totalKills: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   totalIskDestroyed: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   zkillRelatedUrl: string;
   createdAt: ColumnType<Date, Date | undefined, never>;
@@ -15,42 +15,54 @@ export interface BattlesTable {
 
 export interface BattleKillmailsTable {
   battleId: string;
-  killmailId: number;
+  killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   zkbUrl: string;
   occurredAt: ColumnType<Date, Date, Date>;
-  victimAllianceId: number | null;
-  attackerAllianceIds: number[];
+  victimAllianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  attackerAllianceIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
   iskValue: ColumnType<
     bigint | null,
     string | number | bigint | null,
     string | number | bigint | null
   >;
-  sideId: number | null;
+  sideId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
 }
 
 export interface BattleParticipantsTable {
   battleId: string;
-  characterId: number;
-  allianceId: number | null;
-  corpId: number | null;
-  shipTypeId: number | null;
-  sideId: number | null;
+  characterId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  allianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  corpId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  shipTypeId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  sideId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
   isVictim: ColumnType<boolean, boolean, boolean>;
 }
 
 export interface KillmailEventsTable {
-  killmailId: number;
-  systemId: number;
+  killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  systemId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   occurredAt: ColumnType<Date, Date, Date>;
-  victimAllianceId: number | null;
-  victimCorpId: number | null;
+  victimAllianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  victimCorpId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
   victimCharacterId: ColumnType<
     bigint | null,
     string | number | bigint | null,
     string | number | bigint | null
   >;
-  attackerAllianceIds: number[];
-  attackerCorpIds: number[];
+  attackerAllianceIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
+  attackerCorpIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
   attackerCharacterIds: ColumnType<
     bigint[],
     (string | number | bigint)[],
@@ -68,7 +80,7 @@ export interface KillmailEventsTable {
 }
 
 export interface KillmailEnrichmentsTable {
-  killmailId: number;
+  killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   status: string;
   payload: ColumnType<
     Record<string, unknown> | null,

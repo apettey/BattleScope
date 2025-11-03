@@ -4,7 +4,7 @@ import type { KillmailEnrichmentRepository } from '@battlescope/database';
 const tracer = trace.getTracer('battlescope.enrichment');
 
 export interface KillmailEnrichmentSource {
-  fetchKillmail(killmailId: number): Promise<Record<string, unknown>>;
+  fetchKillmail(killmailId: bigint): Promise<Record<string, unknown>>;
 }
 
 export class ZKillboardSource implements KillmailEnrichmentSource {
@@ -12,8 +12,8 @@ export class ZKillboardSource implements KillmailEnrichmentSource {
     private readonly userAgent = 'BattleScope-Enrichment/1.0 (+https://battlescope.app)',
   ) {}
 
-  async fetchKillmail(killmailId: number): Promise<Record<string, unknown>> {
-    const response = await fetch(`https://zkillboard.com/api/killID/${killmailId}/`, {
+  async fetchKillmail(killmailId: bigint): Promise<Record<string, unknown>> {
+    const response = await fetch(`https://zkillboard.com/api/killID/${killmailId.toString()}/`, {
       headers: {
         'User-Agent': this.userAgent,
         Accept: 'application/json',
@@ -47,11 +47,11 @@ export class KillmailEnrichmentService {
     await new Promise((resolve) => setTimeout(resolve, this.throttleMs));
   }
 
-  async process(killmailId: number): Promise<void> {
+  async process(killmailId: bigint): Promise<void> {
     await this.repository.upsertPending(killmailId);
 
     await tracer.startActiveSpan('enrich.killmail', async (span) => {
-      span.setAttribute('killmail.id', killmailId);
+      span.setAttribute('killmail.id', Number(killmailId));
       try {
         await this.repository.markProcessing(killmailId);
         await this.throttle();

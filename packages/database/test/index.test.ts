@@ -22,11 +22,11 @@ describe('BattleRepository', () => {
   it('creates battles with typed validation', async () => {
     const battle = await repository.createBattle({
       id: battleId,
-      systemId: 31000123,
+      systemId: 31000123n,
       spaceType: 'jspace',
       startTime: new Date('2024-05-01T12:00:00Z'),
       endTime: new Date('2024-05-01T12:15:00Z'),
-      totalKills: 4,
+      totalKills: 4n,
       totalIskDestroyed: 1_500_000_000n,
       zkillRelatedUrl: 'https://zkillboard.com/related/31000123/202405011200/',
     });
@@ -40,13 +40,13 @@ describe('BattleRepository', () => {
     await repository.upsertKillmails([
       {
         battleId,
-        killmailId: 9001,
+        killmailId: 9001n,
         zkbUrl: 'https://zkillboard.com/kill/9001/',
         occurredAt: new Date('2024-05-01T12:01:00Z'),
-        victimAllianceId: 99001234,
-        attackerAllianceIds: [99004567, 99002345],
+        victimAllianceId: 99001234n,
+        attackerAllianceIds: [99004567n, 99002345n],
         iskValue: 500_000_000n,
-        sideId: 0,
+        sideId: 0n,
       },
     ]);
 
@@ -54,19 +54,19 @@ describe('BattleRepository', () => {
     await repository.upsertKillmails([
       {
         battleId,
-        killmailId: 9001,
+        killmailId: 9001n,
         zkbUrl: 'https://zkillboard.com/kill/9001/',
         occurredAt: new Date('2024-05-01T12:01:00Z'),
-        victimAllianceId: 99001234,
-        attackerAllianceIds: [99004567, 99002345],
+        victimAllianceId: 99001234n,
+        attackerAllianceIds: [99004567n, 99002345n],
         iskValue: 500_000_000n,
-        sideId: 1,
+        sideId: 1n,
       },
     ]);
 
     const battle = await repository.getBattleById(battleId);
     expect(battle?.killmails).toHaveLength(1);
-    expect(battle?.killmails[0].sideId).toBe(1);
+    expect(battle?.killmails[0].sideId).toBe(1n);
     expect(battle?.killmails[0].iskValue).toBe(500_000_000n);
   });
 
@@ -74,11 +74,11 @@ describe('BattleRepository', () => {
     await repository.upsertParticipants([
       {
         battleId,
-        characterId: 123,
-        allianceId: 99004567,
-        corpId: 12345,
-        shipTypeId: 456,
-        sideId: 0,
+        characterId: 123n,
+        allianceId: 99004567n,
+        corpId: 12345n,
+        shipTypeId: 456n,
+        sideId: 0n,
         isVictim: false,
       },
     ]);
@@ -86,18 +86,18 @@ describe('BattleRepository', () => {
     await repository.upsertParticipants([
       {
         battleId,
-        characterId: 123,
-        allianceId: 99004567,
-        corpId: 12345,
-        shipTypeId: 456,
-        sideId: 1,
+        characterId: 123n,
+        allianceId: 99004567n,
+        corpId: 12345n,
+        shipTypeId: 456n,
+        sideId: 1n,
         isVictim: true,
       },
     ]);
 
     const battle = await repository.getBattleById(battleId);
     expect(battle?.participants).toHaveLength(1);
-    expect(battle?.participants[0].sideId).toBe(1);
+    expect(battle?.participants[0].sideId).toBe(1n);
     expect(battle?.participants[0].isVictim).toBe(true);
   });
 });
