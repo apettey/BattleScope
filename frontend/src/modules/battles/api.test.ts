@@ -52,14 +52,12 @@ const sampleDetail = {
 
 describe('battles api', () => {
   it('parses battle list responses', async () => {
-    const fetchFn = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ items: [sampleSummary], nextCursor: 'cursor-1' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [sampleSummary], nextCursor: 'cursor-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
 
     const result = await fetchBattles({ fetchFn });
     expect(result.nextCursor).toBe('cursor-1');
