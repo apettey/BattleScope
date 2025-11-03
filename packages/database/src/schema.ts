@@ -1,6 +1,5 @@
 import type { ColumnType } from 'kysely';
-
-export type SpaceType = 'kspace' | 'jspace' | 'pochven';
+import type { SpaceType } from '@battlescope/shared';
 
 export interface BattlesTable {
   id: string;
@@ -39,8 +38,26 @@ export interface BattleParticipantsTable {
   isVictim: ColumnType<boolean, boolean, boolean>;
 }
 
+export interface KillmailEventsTable {
+  killmailId: number;
+  systemId: number;
+  occurredAt: ColumnType<Date, Date, Date>;
+  victimAllianceId: number | null;
+  attackerAllianceIds: number[];
+  iskValue: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  zkbUrl: string;
+  fetchedAt: ColumnType<Date, Date | undefined, never>;
+  processedAt: ColumnType<Date | null, Date | null, Date | null>;
+  battleId: string | null;
+}
+
 export interface Database {
   battles: BattlesTable;
   battle_killmails: BattleKillmailsTable;
   battle_participants: BattleParticipantsTable;
+  killmail_events: KillmailEventsTable;
 }

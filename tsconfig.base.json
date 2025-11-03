@@ -14,6 +14,12 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@battlescope/shared": ["packages/shared/src/index.ts"],
+      "@battlescope/database": ["packages/database/src/index.ts"],
+      "@battlescope/database/testing": ["packages/database/src/testing.ts"]
+    }
   }
 }

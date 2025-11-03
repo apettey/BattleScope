@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SpaceType } from './schema';
+import type { SpaceType } from '@battlescope/shared';
 
 export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
 
@@ -69,6 +69,32 @@ export interface BattleParticipantRecord {
 export interface BattleWithDetails extends BattleRecord {
   killmails: BattleKillmailRecord[];
   participants: BattleParticipantRecord[];
+}
+
+export const KillmailEventSchema = z.object({
+  killmailId: z.number().int().nonnegative(),
+  systemId: z.number().int().nonnegative(),
+  occurredAt: z.coerce.date(),
+  victimAllianceId: z.number().int().nonnegative().nullable(),
+  attackerAllianceIds: z.array(z.number().int().nonnegative()),
+  iskValue: z.bigint().nonnegative().nullable(),
+  zkbUrl: z.string().url(),
+  fetchedAt: z.coerce.date().optional(),
+});
+
+export type KillmailEventInsert = z.infer<typeof KillmailEventSchema>;
+
+export interface KillmailEventRecord {
+  killmailId: number;
+  systemId: number;
+  occurredAt: Date;
+  victimAllianceId: number | null;
+  attackerAllianceIds: number[];
+  iskValue: bigint | null;
+  zkbUrl: string;
+  fetchedAt: Date;
+  processedAt: Date | null;
+  battleId: string | null;
 }
 
 export type { SpaceType };

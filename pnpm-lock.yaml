@@ -84,9 +84,18 @@ importers:
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
+      fastify:
+        specifier: ^4.26.2
+        version: 4.29.1
       pino:
         specifier: ^8.17.0
         version: 8.21.0
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       tsx:
         specifier: ^4.7.0
@@ -116,9 +125,18 @@ importers:
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
+      fastify:
+        specifier: ^4.26.2
+        version: 4.29.1
       pino:
         specifier: ^8.17.0
         version: 8.21.0
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       tsx:
         specifier: ^4.7.0
@@ -185,6 +203,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@battlescope/shared':
+        specifier: workspace:*
+        version: link:../shared
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -1157,6 +1178,11 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
     dev: true
+
+  /@opentelemetry/api@1.9.0:
+    resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
+    engines: {node: '>=8.0.0'}
+    dev: false
 
   /@pinojs/redact@0.4.0:
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}

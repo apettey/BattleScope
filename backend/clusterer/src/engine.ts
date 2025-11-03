@@ -1,0 +1,162 @@
+import type {
+  BattleInsert,
+  BattleKillmailInsert,
+  KillmailEventRecord,
+} from '@battlescope/database';
+import { buildZKillRelatedUrl, deriveSpaceType } from '@battlescope/shared';
+import { randomUUID } from 'crypto';
+
+export interface ClusteringParameters {
+  windowMinutes: number;
+  gapMaxMinutes: number;
+  minKills: number;
+}
+
+export interface BattlePlan {
+  battle: BattleInsert;
+  killmailInserts: BattleKillmailInsert[];
+  killmailIds: number[];
+}
+
+export interface ClusterResult {
+  battles: BattlePlan[];
+  ignoredKillmailIds: number[];
+}
+
+interface ClusterAccumulator {
+  systemId: number;
+  killmails: KillmailEventRecord[];
+  allianceIds: Set<number>;
+}
+
+const minutesToMs = (minutes: number) => minutes * 60 * 1000;
+
+const getAllianceIds = (killmail: KillmailEventRecord): number[] => {
+  const ids = new Set<number>();
+  if (killmail.victimAllianceId) {
+    ids.add(killmail.victimAllianceId);
+  }
+  for (const id of killmail.attackerAllianceIds ?? []) {
+    if (typeof id === 'number') {
+      ids.add(id);
+    }
+  }
+  return Array.from(ids);
+};
+
+const sumIsk = (killmails: KillmailEventRecord[]): bigint =>
+  killmails.reduce((total, killmail) => total + (killmail.iskValue ?? 0n), 0n);
+
+const toBattlePlan = (systemId: number, killmails: KillmailEventRecord[]): BattlePlan => {
+  const sorted = [...killmails].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+  const startTime = sorted[0].occurredAt;
+  const endTime = sorted[sorted.length - 1].occurredAt;
+  const battleId = randomUUID();
+
+  const battle: BattleInsert = {
+    id: battleId,
+    systemId,
+    spaceType: deriveSpaceType(systemId),
+    startTime,
+    endTime,
+    totalKills: sorted.length,
+    totalIskDestroyed: sumIsk(sorted),
+    zkillRelatedUrl: buildZKillRelatedUrl(systemId, startTime),
+  };
+
+  const killmailInserts: BattleKillmailInsert[] = sorted.map((killmail) => ({
+    battleId,
+    killmailId: killmail.killmailId,
+    zkbUrl: killmail.zkbUrl,
+    occurredAt: killmail.occurredAt,
+    victimAllianceId: killmail.victimAllianceId,
+    attackerAllianceIds: killmail.attackerAllianceIds,
+    iskValue: killmail.iskValue,
+    sideId: null,
+  }));
+
+  return {
+    battle,
+    killmailInserts,
+    killmailIds: killmails.map((km) => km.killmailId),
+  };
+};
+
+export class ClusteringEngine {
+  private readonly windowMs: number;
+  private readonly gapMs: number;
+
+  constructor(private readonly params: ClusteringParameters) {
+    this.windowMs = minutesToMs(params.windowMinutes);
+    this.gapMs = minutesToMs(params.gapMaxMinutes);
+  }
+
+  cluster(killmails: KillmailEventRecord[]): ClusterResult {
+    if (killmails.length === 0) {
+      return { battles: [], ignoredKillmailIds: [] };
+    }
+
+    const grouped = new Map<number, KillmailEventRecord[]>();
+    for (const killmail of killmails) {
+      const group = grouped.get(killmail.systemId) ?? [];
+      group.push(killmail);
+      grouped.set(killmail.systemId, group);
+    }
+
+    const battles: BattlePlan[] = [];
+    const ignoredKillmailIds: number[] = [];
+
+    for (const [systemId, events] of grouped.entries()) {
+      events.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+      let cluster: ClusterAccumulator | undefined;
+
+      const flushCluster = () => {
+        if (!cluster) {
+          return;
+        }
+        if (cluster.killmails.length >= this.params.minKills) {
+          battles.push(toBattlePlan(systemId, cluster.killmails));
+        } else {
+          ignoredKillmailIds.push(...cluster.killmails.map((km) => km.killmailId));
+        }
+        cluster = undefined;
+      };
+
+      for (const killmail of events) {
+        if (!cluster) {
+          cluster = {
+            systemId,
+            killmails: [killmail],
+            allianceIds: new Set(getAllianceIds(killmail)),
+          };
+          continue;
+        }
+
+        const last = cluster.killmails[cluster.killmails.length - 1];
+        const gap = killmail.occurredAt.getTime() - last.occurredAt.getTime();
+        const window = killmail.occurredAt.getTime() - cluster.killmails[0].occurredAt.getTime();
+        const alliances = getAllianceIds(killmail);
+        const correlated = alliances.some((id) => cluster!.allianceIds.has(id));
+
+        const contiguous = gap <= this.gapMs;
+        const withinWindow = window <= this.windowMs;
+
+        if ((contiguous || correlated) && withinWindow) {
+          cluster.killmails.push(killmail);
+          alliances.forEach((id) => cluster!.allianceIds.add(id));
+        } else {
+          flushCluster();
+          cluster = {
+            systemId,
+            killmails: [killmail],
+            allianceIds: new Set(alliances),
+          };
+        }
+      }
+
+      flushCluster();
+    }
+
+    return { battles, ignoredKillmailIds };
+  }
+}

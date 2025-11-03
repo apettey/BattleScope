@@ -14,6 +14,7 @@
     "migrate:make": "tsx scripts/migrate-make.ts"
   },
   "dependencies": {
+    "@battlescope/shared": "workspace:*",
     "dotenv": "^16.4.5",
     "kysely": "^0.27.2",
     "pg": "^8.11.5",

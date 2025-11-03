@@ -11,21 +11,7 @@ import {
   BattleKillmailInsertSchema,
   BattleParticipantInsertSchema,
 } from '../types';
-
-const serializeBigInt = (value: bigint | null | undefined): string | null =>
-  value === undefined || value === null ? null : value.toString();
-
-const toBigInt = (value: bigint | number | string | null | undefined): bigint | null => {
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  if (typeof value === 'bigint') {
-    return value;
-  }
-
-  return BigInt(value);
-};
+import { serializeBigInt, toBigInt } from './utils';
 
 export class BattleRepository {
   constructor(private readonly db: DatabaseClient) {}

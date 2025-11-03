@@ -11,6 +11,22 @@ The persistence layer relies on PostgreSQL 15. Configure one of the following en
   - `POSTGRES_DB` (required)
   - `POSTGRES_USER` (required)
   - `POSTGRES_PASSWORD` (optional if peer auth is enabled)
-  - `POSTGRES_SSL` (`true` / `false`, default `false`)
+- `POSTGRES_SSL` (`true` / `false`, default `false`)
 
 Environment variables are validated on startup via Zod; missing required values will prevent services from booting. Apply migrations with `pnpm db:migrate` after updating configuration.
+
+## Ingest Service
+
+- `INGEST_POLL_INTERVAL_MS` (default `5000`): Delay between RedisQ polling attempts.
+- `ZKILLBOARD_REDISQ_URL` (default `https://redisq.zkillboard.com/listen.php`)
+- `ZKILLBOARD_REDISQ_ID` / `ZKILLBOARD_QUEUE_ID` (optional queue affinity)
+- `PORT` (default `3002`): Health endpoint port when the ingest service runs standalone.
+
+## Clusterer Service
+
+- `CLUSTER_WINDOW_MINUTES` (default `30`)
+- `CLUSTER_GAP_MAX_MINUTES` (default `15`)
+- `CLUSTER_MIN_KILLS` (default `2`)
+- `CLUSTER_BATCH_SIZE` (default `500`)
+- `CLUSTER_INTERVAL_MS` (default `10000`)
+- `PORT` (default `3003`): Health endpoint port when the clusterer service runs standalone.

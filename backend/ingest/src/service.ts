@@ -1,0 +1,81 @@
+import type { KillmailRepository, KillmailEventInsert } from '@battlescope/database';
+import type { KillmailReference } from '@battlescope/shared';
+import { trace } from '@opentelemetry/api';
+import pino from 'pino';
+import type { KillmailSource } from './source';
+
+export type IngestionResult = 'stored' | 'duplicate' | 'empty';
+
+const tracer = trace.getTracer('battlescope.ingest.service');
+
+export class IngestionService {
+  private readonly logger = pino({
+    name: 'ingest-service',
+    level: process.env.LOG_LEVEL ?? 'info',
+  });
+
+  constructor(
+    private readonly repository: KillmailRepository,
+    private readonly source: KillmailSource,
+  ) {}
+
+  private toEvent(reference: KillmailReference): KillmailEventInsert {
+    return {
+      killmailId: reference.killmailId,
+      systemId: reference.systemId,
+      occurredAt: reference.occurredAt,
+      victimAllianceId: reference.victimAllianceId,
+      attackerAllianceIds: reference.attackerAllianceIds,
+      iskValue: reference.iskValue,
+      zkbUrl: reference.zkbUrl,
+      fetchedAt: new Date(),
+    } satisfies KillmailEventInsert;
+  }
+
+  async processNext(): Promise<IngestionResult> {
+    return tracer.startActiveSpan('ingest.process', async (span) => {
+      try {
+        const reference = await this.source.pull();
+        if (!reference) {
+          span.addEvent('no-killmail');
+          return 'empty';
+        }
+
+        span.setAttribute('killmail.id', reference.killmailId);
+        span.setAttribute('killmail.system', reference.systemId);
+
+        const stored = await this.repository.insert(this.toEvent(reference));
+        if (stored) {
+          this.logger.info({ killmailId: reference.killmailId }, 'Stored killmail reference');
+          span.addEvent('stored');
+          return 'stored';
+        }
+
+        span.addEvent('duplicate');
+        return 'duplicate';
+      } catch (error) {
+        this.logger.error({ err: error }, 'Failed to process killmail');
+        span.recordException(error as Error);
+        span.setStatus({ code: 2, message: (error as Error).message });
+        throw error;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  async runForever(intervalMs: number, signal?: AbortSignal): Promise<void> {
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    while (!signal?.aborted) {
+      try {
+        await this.processNext();
+      } catch (error) {
+        this.logger.error({ err: error }, 'Error during ingestion loop');
+      }
+      await sleep(intervalMs);
+    }
+
+    this.logger.info('Ingestion loop stopped');
+  }
+}
