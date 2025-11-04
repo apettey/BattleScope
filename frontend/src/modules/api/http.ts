@@ -30,7 +30,7 @@ export const buildUrl = (
       return;
     }
 
-    if (value !== '') {
+    if (typeof value === 'string' && value !== '') {
       url.searchParams.set(key, value);
     }
   });

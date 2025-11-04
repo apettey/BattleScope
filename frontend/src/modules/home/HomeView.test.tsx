@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import { HomeView } from './HomeView.js';
 
 vi.mock('../dashboard/api', () => ({
@@ -8,14 +8,15 @@ vi.mock('../dashboard/api', () => ({
 }));
 
 import { fetchDashboardSummary } from '../dashboard/api.js';
+const fetchDashboardSummaryMock = vi.mocked(fetchDashboardSummary);
 
 describe('HomeView', () => {
   beforeEach(() => {
-    fetchDashboardSummary.mockReset();
+    fetchDashboardSummaryMock.mockReset();
   });
 
   it('renders summary metrics', async () => {
-    fetchDashboardSummary.mockResolvedValue({
+    fetchDashboardSummaryMock.mockResolvedValue({
       totalBattles: 42,
       totalKillmails: 100,
       uniqueAlliances: 10,
@@ -30,11 +31,11 @@ describe('HomeView', () => {
     expect(await screen.findByText(/Total Battles/)).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText(/Alliance 99001234/)).toBeInTheDocument();
-    expect(fetchDashboardSummary).toHaveBeenCalledTimes(1);
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1);
   });
 
   it('triggers manual refresh', async () => {
-    fetchDashboardSummary.mockResolvedValueOnce({
+    fetchDashboardSummaryMock.mockResolvedValueOnce({
       totalBattles: 1,
       totalKillmails: 1,
       uniqueAlliances: 1,
@@ -43,7 +44,7 @@ describe('HomeView', () => {
       topCorporations: [],
       generatedAt: '2024-05-01T12:00:00.000Z',
     });
-    fetchDashboardSummary.mockResolvedValueOnce({
+    fetchDashboardSummaryMock.mockResolvedValueOnce({
       totalBattles: 2,
       totalKillmails: 3,
       uniqueAlliances: 1,
@@ -57,8 +58,9 @@ describe('HomeView', () => {
 
     const refreshButton = await screen.findByRole('button', { name: /refresh now/i });
 
-    await userEvent.click(refreshButton);
+    const user = userEvent.setup();
+    await user.click(refreshButton);
 
-    expect(fetchDashboardSummary).toHaveBeenCalledTimes(2);
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(2);
   });
 });

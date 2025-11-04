@@ -133,7 +133,7 @@ export interface RulesetsTable {
   ignoreUnlisted: ColumnType<boolean, boolean | undefined, boolean>;
   updatedBy: string | null;
   createdAt: ColumnType<Date, Date | undefined, never>;
-  updatedAt: ColumnType<Date, Date | undefined, never>;
+  updatedAt: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
 export interface Database {

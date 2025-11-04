@@ -9,6 +9,7 @@ import {
   DashboardRepository,
   createInMemoryDatabase,
 } from '@battlescope/database';
+import type { KillmailEventInsert } from '@battlescope/database';
 import { buildServer } from '../src/server.js';
 import type { ApiConfig } from '../src/config.js';
 
@@ -16,22 +17,10 @@ const createBattle = async (
   battleRepository: BattleRepository,
   killmailRepository: KillmailRepository,
   battleId: string,
-  killmailBase: {
-    killmailId: number;
-    systemId: number;
-    occurredAt: Date;
-    victimAllianceId: number | null;
-    victimCorpId: number | null;
-    victimCharacterId: bigint | null;
-    attackerAllianceIds: number[];
-    attackerCorpIds: number[];
-    attackerCharacterIds: bigint[];
-    iskValue: bigint | null;
-    zkbUrl: string;
-  },
-  overrides?: Partial<typeof killmailBase>,
+  killmailBase: KillmailEventInsert,
+  overrides?: Partial<KillmailEventInsert>,
 ) => {
-  const killmail = { ...killmailBase, ...overrides };
+  const killmail: KillmailEventInsert = { ...killmailBase, ...overrides };
   await killmailRepository.insert(killmail);
 
   await battleRepository.createBattle({
@@ -40,7 +29,7 @@ const createBattle = async (
     spaceType: 'jspace',
     startTime: killmail.occurredAt,
     endTime: new Date(killmail.occurredAt.getTime() + 5 * 60 * 1000),
-    totalKills: 1,
+    totalKills: 1n,
     totalIskDestroyed: killmail.iskValue ?? 0n,
     zkillRelatedUrl: `https://zkillboard.com/related/${killmail.systemId}/${killmail.occurredAt
       .toISOString()
@@ -128,11 +117,11 @@ describe('API routes', () => {
 
     await battleRepository.createBattle({
       id: secondBattleId,
-      systemId: 30000111,
+      systemId: 30000111n,
       spaceType: 'kspace',
       startTime: new Date('2024-05-02T15:00:00Z'),
       endTime: new Date('2024-05-02T15:10:00Z'),
-      totalKills: 1,
+      totalKills: 1n,
       totalIskDestroyed: 125_000_000n,
       zkillRelatedUrl: 'https://zkillboard.com/related/30000111/202405021500/',
     });
@@ -150,8 +139,8 @@ describe('API routes', () => {
       },
     ]);
 
-    await killmailRepository.markAsProcessed([2001], secondBattleId);
-    await enrichmentRepository.markFailed(2001, 'timeout');
+    await killmailRepository.markAsProcessed([2001n], secondBattleId);
+    await enrichmentRepository.markFailed(2001n, 'timeout');
 
     app = buildServer({
       battleRepository,

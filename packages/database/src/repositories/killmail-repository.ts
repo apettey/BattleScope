@@ -160,25 +160,21 @@ export class KillmailRepository {
         battleId,
         processedAt,
       })
-      .where(
-        'killmailId',
-        'in',
-        killmailIds.map((id) => serializeBigIntRequired(id)),
-      )
+      .where('killmailId', 'in', killmailIds)
       .execute();
   }
 
   private toFeedItem(row: {
-    killmailId: unknown;
-    systemId: unknown;
+    killmailId: bigint | number | string | null | undefined;
+    systemId: bigint | number | string | null | undefined;
     occurredAt: Date;
-    victimAllianceId: unknown;
-    victimCorpId: unknown;
-    victimCharacterId: unknown;
+    victimAllianceId: bigint | number | string | null | undefined;
+    victimCorpId: bigint | number | string | null | undefined;
+    victimCharacterId: bigint | number | string | null | undefined;
     attackerAllianceIds: readonly (bigint | number | string | null | undefined)[] | null;
     attackerCorpIds: readonly (bigint | number | string | null | undefined)[] | null;
     attackerCharacterIds: readonly (bigint | number | string | null | undefined)[] | null;
-    iskValue: unknown;
+    iskValue: bigint | number | string | null | undefined;
     zkbUrl: string;
     battleId: string | null;
   }): KillmailFeedItem {
@@ -271,6 +267,7 @@ export class KillmailRepository {
 
   async fetchFeedSince(options: FeedSinceOptions): Promise<KillmailFeedItem[]> {
     const limit = options.limit;
+    const { after, since } = options;
     let query = this.db
       .selectFrom('killmail_events')
       .select([
@@ -288,18 +285,18 @@ export class KillmailRepository {
         'battleId',
       ]);
 
-    if (options.after) {
+    if (after) {
       query = query.where((eb) =>
         eb.or([
-          eb('occurredAt', '>', options.after.occurredAt),
+          eb('occurredAt', '>', after.occurredAt),
           eb.and([
-            eb('occurredAt', '=', options.after.occurredAt),
-            eb('killmailId', '>', serializeBigIntRequired(options.after.killmailId)),
+            eb('occurredAt', '=', after.occurredAt),
+            eb('killmailId', '>', after.killmailId),
           ]),
         ]),
       );
-    } else if (options.since) {
-      query = query.where('occurredAt', '>', options.since);
+    } else if (since) {
+      query = query.where('occurredAt', '>', since);
     }
 
     const rows = await query

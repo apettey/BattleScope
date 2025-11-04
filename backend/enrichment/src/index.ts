@@ -8,7 +8,7 @@ export type { EnrichmentJobData } from './queue.js';
 import { createDb, KillmailEnrichmentRepository } from '@battlescope/database';
 import { Redis as IORedis } from 'ioredis';
 import { QueueEvents, Worker } from 'bullmq';
-import pino from 'pino';
+import { pino } from 'pino';
 import { loadConfig } from './config.js';
 import { KillmailEnrichmentService, ZKillboardSource } from './enrichment-service.js';
 import { createHealthServer } from './health.js';

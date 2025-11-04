@@ -40,7 +40,7 @@ export class KillmailEnrichmentRepository {
     await this.db
       .updateTable('killmail_enrichments')
       .set({ status: 'processing', updatedAt: nowSql, error: null })
-      .where('killmailId', '=', serializeBigIntRequired(killmailId))
+      .where('killmailId', '=', killmailId)
       .execute();
   }
 
@@ -100,7 +100,7 @@ export class KillmailEnrichmentRepository {
     const record = await this.db
       .selectFrom('killmail_enrichments')
       .selectAll()
-      .where('killmailId', '=', serializeBigIntRequired(killmailId))
+      .where('killmailId', '=', killmailId)
       .executeTakeFirst();
 
     if (!record) {

@@ -125,7 +125,7 @@ export class ZKillboardRedisQSource implements KillmailSource {
         }
 
         const reference = toKillmailReference(body.package);
-        span.setAttribute('killmail.id', reference.killmailId);
+        span.setAttribute('killmail.id', reference.killmailId.toString());
         return reference;
       } catch (error) {
         span.recordException(error as Error);

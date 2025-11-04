@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import { RecentKillsView } from './RecentKillsView.js';
 
 vi.mock('./api', () => ({
@@ -10,7 +10,9 @@ vi.mock('./api', () => ({
   formatParticipantCount: (count: number) => `${count} pilots`,
 }));
 
-import { fetchRecentKillmails, createKillmailStream } from './api.js';
+import { fetchRecentKillmails, createKillmailStream, type KillmailStreamOptions } from './api.js';
+const fetchRecentKillmailsMock = vi.mocked(fetchRecentKillmails);
+const createKillmailStreamMock = vi.mocked(createKillmailStream);
 
 const baseItem = {
   killmailId: '1',
@@ -31,15 +33,15 @@ const baseItem = {
 
 describe('RecentKillsView', () => {
   beforeEach(() => {
-    fetchRecentKillmails.mockReset();
-    createKillmailStream.mockReset();
+    fetchRecentKillmailsMock.mockReset();
+    createKillmailStreamMock.mockReset();
   });
 
   it('renders snapshot and applies updates', async () => {
-    fetchRecentKillmails.mockResolvedValue({ items: [baseItem], count: 1 });
+    fetchRecentKillmailsMock.mockResolvedValue({ items: [baseItem], count: 1 });
 
-    let handlers: Parameters<typeof createKillmailStream>[0] | null = null;
-    createKillmailStream.mockImplementation((options) => {
+    let handlers: KillmailStreamOptions | null = null;
+    createKillmailStreamMock.mockImplementation((options: KillmailStreamOptions) => {
       handlers = options;
       return () => {};
     });
@@ -47,7 +49,7 @@ describe('RecentKillsView', () => {
     render(<RecentKillsView />);
 
     expect(await screen.findByText(/Kill #1/)).toBeInTheDocument();
-    expect(createKillmailStream).toHaveBeenCalled();
+    expect(createKillmailStreamMock).toHaveBeenCalled();
 
     await act(async () => {
       handlers?.onUpdate?.({
@@ -61,7 +63,8 @@ describe('RecentKillsView', () => {
 
     expect(await screen.findByText(/Kill #2/)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('checkbox', { name: /Known Space/ }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('checkbox', { name: /Known Space/ }));
 
     expect(await screen.findByText(/Kill #2/)).toBeInTheDocument();
     expect(screen.queryByText(/Kill #1/)).not.toBeInTheDocument();

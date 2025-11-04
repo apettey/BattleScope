@@ -6,7 +6,7 @@ import { loadConfig } from './config.js';
 import { IngestionService, type KillmailEnrichmentProducer } from './service.js';
 import { MockKillmailSource, ZKillboardRedisQSource } from './source.js';
 import { createHealthServer } from './health.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino({ name: 'ingest-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 
