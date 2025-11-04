@@ -4,6 +4,8 @@ export { BattleRepository } from './repositories/battle-repository.js';
 export type { BattleFilters, BattleCursor } from './repositories/battle-repository.js';
 export { KillmailRepository } from './repositories/killmail-repository.js';
 export { KillmailEnrichmentRepository } from './repositories/killmail-enrichment-repository.js';
+export { RulesetRepository } from './repositories/ruleset-repository.js';
+export { DashboardRepository } from './repositories/dashboard-repository.js';
 export type { Database } from './schema.js';
 export {
   BattleInsertSchema,
@@ -11,6 +13,9 @@ export {
   BattleParticipantInsertSchema,
   SpaceTypeSchema,
   KillmailEventSchema,
+  RulesetSchema,
+  RulesetUpdateSchema,
+  KillmailFeedItemSchema,
   type BattleInsert,
   type BattleKillmailInsert,
   type BattleParticipantInsert,
@@ -22,6 +27,10 @@ export {
   type KillmailEventInsert,
   type KillmailEventRecord,
   type KillmailEnrichmentRecord,
+  type RulesetRecord,
+  type RulesetUpdate,
+  type KillmailFeedItem,
+  type DashboardSummary,
   KillmailEnrichmentStatusSchema,
 } from './types.js';
 export { createInMemoryDatabase, type InMemoryDatabase } from './testing.js';

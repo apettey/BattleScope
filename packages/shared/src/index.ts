@@ -53,3 +53,49 @@ export interface KillmailReference {
   iskValue: bigint | null;
   zkbUrl: string;
 }
+
+export interface RulesetSnapshot {
+  id: string;
+  minPilots: number;
+  trackedAllianceIds: string[];
+  trackedCorpIds: string[];
+  ignoreUnlisted: boolean;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RulesetUpdatePayload {
+  minPilots: number;
+  trackedAllianceIds: string[];
+  trackedCorpIds: string[];
+  ignoreUnlisted: boolean;
+  updatedBy: string | null;
+}
+
+export interface KillmailFeedItemDto {
+  killmailId: string;
+  systemId: string;
+  occurredAt: string;
+  spaceType: SpaceType;
+  victimAllianceId: string | null;
+  victimCorpId: string | null;
+  victimCharacterId: string | null;
+  attackerAllianceIds: string[];
+  attackerCorpIds: string[];
+  attackerCharacterIds: string[];
+  iskValue: string | null;
+  zkbUrl: string;
+  battleId: string | null;
+  participantCount: number;
+}
+
+export interface DashboardSummaryDto {
+  totalBattles: number;
+  totalKillmails: number;
+  uniqueAlliances: number;
+  uniqueCorporations: number;
+  topAlliances: Array<{ allianceId: string; battleCount: number }>;
+  topCorporations: Array<{ corpId: string; battleCount: number }>;
+  generatedAt: string;
+}

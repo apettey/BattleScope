@@ -1,5 +1,11 @@
 import { pino } from 'pino';
-import { BattleRepository, createDb } from '@battlescope/database';
+import {
+  BattleRepository,
+  KillmailRepository,
+  RulesetRepository,
+  DashboardRepository,
+  createDb,
+} from '@battlescope/database';
 import { loadConfig } from './config.js';
 import { buildServer } from './server.js';
 
@@ -9,7 +15,16 @@ export const start = async (): Promise<void> => {
   const config = loadConfig();
   const db = createDb();
   const battleRepository = new BattleRepository(db);
-  const app = buildServer({ battleRepository, db });
+  const killmailRepository = new KillmailRepository(db);
+  const rulesetRepository = new RulesetRepository(db);
+  const dashboardRepository = new DashboardRepository(db);
+  const app = buildServer({
+    battleRepository,
+    killmailRepository,
+    rulesetRepository,
+    dashboardRepository,
+    db,
+  });
 
   const shutdown = async () => {
     logger.info('Shutting down API server');

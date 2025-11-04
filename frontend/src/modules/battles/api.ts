@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildUrl, defaultFetch, fetchJson } from '../api/http.js';
 
 const KillmailEnrichmentSchema = z.object({
   status: z.enum(['pending', 'processing', 'succeeded', 'failed']),
@@ -67,43 +68,6 @@ export type BattleSummary = z.infer<typeof BattleSummarySchema>;
 export type BattleDetail = z.infer<typeof BattleDetailSchema>;
 export type KillmailDetail = z.infer<typeof KillmailDetailSchema>;
 export type BattlesListResponse = z.infer<typeof BattlesListResponseSchema>;
-
-const defaultFetch: typeof fetch = (...args) => fetch(...args);
-
-const resolveBaseUrl = (override?: string) => {
-  if (override) {
-    return override.replace(/\/$/, '');
-  }
-  const fromEnv = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  return (fromEnv ?? 'http://localhost:3000').replace(/\/$/, '');
-};
-
-const buildUrl = (
-  path: string,
-  params: Record<string, string | null | undefined>,
-  baseUrl?: string,
-) => {
-  const url = new URL(path, `${resolveBaseUrl(baseUrl)}/`);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
-  return url.toString();
-};
-
-const fetchJson = async (
-  input: string,
-  init: RequestInit | undefined,
-  fetchFn: typeof fetch,
-): Promise<unknown> => {
-  const response = await fetchFn(input, init);
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Request failed (${response.status}): ${body || response.statusText}`);
-  }
-  return response.json() as Promise<unknown>;
-};
 
 export interface FetchBattlesOptions {
   limit?: number;

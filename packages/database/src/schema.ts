@@ -93,10 +93,30 @@ export interface KillmailEnrichmentsTable {
   createdAt: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface RulesetsTable {
+  id: string;
+  minPilots: ColumnType<number, number | undefined, number>;
+  trackedAllianceIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
+  trackedCorpIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
+  ignoreUnlisted: ColumnType<boolean, boolean | undefined, boolean>;
+  updatedBy: string | null;
+  createdAt: ColumnType<Date, Date | undefined, never>;
+  updatedAt: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface Database {
   battles: BattlesTable;
   battle_killmails: BattleKillmailsTable;
   battle_participants: BattleParticipantsTable;
   killmail_events: KillmailEventsTable;
   killmail_enrichments: KillmailEnrichmentsTable;
+  rulesets: RulesetsTable;
 }

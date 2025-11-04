@@ -3,12 +3,17 @@ import type {
   BattleWithDetails,
   BattleKillmailRecord,
   BattleParticipantRecord,
+  RulesetRecord,
+  KillmailFeedItem,
+  DashboardSummary,
 } from '@battlescope/database';
 
 const formatBigInt = (value: bigint | null | undefined): string | null =>
   value === null || value === undefined ? null : value.toString();
 
 const formatDate = (value: Date): string => value.toISOString();
+
+const formatBigIntArray = (values: readonly bigint[]): string[] => values.map((value) => value.toString());
 
 export interface BattleSummaryResponse {
   id: string;
@@ -101,4 +106,90 @@ export const toBattleDetailResponse = (battle: BattleWithDetails): BattleDetailR
     sideId: formatBigInt(participant.sideId),
     isVictim: participant.isVictim,
   })),
+});
+
+export interface RulesetResponse {
+  id: string;
+  minPilots: number;
+  trackedAllianceIds: string[];
+  trackedCorpIds: string[];
+  ignoreUnlisted: boolean;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const toRulesetResponse = (ruleset: RulesetRecord): RulesetResponse => ({
+  id: ruleset.id,
+  minPilots: ruleset.minPilots,
+  trackedAllianceIds: formatBigIntArray(ruleset.trackedAllianceIds),
+  trackedCorpIds: formatBigIntArray(ruleset.trackedCorpIds),
+  ignoreUnlisted: ruleset.ignoreUnlisted,
+  updatedBy: ruleset.updatedBy ?? null,
+  createdAt: formatDate(ruleset.createdAt),
+  updatedAt: formatDate(ruleset.updatedAt),
+});
+
+export interface KillmailFeedItemResponse {
+  killmailId: string;
+  systemId: string;
+  occurredAt: string;
+  spaceType: string;
+  victimAllianceId: string | null;
+  victimCorpId: string | null;
+  victimCharacterId: string | null;
+  attackerAllianceIds: string[];
+  attackerCorpIds: string[];
+  attackerCharacterIds: string[];
+  iskValue: string | null;
+  zkbUrl: string;
+  battleId: string | null;
+  participantCount: number;
+}
+
+export const toKillmailFeedItemResponse = (
+  item: KillmailFeedItem,
+): KillmailFeedItemResponse => ({
+  killmailId: item.killmailId.toString(),
+  systemId: item.systemId.toString(),
+  occurredAt: formatDate(item.occurredAt),
+  spaceType: item.spaceType,
+  victimAllianceId: formatBigInt(item.victimAllianceId),
+  victimCorpId: formatBigInt(item.victimCorpId),
+  victimCharacterId: formatBigInt(item.victimCharacterId),
+  attackerAllianceIds: formatBigIntArray(item.attackerAllianceIds),
+  attackerCorpIds: formatBigIntArray(item.attackerCorpIds),
+  attackerCharacterIds: formatBigIntArray(item.attackerCharacterIds),
+  iskValue: formatBigInt(item.iskValue),
+  zkbUrl: item.zkbUrl,
+  battleId: item.battleId,
+  participantCount: item.participantCount,
+});
+
+export interface DashboardSummaryResponse {
+  totalBattles: number;
+  totalKillmails: number;
+  uniqueAlliances: number;
+  uniqueCorporations: number;
+  topAlliances: Array<{ allianceId: string; battleCount: number }>;
+  topCorporations: Array<{ corpId: string; battleCount: number }>;
+  generatedAt: string;
+}
+
+export const toDashboardSummaryResponse = (
+  summary: DashboardSummary,
+): DashboardSummaryResponse => ({
+  totalBattles: summary.totalBattles,
+  totalKillmails: summary.totalKillmails,
+  uniqueAlliances: summary.uniqueAlliances,
+  uniqueCorporations: summary.uniqueCorporations,
+  topAlliances: summary.topAlliances.map((entry) => ({
+    allianceId: entry.allianceId.toString(),
+    battleCount: entry.battleCount,
+  })),
+  topCorporations: summary.topCorporations.map((entry) => ({
+    corpId: entry.corpId.toString(),
+    battleCount: entry.battleCount,
+  })),
+  generatedAt: formatDate(summary.generatedAt),
 });

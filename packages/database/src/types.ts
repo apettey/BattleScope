@@ -135,3 +135,61 @@ export const KillmailEnrichmentSchema = z.object({
 });
 
 export type KillmailEnrichmentRecord = z.infer<typeof KillmailEnrichmentSchema>;
+
+const trackedIdArray = z
+  .array(nonNegativeBigint)
+  .max(250, { message: 'Tracked lists cannot exceed 250 entries' })
+  .default([]);
+
+export const RulesetUpdateSchema = z.object({
+  minPilots: z.coerce.number().int().min(1).max(500).default(1),
+  trackedAllianceIds: trackedIdArray,
+  trackedCorpIds: trackedIdArray,
+  ignoreUnlisted: z.boolean().default(false),
+  updatedBy: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .nullable()
+    .optional(),
+});
+
+export type RulesetUpdate = z.infer<typeof RulesetUpdateSchema>;
+
+export const RulesetSchema = RulesetUpdateSchema.extend({
+  id: z.string().uuid(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type RulesetRecord = z.infer<typeof RulesetSchema>;
+
+export const KillmailFeedItemSchema = z.object({
+  killmailId: nonNegativeBigint,
+  systemId: nonNegativeBigint,
+  occurredAt: z.coerce.date(),
+  spaceType: SpaceTypeSchema,
+  victimAllianceId: nonNegativeBigint.nullable(),
+  victimCorpId: nonNegativeBigint.nullable(),
+  victimCharacterId: nonNegativeBigint.nullable(),
+  attackerAllianceIds: z.array(nonNegativeBigint).default([]),
+  attackerCorpIds: z.array(nonNegativeBigint).default([]),
+  attackerCharacterIds: z.array(nonNegativeBigint).default([]),
+  iskValue: nonNegativeBigint.nullable(),
+  zkbUrl: z.string().url(),
+  battleId: z.string().uuid().nullable(),
+  participantCount: z.coerce.number().int().min(1),
+});
+
+export type KillmailFeedItem = z.infer<typeof KillmailFeedItemSchema>;
+
+export interface DashboardSummary {
+  totalBattles: number;
+  totalKillmails: number;
+  uniqueAlliances: number;
+  uniqueCorporations: number;
+  topAlliances: Array<{ allianceId: bigint; battleCount: number }>;
+  topCorporations: Array<{ corpId: bigint; battleCount: number }>;
+  generatedAt: Date;
+}

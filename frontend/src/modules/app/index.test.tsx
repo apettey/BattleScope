@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type * as BattlesApi from '../battles/api.js';
 import { App } from './index.js';
 
 type BattlesApiModule = typeof BattlesApi;
-
 vi.mock('../battles/api', async () => {
   const actual = (await vi.importActual('../battles/api')) as BattlesApiModule;
   return {
@@ -14,7 +13,41 @@ vi.mock('../battles/api', async () => {
   } as BattlesApiModule;
 });
 
+vi.mock('../dashboard/api', () => ({
+  fetchDashboardSummary: vi.fn(),
+}));
+
+vi.mock('../killfeed/api', () => ({
+  fetchRecentKillmails: vi.fn().mockResolvedValue({ items: [], count: 0 }),
+  createKillmailStream: vi.fn().mockReturnValue(() => {}),
+  formatParticipantCount: (count: number) => `${count} pilots`,
+}));
+
+vi.mock('../rules/api', () => ({
+  fetchCurrentRuleset: vi.fn().mockResolvedValue({
+    id: '00000000-0000-0000-0000-000000000001',
+    minPilots: 1,
+    trackedAllianceIds: [],
+    trackedCorpIds: [],
+    ignoreUnlisted: false,
+    updatedBy: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+  updateRuleset: vi.fn().mockResolvedValue({
+    id: '00000000-0000-0000-0000-000000000001',
+    minPilots: 1,
+    trackedAllianceIds: [],
+    trackedCorpIds: [],
+    ignoreUnlisted: false,
+    updatedBy: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }),
+}));
+
 import { fetchBattles, fetchBattleDetail } from '../battles/api.js';
+import { fetchDashboardSummary } from '../dashboard/api.js';
 
 const sampleSummary = {
   id: '5f2e5e02-0d75-4a47-8618-6c526d5e62c8',
@@ -68,21 +101,36 @@ const sampleDetail = {
 describe('App', () => {
   const mockedFetchBattles = fetchBattles as unknown as Mock;
   const mockedFetchBattleDetail = fetchBattleDetail as unknown as Mock;
+  const mockedFetchDashboardSummary = fetchDashboardSummary as unknown as Mock;
 
   beforeEach(() => {
     mockedFetchBattles.mockReset();
     mockedFetchBattleDetail.mockReset();
+    mockedFetchDashboardSummary.mockReset();
   });
 
-  it('renders battle feed and enrichment details', async () => {
+  it('renders home overview and navigates to battles tab', async () => {
+    mockedFetchDashboardSummary.mockResolvedValue({
+      totalBattles: 12,
+      totalKillmails: 34,
+      uniqueAlliances: 5,
+      uniqueCorporations: 7,
+      topAlliances: [{ allianceId: '99001234', battleCount: 4 }],
+      topCorporations: [{ corpId: '123456', battleCount: 3 }],
+      generatedAt: '2024-05-01T10:10:00.000Z',
+    });
     mockedFetchBattles.mockResolvedValue({ items: [sampleSummary], nextCursor: null });
     mockedFetchBattleDetail.mockResolvedValue(sampleDetail);
 
     render(<App />);
 
+    expect(await screen.findByText(/Operational Overview/)).toBeInTheDocument();
+    expect(await screen.findByText(/Total Battles/)).toBeInTheDocument();
+    expect(mockedFetchDashboardSummary).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Battles' }));
+
     expect(await screen.findByText(/Recent Battles/)).toBeInTheDocument();
-    expect(await screen.findByText(/BattleScope Operations Console/)).toBeInTheDocument();
     expect(await screen.findByText(/Killmail #90000001/)).toBeInTheDocument();
-    expect(screen.getByText(/Enrichment: succeeded/)).toBeInTheDocument();
   });
 });

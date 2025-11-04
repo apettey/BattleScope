@@ -5,6 +5,8 @@ import {
   BattleRepository,
   KillmailEnrichmentRepository,
   KillmailRepository,
+  RulesetRepository,
+  DashboardRepository,
   createInMemoryDatabase,
 } from '@battlescope/database';
 import { buildServer } from '../src/server.js';
@@ -62,16 +64,21 @@ const createBattle = async (
   await killmailRepository.markAsProcessed([killmail.killmailId], battleId);
 };
 
-describe('API battles routes', () => {
+describe('API routes', () => {
   let app: FastifyInstance;
   let db: Awaited<ReturnType<typeof createInMemoryDatabase>>;
+  let battleRepository: BattleRepository;
+  let killmailRepository: KillmailRepository;
+  let rulesetRepository: RulesetRepository;
   let firstBattleId: string;
   let secondBattleId: string;
 
   beforeAll(async () => {
     db = await createInMemoryDatabase();
-    const battleRepository = new BattleRepository(db.db);
-    const killmailRepository = new KillmailRepository(db.db);
+    battleRepository = new BattleRepository(db.db);
+    killmailRepository = new KillmailRepository(db.db);
+    rulesetRepository = new RulesetRepository(db.db);
+    const dashboardRepository = new DashboardRepository(db.db);
     const enrichmentRepository = new KillmailEnrichmentRepository(db.db);
 
     const baseKillmail = {
@@ -139,7 +146,13 @@ describe('API battles routes', () => {
     await killmailRepository.markAsProcessed([2001], secondBattleId);
     await enrichmentRepository.markFailed(2001, 'timeout');
 
-    app = buildServer({ battleRepository, db: db.db });
+    app = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository,
+      db: db.db,
+    });
     await app.ready();
   });
 
@@ -214,6 +227,123 @@ describe('API battles routes', () => {
       status: 'failed',
       error: 'timeout',
       payload: null,
+    });
+  });
+
+  it('returns ruleset defaults', async () => {
+    const response = await app.inject({ method: 'GET', url: '/rulesets/current' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toMatchObject({
+      id: expect.any(String),
+      minPilots: 1,
+      trackedAllianceIds: [],
+      trackedCorpIds: [],
+      ignoreUnlisted: false,
+    });
+  });
+
+  it('updates ruleset configuration', async () => {
+    const payload = {
+      minPilots: 2,
+      trackedAllianceIds: ['99001234'],
+      trackedCorpIds: ['12345'],
+      ignoreUnlisted: true,
+      updatedBy: 'vitest',
+    };
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/rulesets/current',
+      payload,
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toMatchObject({
+      minPilots: 2,
+      ignoreUnlisted: true,
+      trackedAllianceIds: ['99001234'],
+      trackedCorpIds: ['12345'],
+      updatedBy: 'vitest',
+    });
+
+    // revert to default for other tests
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [],
+      trackedCorpIds: [],
+      ignoreUnlisted: false,
+      updatedBy: null,
+    });
+  });
+
+  it('provides recent killmail feed data with filtering', async () => {
+    const response = await app.inject({ method: 'GET', url: '/killmails/recent?limit=5' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.count).toBeGreaterThan(0);
+    expect(body.items[0]).toMatchObject({ killmailId: '2001', spaceType: 'kspace' });
+
+    const filtered = await app.inject({ method: 'GET', url: '/killmails/recent?spaceType=jspace' });
+    const filteredBody = filtered.json();
+    expect(filteredBody.items).toHaveLength(1);
+    expect(filteredBody.items[0].killmailId).toBe('1001');
+  });
+
+  it('applies tracked-only filtering when rules enforce allowlists', async () => {
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [99001234n],
+      trackedCorpIds: [],
+      ignoreUnlisted: true,
+      updatedBy: 'test-tracked',
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/killmails/recent?trackedOnly=true',
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].killmailId).toBe('1001');
+
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [],
+      trackedCorpIds: [],
+      ignoreUnlisted: false,
+      updatedBy: null,
+    });
+  });
+
+  it('streams killmail updates via SSE snapshot', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/killmails/stream?once=true&limit=1',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    const blocks = response.body.trim().split('\n\n');
+    expect(blocks[0]).toContain('event: snapshot');
+    const dataLine = blocks[0].split('\n').find((line) => line.startsWith('data:'));
+    expect(dataLine).toBeDefined();
+    const payload = JSON.parse(dataLine!.slice('data: '.length));
+    expect(Array.isArray(payload)).toBe(true);
+    expect(payload[0].killmailId).toBe('2001');
+  });
+
+  it('returns dashboard statistics summary', async () => {
+    const response = await app.inject({ method: 'GET', url: '/stats/summary' });
+    expect(response.statusCode).toBe(200);
+    const summary = response.json();
+    expect(summary).toMatchObject({
+      totalBattles: 2,
+      totalKillmails: expect.any(Number),
+      uniqueAlliances: expect.any(Number),
+      uniqueCorporations: expect.any(Number),
+      topAlliances: expect.any(Array),
+      topCorporations: expect.any(Array),
     });
   });
 });

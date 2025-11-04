@@ -1,14 +1,32 @@
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
-import type { BattleRepository, DatabaseClient } from '@battlescope/database';
+import type {
+  BattleRepository,
+  KillmailRepository,
+  RulesetRepository,
+  DashboardRepository,
+  DatabaseClient,
+} from '@battlescope/database';
 import { registerBattleRoutes } from './routes/battles.js';
+import { registerRulesRoutes } from './routes/rules.js';
+import { registerKillmailRoutes } from './routes/killmails.js';
+import { registerDashboardRoutes } from './routes/dashboard.js';
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;
+  killmailRepository: KillmailRepository;
+  rulesetRepository: RulesetRepository;
+  dashboardRepository: DashboardRepository;
   db: DatabaseClient;
 }
 
-export const buildServer = ({ battleRepository, db }: BuildServerOptions) => {
+export const buildServer = ({
+  battleRepository,
+  killmailRepository,
+  rulesetRepository,
+  dashboardRepository,
+  db,
+}: BuildServerOptions) => {
   const app = Fastify({ logger: true });
 
   app.setErrorHandler((error, request, reply) => {
@@ -26,6 +44,9 @@ export const buildServer = ({ battleRepository, db }: BuildServerOptions) => {
   });
 
   registerBattleRoutes(app, battleRepository);
+  registerRulesRoutes(app, rulesetRepository);
+  registerKillmailRoutes(app, killmailRepository, rulesetRepository);
+  registerDashboardRoutes(app, dashboardRepository);
 
   return app;
 };
