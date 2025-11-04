@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { randomUUID } from 'crypto';
 import {
   BattleRepository,
@@ -77,7 +78,8 @@ const createBattle = async (
 };
 
 describe('API routes', () => {
-  let app: FastifyInstance;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let app: FastifyInstance<any, any, any, any, ZodTypeProvider>;
   let db: Awaited<ReturnType<typeof createInMemoryDatabase>>;
   let battleRepository: BattleRepository;
   let killmailRepository: KillmailRepository;

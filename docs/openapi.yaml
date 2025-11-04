@@ -1,0 +1,1041 @@
+openapi: 3.1.0
+info:
+  title: BattleScope API
+  version: 2.0.0
+  description: |
+    BattleScope is a data intelligence platform that reconstructs and classifies battles in EVE Online
+    by clustering related killmails from zKillboard.
+
+    ## Key Features
+    - Battle reconstruction from killmail clustering
+    - Real-time killmail feed with Server-Sent Events
+    - Entity name resolution via ESI API
+    - Configurable ruleset filtering
+
+    ## Data Types
+    All EVE Online entity IDs (killmail, character, corporation, alliance, system, ship type) are
+    transmitted as strings to support bigint values that exceed JavaScript's Number.MAX_SAFE_INTEGER.
+
+  contact:
+    name: BattleScope Support
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.battlescope.example.com
+    description: Production server
+
+tags:
+  - name: Battles
+    description: Battle reconstruction and querying
+  - name: Killmails
+    description: Killmail feed and streaming
+  - name: Dashboard
+    description: Statistical summaries
+  - name: Rules
+    description: Ruleset configuration
+
+paths:
+  /battles:
+    get:
+      tags:
+        - Battles
+      summary: List battles
+      description: |
+        Returns a paginated list of battles with optional filtering by space type, system,
+        alliance, corporation, character, or time range.
+      operationId: listBattles
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/SpaceTypeParam'
+        - $ref: '#/components/parameters/SystemIdParam'
+        - $ref: '#/components/parameters/AllianceIdParam'
+        - $ref: '#/components/parameters/CorpIdParam'
+        - $ref: '#/components/parameters/CharacterIdParam'
+        - $ref: '#/components/parameters/SinceParam'
+        - $ref: '#/components/parameters/UntilParam'
+      responses:
+        '200':
+          description: List of battles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /battles/{id}:
+    get:
+      tags:
+        - Battles
+      summary: Get battle details
+      description: Returns detailed information about a specific battle including all killmails and participants
+      operationId: getBattleById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Battle UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Battle details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /alliances/{id}/battles:
+    get:
+      tags:
+        - Battles
+      summary: List battles for an alliance
+      description: Returns battles where the specified alliance participated
+      operationId: listAllianceBattles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Alliance ID
+          schema:
+            type: string
+            pattern: '^\d+$'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/SpaceTypeParam'
+        - $ref: '#/components/parameters/SinceParam'
+        - $ref: '#/components/parameters/UntilParam'
+      responses:
+        '200':
+          description: List of battles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /corporations/{id}/battles:
+    get:
+      tags:
+        - Battles
+      summary: List battles for a corporation
+      description: Returns battles where the specified corporation participated
+      operationId: listCorporationBattles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Corporation ID
+          schema:
+            type: string
+            pattern: '^\d+$'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/SpaceTypeParam'
+        - $ref: '#/components/parameters/SinceParam'
+        - $ref: '#/components/parameters/UntilParam'
+      responses:
+        '200':
+          description: List of battles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /characters/{id}/battles:
+    get:
+      tags:
+        - Battles
+      summary: List battles for a character
+      description: Returns battles where the specified character participated
+      operationId: listCharacterBattles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Character ID
+          schema:
+            type: string
+            pattern: '^\d+$'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/SpaceTypeParam'
+        - $ref: '#/components/parameters/SinceParam'
+        - $ref: '#/components/parameters/UntilParam'
+      responses:
+        '200':
+          description: List of battles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /killmails/recent:
+    get:
+      tags:
+        - Killmails
+      summary: Get recent killmails
+      description: Returns a list of recent killmails with optional filtering by space type
+      operationId: getRecentKillmails
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of killmails to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: spaceType
+          in: query
+          description: Filter by space type (can be specified multiple times)
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/SpaceType'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/SpaceType'
+        - name: trackedOnly
+          in: query
+          description: Only return killmails matching tracked alliances/corporations
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Recent killmails
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KillmailFeedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /killmails/stream:
+    get:
+      tags:
+        - Killmails
+      summary: Stream killmails via Server-Sent Events
+      description: |
+        Opens a Server-Sent Events stream that sends an initial snapshot followed by
+        real-time updates as new killmails arrive.
+
+        ## Events
+        - `snapshot`: Initial batch of recent killmails (sent once on connection)
+        - `killmail`: Individual killmail updates as they arrive
+        - `: keep-alive`: Heartbeat to keep connection alive
+
+      operationId: streamKillmails
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of killmails in initial snapshot
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: spaceType
+          in: query
+          description: Filter by space type (can be specified multiple times)
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/SpaceType'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/SpaceType'
+        - name: trackedOnly
+          in: query
+          description: Only stream killmails matching tracked alliances/corporations
+          schema:
+            type: boolean
+            default: false
+        - name: once
+          in: query
+          description: Send snapshot only and close connection (no streaming)
+          schema:
+            type: boolean
+            default: false
+        - name: pollIntervalMs
+          in: query
+          description: Polling interval for updates in milliseconds
+          schema:
+            type: integer
+            minimum: 1000
+            maximum: 60000
+            default: 5000
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Event stream format:
+                  ```
+                  event: snapshot
+                  data: [array of killmails]
+
+                  event: killmail
+                  data: {killmail object}
+                  ```
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /stats/summary:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard summary statistics
+      description: Returns aggregated statistics including battle counts, top alliances, and top corporations
+      operationId: getDashboardSummary
+      responses:
+        '200':
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /rulesets/current:
+    get:
+      tags:
+        - Rules
+      summary: Get current ruleset
+      description: Returns the currently active ruleset configuration
+      operationId: getCurrentRuleset
+      responses:
+        '200':
+          description: Current ruleset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ruleset'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Rules
+      summary: Update current ruleset
+      description: |
+        Updates the active ruleset configuration. All fields are optional; omitted fields
+        retain their current values.
+      operationId: updateCurrentRuleset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RulesetUpdate'
+      responses:
+        '200':
+          description: Updated ruleset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ruleset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    CursorParam:
+      name: cursor
+      in: query
+      description: Pagination cursor from previous response
+      schema:
+        type: string
+        format: byte
+
+    SpaceTypeParam:
+      name: spaceType
+      in: query
+      description: Filter by space type
+      schema:
+        $ref: '#/components/schemas/SpaceType'
+
+    SystemIdParam:
+      name: systemId
+      in: query
+      description: Filter by solar system ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+    AllianceIdParam:
+      name: allianceId
+      in: query
+      description: Filter by alliance ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+    CorpIdParam:
+      name: corpId
+      in: query
+      description: Filter by corporation ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+    CharacterIdParam:
+      name: characterId
+      in: query
+      description: Filter by character ID
+      schema:
+        type: string
+        pattern: '^\d+$'
+
+    SinceParam:
+      name: since
+      in: query
+      description: Filter battles starting after this timestamp
+      schema:
+        type: string
+        format: date-time
+
+    UntilParam:
+      name: until
+      in: query
+      description: Filter battles ending before this timestamp
+      schema:
+        type: string
+        format: date-time
+
+  schemas:
+    SpaceType:
+      type: string
+      enum:
+        - kspace
+        - jspace
+        - pochven
+      description: |
+        EVE Online space type:
+        - `kspace`: Known space (empire and null-sec)
+        - `jspace`: Wormhole space (J-space)
+        - `pochven`: Pochven (Triglavian space)
+
+    BattleSummary:
+      type: object
+      required:
+        - id
+        - systemId
+        - systemName
+        - spaceType
+        - startTime
+        - endTime
+        - totalKills
+        - totalIskDestroyed
+        - zkillRelatedUrl
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique battle identifier
+        systemId:
+          type: string
+          description: Solar system ID (bigint as string)
+        systemName:
+          type: string
+          nullable: true
+          description: Solar system name resolved via ESI
+        spaceType:
+          $ref: '#/components/schemas/SpaceType'
+        startTime:
+          type: string
+          format: date-time
+          description: Timestamp of first killmail in battle
+        endTime:
+          type: string
+          format: date-time
+          description: Timestamp of last killmail in battle
+        totalKills:
+          type: string
+          description: Total number of killmails in battle (bigint as string)
+        totalIskDestroyed:
+          type: string
+          description: Total ISK value destroyed (bigint as string)
+        zkillRelatedUrl:
+          type: string
+          format: uri
+          description: zKillboard related kills URL
+
+    BattleDetail:
+      allOf:
+        - $ref: '#/components/schemas/BattleSummary'
+        - type: object
+          required:
+            - createdAt
+            - killmails
+            - participants
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+              description: When this battle record was created
+            killmails:
+              type: array
+              items:
+                $ref: '#/components/schemas/KillmailDetail'
+            participants:
+              type: array
+              items:
+                $ref: '#/components/schemas/BattleParticipant'
+
+    KillmailDetail:
+      type: object
+      required:
+        - killmailId
+        - occurredAt
+        - victimAllianceId
+        - victimAllianceName
+        - victimCorpId
+        - victimCorpName
+        - victimCharacterId
+        - victimCharacterName
+        - attackerAllianceIds
+        - attackerAllianceNames
+        - attackerCorpIds
+        - attackerCorpNames
+        - attackerCharacterIds
+        - attackerCharacterNames
+        - iskValue
+        - zkbUrl
+        - enrichment
+      properties:
+        killmailId:
+          type: string
+          description: Killmail ID (bigint as string)
+        occurredAt:
+          type: string
+          format: date-time
+        victimAllianceId:
+          type: string
+          nullable: true
+          description: Victim's alliance ID
+        victimAllianceName:
+          type: string
+          nullable: true
+          description: Victim's alliance name
+        victimCorpId:
+          type: string
+          nullable: true
+          description: Victim's corporation ID
+        victimCorpName:
+          type: string
+          nullable: true
+          description: Victim's corporation name
+        victimCharacterId:
+          type: string
+          nullable: true
+          description: Victim's character ID
+        victimCharacterName:
+          type: string
+          nullable: true
+          description: Victim's character name
+        attackerAllianceIds:
+          type: array
+          items:
+            type: string
+          description: Array of attacker alliance IDs
+        attackerAllianceNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+          description: Array of attacker alliance names
+        attackerCorpIds:
+          type: array
+          items:
+            type: string
+          description: Array of attacker corporation IDs
+        attackerCorpNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+          description: Array of attacker corporation names
+        attackerCharacterIds:
+          type: array
+          items:
+            type: string
+          description: Array of attacker character IDs
+        attackerCharacterNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+          description: Array of attacker character names
+        iskValue:
+          type: string
+          nullable: true
+          description: ISK value of destroyed assets (bigint as string)
+        zkbUrl:
+          type: string
+          format: uri
+          description: zKillboard killmail URL
+        enrichment:
+          $ref: '#/components/schemas/KillmailEnrichment'
+
+    KillmailEnrichment:
+      type: object
+      nullable: true
+      required:
+        - status
+        - payload
+        - error
+        - fetchedAt
+        - updatedAt
+        - createdAt
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - succeeded
+            - failed
+          description: Enrichment worker status
+        payload:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Enrichment data payload
+        error:
+          type: string
+          nullable: true
+          description: Error message if enrichment failed
+        fetchedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When enrichment data was fetched
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+
+    BattleParticipant:
+      type: object
+      required:
+        - battleId
+        - characterId
+        - characterName
+        - allianceId
+        - allianceName
+        - corpId
+        - corpName
+        - shipTypeId
+        - shipTypeName
+        - sideId
+        - isVictim
+      properties:
+        battleId:
+          type: string
+          format: uuid
+        characterId:
+          type: string
+          description: Character ID (bigint as string)
+        characterName:
+          type: string
+          nullable: true
+          description: Character name
+        allianceId:
+          type: string
+          nullable: true
+          description: Alliance ID (bigint as string)
+        allianceName:
+          type: string
+          nullable: true
+          description: Alliance name
+        corpId:
+          type: string
+          nullable: true
+          description: Corporation ID (bigint as string)
+        corpName:
+          type: string
+          nullable: true
+          description: Corporation name
+        shipTypeId:
+          type: string
+          nullable: true
+          description: Ship type ID (bigint as string)
+        shipTypeName:
+          type: string
+          nullable: true
+          description: Ship type name
+        sideId:
+          type: string
+          nullable: true
+          description: Battle side identifier
+        isVictim:
+          type: boolean
+          description: Whether this participant lost their ship
+
+    BattleListResponse:
+      type: object
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BattleSummary'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for next page of results
+
+    KillmailFeedItem:
+      type: object
+      required:
+        - killmailId
+        - systemId
+        - systemName
+        - occurredAt
+        - spaceType
+        - victimAllianceId
+        - victimAllianceName
+        - victimCorpId
+        - victimCorpName
+        - victimCharacterId
+        - victimCharacterName
+        - attackerAllianceIds
+        - attackerAllianceNames
+        - attackerCorpIds
+        - attackerCorpNames
+        - attackerCharacterIds
+        - attackerCharacterNames
+        - iskValue
+        - zkbUrl
+        - battleId
+        - participantCount
+      properties:
+        killmailId:
+          type: string
+          description: Killmail ID (bigint as string)
+        systemId:
+          type: string
+          description: Solar system ID (bigint as string)
+        systemName:
+          type: string
+          nullable: true
+          description: Solar system name
+        occurredAt:
+          type: string
+          format: date-time
+        spaceType:
+          $ref: '#/components/schemas/SpaceType'
+        victimAllianceId:
+          type: string
+          nullable: true
+        victimAllianceName:
+          type: string
+          nullable: true
+        victimCorpId:
+          type: string
+          nullable: true
+        victimCorpName:
+          type: string
+          nullable: true
+        victimCharacterId:
+          type: string
+          nullable: true
+        victimCharacterName:
+          type: string
+          nullable: true
+        attackerAllianceIds:
+          type: array
+          items:
+            type: string
+        attackerAllianceNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+        attackerCorpIds:
+          type: array
+          items:
+            type: string
+        attackerCorpNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+        attackerCharacterIds:
+          type: array
+          items:
+            type: string
+        attackerCharacterNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+        iskValue:
+          type: string
+          nullable: true
+          description: ISK value destroyed (bigint as string)
+        zkbUrl:
+          type: string
+          format: uri
+        battleId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Associated battle ID if clustered
+        participantCount:
+          type: integer
+          description: Total number of participants in killmail
+
+    KillmailFeedResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/KillmailFeedItem'
+        count:
+          type: integer
+          description: Number of items returned
+
+    DashboardSummary:
+      type: object
+      required:
+        - totalBattles
+        - totalKillmails
+        - uniqueAlliances
+        - uniqueCorporations
+        - topAlliances
+        - topCorporations
+        - generatedAt
+      properties:
+        totalBattles:
+          type: integer
+          description: Total number of battles tracked
+        totalKillmails:
+          type: integer
+          description: Total number of killmails indexed
+        uniqueAlliances:
+          type: integer
+          description: Number of unique alliances involved
+        uniqueCorporations:
+          type: integer
+          description: Number of unique corporations involved
+        topAlliances:
+          type: array
+          items:
+            type: object
+            required:
+              - allianceId
+              - allianceName
+              - battleCount
+            properties:
+              allianceId:
+                type: string
+                description: Alliance ID (bigint as string)
+              allianceName:
+                type: string
+                nullable: true
+                description: Alliance name
+              battleCount:
+                type: integer
+                description: Number of battles this alliance participated in
+        topCorporations:
+          type: array
+          items:
+            type: object
+            required:
+              - corpId
+              - corpName
+              - battleCount
+            properties:
+              corpId:
+                type: string
+                description: Corporation ID (bigint as string)
+              corpName:
+                type: string
+                nullable: true
+                description: Corporation name
+              battleCount:
+                type: integer
+                description: Number of battles this corporation participated in
+        generatedAt:
+          type: string
+          format: date-time
+          description: When these statistics were generated
+
+    Ruleset:
+      type: object
+      required:
+        - id
+        - minPilots
+        - trackedAllianceIds
+        - trackedAllianceNames
+        - trackedCorpIds
+        - trackedCorpNames
+        - ignoreUnlisted
+        - updatedBy
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Ruleset identifier
+        minPilots:
+          type: integer
+          minimum: 1
+          maximum: 500
+          description: Minimum number of pilots required per killmail
+        trackedAllianceIds:
+          type: array
+          maxItems: 250
+          items:
+            type: string
+          description: Array of tracked alliance IDs (bigint as string)
+        trackedAllianceNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+          description: Array of tracked alliance names
+        trackedCorpIds:
+          type: array
+          maxItems: 250
+          items:
+            type: string
+          description: Array of tracked corporation IDs (bigint as string)
+        trackedCorpNames:
+          type: array
+          items:
+            type: string
+            nullable: true
+          description: Array of tracked corporation names
+        ignoreUnlisted:
+          type: boolean
+          description: Whether to ignore killmails from entities not in tracked lists
+        updatedBy:
+          type: string
+          nullable: true
+          maxLength: 128
+          description: Name of person who last updated the ruleset
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RulesetUpdate:
+      type: object
+      properties:
+        minPilots:
+          type: integer
+          minimum: 1
+          maximum: 500
+          description: Minimum number of pilots required per killmail
+        trackedAllianceIds:
+          type: array
+          maxItems: 250
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+          description: Array of alliance IDs to track (accepts strings or numbers)
+        trackedCorpIds:
+          type: array
+          maxItems: 250
+          items:
+            oneOf:
+              - type: string
+              - type: integer
+          description: Array of corporation IDs to track (accepts strings or numbers)
+        ignoreUnlisted:
+          type: boolean
+          description: Whether to ignore killmails from entities not in tracked lists
+        updatedBy:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Name of person making this update
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Error message
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

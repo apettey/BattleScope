@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make ci compose-up compose-down compose-logs
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs
 
 install:
 	pnpm install
@@ -46,6 +46,11 @@ ifndef NAME
 	$(error NAME is required, e.g. make db-migrate-make NAME=create_table)
 endif
 	pnpm run db:migrate:make $(NAME)
+
+generate-openapi:
+	@echo "🔧 Generating OpenAPI specification..."
+	cd backend/api && pnpm run generate-openapi
+	@echo "✅ OpenAPI spec generated at docs/openapi.json and docs/openapi-generated.yaml"
 
 ci: install-ci format-check lint typecheck test build
 

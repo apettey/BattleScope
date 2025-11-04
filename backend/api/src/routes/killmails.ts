@@ -1,37 +1,23 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { trace } from '@opentelemetry/api';
-import { z } from 'zod';
 import type { KillmailRepository, RulesetRepository, SpaceType } from '@battlescope/database';
-import { SpaceTypeSchema } from '@battlescope/database';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from '../cors.js';
 import type { NameEnricher } from '../services/name-enricher.js';
+import {
+  KillmailRecentQuerySchema,
+  KillmailStreamQuerySchema,
+  KillmailFeedResponseSchema,
+  ErrorResponseSchema,
+} from '../schemas.js';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 const tracer = trace.getTracer('battlescope.api.killmails');
 
-const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 25;
 const DEFAULT_STREAM_INTERVAL = 5000;
 
-const SpaceTypeQuerySchema = z
-  .union([SpaceTypeSchema, z.array(SpaceTypeSchema)])
-  .optional()
-  .transform((value) => {
-    if (!value) {
-      return undefined;
-    }
-    return Array.isArray(value) ? [...new Set(value)] : [value];
-  });
-
-const RecentQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
-  spaceType: SpaceTypeQuerySchema,
-  trackedOnly: z.coerce.boolean().optional(),
-});
-
-const StreamQuerySchema = RecentQuerySchema.extend({
-  once: z.coerce.boolean().optional(),
-  pollIntervalMs: z.coerce.number().int().min(1000).max(60000).optional(),
-});
+const RecentQuerySchema = KillmailRecentQuerySchema;
+const StreamQuerySchema = KillmailStreamQuerySchema;
 
 const setSseHeaders = (reply: FastifyReply) => {
   reply.raw.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -51,36 +37,50 @@ const normalizeSpaceTypes = (
   spaceTypes && spaceTypes.length > 0 ? spaceTypes : undefined;
 
 export const registerKillmailRoutes = (
-  app: FastifyInstance,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: FastifyInstance<any, any, any, any, ZodTypeProvider>,
   repository: KillmailRepository,
   rulesetRepository: RulesetRepository,
   resolveCorsOrigin: ResolveCorsOrigin,
   nameEnricher: NameEnricher,
 ): void => {
-  app.get('/killmails/recent', async (request, reply) => {
-    const query = RecentQuerySchema.parse(request.query);
-    const limit = query.limit ?? DEFAULT_LIMIT;
+  app.get('/killmails/recent', {
+    schema: {
+      tags: ['Killmails'],
+      summary: 'Get recent killmails',
+      description: 'Returns a list of recent killmails with optional filtering by space type',
+      querystring: KillmailRecentQuerySchema,
+      response: {
+        200: KillmailFeedResponseSchema,
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const query = RecentQuerySchema.parse(request.query);
+      const limit = query.limit ?? DEFAULT_LIMIT;
 
-    const ruleset = await rulesetRepository.getActiveRuleset();
-    const items = await tracer.startActiveSpan('fetchRecentKillmails', async (span) => {
-      try {
-        return await repository.fetchRecentFeed({
-          limit,
-          spaceTypes: normalizeSpaceTypes(query.spaceType),
-          ruleset,
-          enforceTracked: query.trackedOnly ?? false,
-        });
-      } finally {
-        span.end();
-      }
-    });
+      const ruleset = await rulesetRepository.getActiveRuleset();
+      const items = await tracer.startActiveSpan('fetchRecentKillmails', async (span) => {
+        try {
+          return await repository.fetchRecentFeed({
+            limit,
+            spaceTypes: normalizeSpaceTypes(query.spaceType),
+            ruleset,
+            enforceTracked: query.trackedOnly ?? false,
+          });
+        } finally {
+          span.end();
+        }
+      });
 
-    const enriched = await nameEnricher.enrichKillmailFeed(items);
+      const enriched = await nameEnricher.enrichKillmailFeed(items);
 
-    return reply.send({
-      items: enriched,
-      count: enriched.length,
-    });
+      return reply.send({
+        items: enriched,
+        count: enriched.length,
+      });
+    },
   });
 
   app.get('/killmails/stream', async (request, reply) => {

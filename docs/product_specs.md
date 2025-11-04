@@ -89,7 +89,7 @@ This enables performant historical and tactical insights while maintaining low s
 | Column | Type | Description |
 |---------|------|-------------|
 | `id` | UUID | Internal battle ID |
-| `system_id` | INT | Solar system ID |
+| `system_id` | BIGINT | Solar system ID (supports large EVE system IDs) |
 | `space_type` | ENUM(`kspace`, `jspace`, `pochven`) | Derived from system ID |
 | `start_time` | DATETIME | Earliest killmail |
 | `end_time` | DATETIME | Latest killmail |
@@ -102,11 +102,11 @@ This enables performant historical and tactical insights while maintaining low s
 | Column | Type | Description |
 |---------|------|-------------|
 | `battle_id` | UUID | FK to battles |
-| `killmail_id` | INT | zKillboard kill ID |
+| `killmail_id` | BIGINT | zKillboard kill ID (large IDs require bigint) |
 | `zkb_url` | TEXT | Killmail link |
 | `timestamp` | DATETIME | Killmail time |
-| `victim_alliance_id` | INT | From metadata |
-| `attacker_alliance_ids` | ARRAY | List of alliances involved |
+| `victim_alliance_id` | BIGINT | From metadata (nullable) |
+| `attacker_alliance_ids` | ARRAY[BIGINT] | List of alliances involved |
 | `isk_value` | BIGINT | Total value destroyed |
 | `side_id` | SMALLINT | 0 or 1 to group sides |
 
@@ -114,12 +114,21 @@ This enables performant historical and tactical insights while maintaining low s
 | Column | Type | Description |
 |---------|------|-------------|
 | `battle_id` | UUID | FK to battles |
-| `character_id` | INT | Participant ID |
-| `alliance_id` | INT | Alliance ID |
-| `corp_id` | INT | Corporation ID |
-| `ship_type_id` | INT | Hull type |
+| `character_id` | BIGINT | Participant ID |
+| `alliance_id` | BIGINT | Alliance ID (nullable) |
+| `corp_id` | BIGINT | Corporation ID (nullable) |
+| `ship_type_id` | BIGINT | Hull type (nullable) |
 | `side_id` | SMALLINT | Alliance group side |
 | `is_victim` | BOOL | True if ship lost |
+
+### 5.2 ID Type Requirements
+
+**All EVE Online entity identifiers must use BIGINT (64-bit integers):**
+
+- **Rationale**: EVE Online IDs can exceed JavaScript's `Number.MAX_SAFE_INTEGER` (2^53-1 = 9,007,199,254,740,991)
+- **Affected entities**: killmail IDs, character IDs, corporation IDs, alliance IDs, system IDs, ship type IDs
+- **API representation**: All IDs transmitted as strings in JSON to prevent precision loss
+- **Database storage**: Native BIGINT columns for efficient indexing and filtering
 
 ---
 
@@ -140,12 +149,54 @@ This enables performant historical and tactical insights while maintaining low s
 | F11 | Provide aggregated statistics for total battles and top alliances/corps to power the homepage dashboard | Medium |
 | F12 | Expose a streaming-friendly recent killmail feed segmented by space type for the Recent Kills page | Medium |
 | F13 | Offer read/write APIs for rulesets (min pilots, tracked alliances/corps, ignore-unlisted toggle) surfaced in the Rules UI | High |
+| F14 | Resolve and include entity names (alliances, corps, characters, systems, ships) in all API responses via ESI integration | High |
 
 ### Frontend MVP Experience
 
 - **Home:** Present total battle reports and tracked alliance/corp counts with contextual metadata from F11; refresh periodically without requiring login.
 - **Recent Kills:** Auto-update a list of recent killmails by space type (kspace, jspace, pochven) using the streaming feed from F12 with graceful fallback polling.
 - **Rules:** Allow operators to configure minimum pilot thresholds and tracked alliances/corps, persisting changes through F13 while signalling that authentication will arrive in a future iteration.
+- **Battles:** Display list of recent battles with detail view showing participants and killmails.
+
+### UI Display Requirements (F14)
+
+**Entity Name Display**: The UI must display human-readable names for all EVE Online entities instead of raw IDs.
+
+| Entity Type | Display Format | Example | zKillboard Link |
+|-------------|----------------|---------|-----------------|
+| **Alliance** | Alliance name as clickable link | [Pandemic Legion](https://zkillboard.com/alliance/99001234/) | `https://zkillboard.com/alliance/{allianceId}/` |
+| **Corporation** | Corporation name as clickable link | [Sniggerdly](https://zkillboard.com/corporation/98001234/) | `https://zkillboard.com/corporation/{corpId}/` |
+| **Character** | Character name as clickable link | [John Doe](https://zkillboard.com/character/90012345/) | `https://zkillboard.com/character/{characterId}/` |
+| **System** | System name with optional ID | J115422 (31000123) | N/A |
+| **Ship Type** | Ship name | Loki | N/A |
+
+**UI Implementation Rules**:
+
+1. **Never display raw IDs**: All entity references must show names, not numeric IDs
+2. **External links**: All alliances, corporations, and characters must link to their respective zKillboard pages
+3. **Link styling**: Use visual indicators (color, underline, or icon) to distinguish external links
+4. **Fallback handling**: If a name is unavailable, display "Unknown {EntityType} #{ID}" with tooltip
+5. **Loading states**: Show skeleton loaders or placeholders while names are being fetched
+6. **Multiple entities**: When displaying lists (e.g., attacker alliances), show all names separated by commas, each as a clickable link
+
+**Screen-Specific Requirements**:
+
+- **Home View**:
+  - Top Alliances: Display alliance names with battle counts
+  - Top Corporations: Display corporation names with battle counts
+  - Each entry links to zKillboard entity page
+  
+- **Recent Kills View**:
+  - Show victim alliance/corp/character names
+  - Show attacker alliance/corp names (summarized if many)
+  - System name with space type indicator
+  - All entity names link to zKillboard
+  
+- **Battles View**:
+  - Battle list: Show system name and space type
+  - Battle detail: Show all participant names with roles (victim/attacker)
+  - Killmail list: Show victim and attacker entity names
+  - All entity names link to zKillboard
 
 ---
 
@@ -164,18 +215,49 @@ This enables performant historical and tactical insights while maintaining low s
 
 ## 8. API Examples
 
+### GET /stats/summary
+```json
+{
+  "totalBattles": 1543,
+  "totalKillmails": 8721,
+  "uniqueAlliances": 42,
+  "uniqueCorporations": 156,
+  "topAlliances": [
+    {
+      "allianceId": "99001234",
+      "allianceName": "Pandemic Legion",
+      "battleCount": 87
+    },
+    {
+      "allianceId": "99005678",
+      "allianceName": "Goonswarm Federation",
+      "battleCount": 73
+    }
+  ],
+  "topCorporations": [
+    {
+      "corpId": "98001234",
+      "corpName": "Sniggerdly",
+      "battleCount": 45
+    }
+  ],
+  "generatedAt": "2025-11-03T19:15:00Z"
+}
+```
+
 ### GET /battles?space_type=jspace
 ```json
 [
   {
-    "battle_id": "BR-31000123-20251103",
-    "system_name": "J115422",
-    "space_type": "jspace",
-    "start_time": "2025-11-03T18:42:00Z",
-    "end_time": "2025-11-03T19:05:00Z",
-    "total_kills": 14,
-    "total_isk_destroyed": 3600000000,
-    "zkill_related_url": "https://zkillboard.com/related/31000123/202511031842/"
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "systemId": "31000123",
+    "systemName": "J115422",
+    "spaceType": "jspace",
+    "startTime": "2025-11-03T18:42:00Z",
+    "endTime": "2025-11-03T19:05:00Z",
+    "totalKills": "14",
+    "totalIskDestroyed": "3600000000",
+    "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
   }
 ]
 ```
@@ -183,29 +265,97 @@ This enables performant historical and tactical insights while maintaining low s
 ### GET /battles/:id
 ```json
 {
-  "battle_id": "BR-31000123-20251103",
-  "system_id": "31000123",
-  "space_type": "jspace",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "systemId": "31000123",
+  "systemName": "J115422",
+  "spaceType": "jspace",
+  "startTime": "2025-11-03T18:42:00Z",
+  "endTime": "2025-11-03T19:05:00Z",
+  "totalKills": "14",
+  "totalIskDestroyed": "3600000000",
+  "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/",
+  "createdAt": "2025-11-03T19:05:30Z",
   "killmails": [
     {
-      "killmail_id": "12457890",
-      "zkb_url": "https://zkillboard.com/kill/12457890/",
-      "isk_value": "380000000",
-      "timestamp": "2025-11-03T18:43:00Z",
+      "killmailId": "12457890",
+      "zkbUrl": "https://zkillboard.com/kill/12457890/",
+      "occurredAt": "2025-11-03T18:43:00Z",
+      "victimAllianceId": "99001234",
+      "victimAllianceName": "Pandemic Legion",
+      "victimCorpId": "98001234",
+      "victimCorpName": "Sniggerdly",
+      "victimCharacterId": "90012345",
+      "victimCharacterName": "John Doe",
+      "attackerAllianceIds": ["99005678"],
+      "attackerAllianceNames": ["Goonswarm Federation"],
+      "attackerCorpIds": ["98005678"],
+      "attackerCorpNames": ["KarmaFleet"],
+      "attackerCharacterIds": ["90098765"],
+      "attackerCharacterNames": ["Jane Smith"],
+      "iskValue": "380000000",
       "enrichment": {
         "status": "succeeded",
         "payload": { "source": "zkill" },
         "error": null,
-        "fetched_at": "2025-11-03T18:45:00Z",
-        "updated_at": "2025-11-03T18:45:05Z",
-        "created_at": "2025-11-03T18:44:30Z"
+        "fetchedAt": "2025-11-03T18:45:00Z",
+        "updatedAt": "2025-11-03T18:45:05Z",
+        "createdAt": "2025-11-03T18:44:30Z"
       }
+    }
+  ],
+  "participants": [
+    {
+      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "characterId": "90012345",
+      "characterName": "John Doe",
+      "allianceId": "99001234",
+      "allianceName": "Pandemic Legion",
+      "corpId": "98001234",
+      "corpName": "Sniggerdly",
+      "shipTypeId": "11567",
+      "shipTypeName": "Loki",
+      "sideId": "1",
+      "isVictim": true
     }
   ]
 }
 ```
 
-> `enrichment.status` tracks the worker lifecycle (`pending`, `processing`, `succeeded`, `failed`) while keeping detailed payloads optional. Producers should requeue killmails when failures persist to guarantee eventual consistency.
+### GET /killmails/recent?limit=50
+```json
+{
+  "items": [
+    {
+      "killmailId": "12457890",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "occurredAt": "2025-11-03T18:43:00Z",
+      "spaceType": "jspace",
+      "victimAllianceId": "99001234",
+      "victimAllianceName": "Pandemic Legion",
+      "victimCorpId": "98001234",
+      "victimCorpName": "Sniggerdly",
+      "victimCharacterId": "90012345",
+      "victimCharacterName": "John Doe",
+      "attackerAllianceIds": ["99005678"],
+      "attackerAllianceNames": ["Goonswarm Federation"],
+      "attackerCorpIds": ["98005678"],
+      "attackerCorpNames": ["KarmaFleet"],
+      "attackerCharacterIds": ["90098765"],
+      "attackerCharacterNames": ["Jane Smith"],
+      "iskValue": "380000000",
+      "zkbUrl": "https://zkillboard.com/kill/12457890/",
+      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "participantCount": 15
+    }
+  ],
+  "count": 50
+}
+```
+
+> **Entity Name Resolution**: All API responses include both IDs (as strings for bigint support) and human-readable names for alliances, corporations, characters, systems, and ship types. Names are resolved via the ESI API during enrichment and cached for performance.
+
+> **Enrichment Lifecycle**: `enrichment.status` tracks the worker lifecycle (`pending`, `processing`, `succeeded`, `failed`) while keeping detailed payloads optional. Producers should requeue killmails when failures persist to guarantee eventual consistency.
 
 ---
 

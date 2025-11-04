@@ -1,31 +1,26 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { trace } from '@opentelemetry/api';
-import { z } from 'zod';
-import { SpaceTypeSchema } from '@battlescope/database';
 import type { BattleRepository, BattleFilters, BattleCursor } from '@battlescope/database';
 import type { NameEnricher } from '../services/name-enricher.js';
+import {
+  BattleListQuerySchema,
+  BattleIdParamSchema,
+  EntityIdParamSchema,
+  BattleListResponseSchema,
+  BattleDetailSchema,
+  ErrorResponseSchema,
+} from '../schemas.js';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 const tracer = trace.getTracer('battlescope.api.battles');
 
-const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 20;
 
-const ListQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
-  cursor: z.string().optional(),
-  spaceType: SpaceTypeSchema.optional(),
-  systemId: z.coerce.bigint().optional(),
-  allianceId: z.coerce.bigint().optional(),
-  corpId: z.coerce.bigint().optional(),
-  characterId: z.string().optional(),
-  since: z.coerce.date().optional(),
-  until: z.coerce.date().optional(),
-});
-
-const AllianceParamsSchema = z.object({ id: z.coerce.bigint() });
-const CorpParamsSchema = z.object({ id: z.coerce.bigint() });
-const CharacterParamsSchema = z.object({ id: z.string() });
-const BattleParamsSchema = z.object({ id: z.string() });
+const ListQuerySchema = BattleListQuerySchema;
+const AllianceParamsSchema = EntityIdParamSchema;
+const CorpParamsSchema = EntityIdParamSchema;
+const CharacterParamsSchema = EntityIdParamSchema;
+const BattleParamsSchema = BattleIdParamSchema;
 
 const encodeCursor = (cursor: BattleCursor): string =>
   Buffer.from(
@@ -61,11 +56,26 @@ const buildFilters = (
     characterId = BigInt(query.characterId);
   }
 
+  let systemId: bigint | undefined;
+  if (query.systemId) {
+    systemId = BigInt(query.systemId);
+  }
+
+  let allianceId: bigint | undefined;
+  if (query.allianceId) {
+    allianceId = BigInt(query.allianceId);
+  }
+
+  let corpId: bigint | undefined;
+  if (query.corpId) {
+    corpId = BigInt(query.corpId);
+  }
+
   return {
     spaceType: query.spaceType,
-    systemId: query.systemId,
-    allianceId: query.allianceId,
-    corpId: query.corpId,
+    systemId,
+    allianceId,
+    corpId,
     characterId,
     since: query.since,
     until: query.until,
@@ -124,50 +134,125 @@ const handleListRequest = async (
 };
 
 export const registerBattleRoutes = (
-  app: FastifyInstance,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: FastifyInstance<any, any, any, any, ZodTypeProvider>,
   repository: BattleRepository,
   nameEnricher: NameEnricher,
 ): void => {
-  app.get('/battles', async (request, reply) => {
-    return handleListRequest(repository, request, reply, nameEnricher);
+  app.get('/battles', {
+    schema: {
+      tags: ['Battles'],
+      summary: 'List battles',
+      description:
+        'Returns a paginated list of battles with optional filtering by space type, system, alliance, corporation, character, or time range.',
+      querystring: BattleListQuerySchema,
+      response: {
+        200: BattleListResponseSchema,
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      return handleListRequest(repository, request, reply, nameEnricher);
+    },
   });
 
-  app.get('/alliances/:id/battles', async (request, reply) => {
-    const params = AllianceParamsSchema.parse(request.params);
-    return handleListRequest(repository, request, reply, nameEnricher, { allianceId: params.id });
-  });
-
-  app.get('/corporations/:id/battles', async (request, reply) => {
-    const params = CorpParamsSchema.parse(request.params);
-    return handleListRequest(repository, request, reply, nameEnricher, { corpId: params.id });
-  });
-
-  app.get('/characters/:id/battles', async (request, reply) => {
-    const params = CharacterParamsSchema.parse(request.params);
-    try {
+  app.get('/alliances/:id/battles', {
+    schema: {
+      tags: ['Battles'],
+      summary: 'List battles for an alliance',
+      description: 'Returns battles where the specified alliance participated',
+      params: EntityIdParamSchema,
+      querystring: BattleListQuerySchema,
+      response: {
+        200: BattleListResponseSchema,
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = AllianceParamsSchema.parse(request.params);
       return handleListRequest(repository, request, reply, nameEnricher, {
-        characterId: BigInt(params.id),
+        allianceId: BigInt(params.id),
       });
-    } catch {
-      return reply.status(400).send({ message: 'Invalid character id' });
-    }
+    },
   });
 
-  app.get('/battles/:id', async (request, reply) => {
-    const params = BattleParamsSchema.parse(request.params);
-    const battle = await tracer.startActiveSpan('getBattle', async (span) => {
+  app.get('/corporations/:id/battles', {
+    schema: {
+      tags: ['Battles'],
+      summary: 'List battles for a corporation',
+      description: 'Returns battles where the specified corporation participated',
+      params: EntityIdParamSchema,
+      querystring: BattleListQuerySchema,
+      response: {
+        200: BattleListResponseSchema,
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = CorpParamsSchema.parse(request.params);
+      return handleListRequest(repository, request, reply, nameEnricher, {
+        corpId: BigInt(params.id),
+      });
+    },
+  });
+
+  app.get('/characters/:id/battles', {
+    schema: {
+      tags: ['Battles'],
+      summary: 'List battles for a character',
+      description: 'Returns battles where the specified character participated',
+      params: EntityIdParamSchema,
+      querystring: BattleListQuerySchema,
+      response: {
+        200: BattleListResponseSchema,
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = CharacterParamsSchema.parse(request.params);
       try {
-        return await repository.getBattleById(params.id);
-      } finally {
-        span.end();
+        return handleListRequest(repository, request, reply, nameEnricher, {
+          characterId: BigInt(params.id),
+        });
+      } catch {
+        return reply.status(400).send({ message: 'Invalid character id' });
       }
-    });
+    },
+  });
 
-    if (!battle) {
-      return reply.status(404).send({ message: 'Battle not found' });
-    }
+  app.get('/battles/:id', {
+    schema: {
+      tags: ['Battles'],
+      summary: 'Get battle details',
+      description:
+        'Returns detailed information about a specific battle including all killmails and participants',
+      params: BattleIdParamSchema,
+      response: {
+        200: BattleDetailSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = BattleParamsSchema.parse(request.params);
+      const battle = await tracer.startActiveSpan('getBattle', async (span) => {
+        try {
+          return await repository.getBattleById(params.id);
+        } finally {
+          span.end();
+        }
+      });
 
-    const response = await nameEnricher.enrichBattleDetail(battle);
-    return reply.send(response);
+      if (!battle) {
+        return reply.status(404).send({ message: 'Battle not found' });
+      }
+
+      const response = await nameEnricher.enrichBattleDetail(battle);
+      return reply.send(response);
+    },
   });
 };

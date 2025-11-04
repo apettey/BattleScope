@@ -1,6 +1,14 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { ZodError } from 'zod';
+import {
+  jsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 import type {
   BattleRepository,
   KillmailRepository,
@@ -35,7 +43,59 @@ export const buildServer = ({
   config,
   nameEnricher,
 }: BuildServerOptions) => {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
+
+  // Set up Zod validators
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  // Register Swagger for OpenAPI generation
+  void app.register(swagger, {
+    openapi: {
+      info: {
+        title: 'BattleScope API',
+        version: '2.0.0',
+        description: `BattleScope is a data intelligence platform that reconstructs and classifies battles in EVE Online by clustering related killmails from zKillboard.
+
+## Key Features
+- Battle reconstruction from killmail clustering
+- Real-time killmail feed with Server-Sent Events
+- Entity name resolution via ESI API
+- Configurable ruleset filtering
+
+## Data Types
+All EVE Online entity IDs (killmail, character, corporation, alliance, system, ship type) are transmitted as strings to support bigint values that exceed JavaScript's Number.MAX_SAFE_INTEGER.`,
+        contact: {
+          name: 'BattleScope Support',
+        },
+        license: {
+          name: 'MIT',
+        },
+      },
+      servers: [
+        {
+          url: 'http://localhost:3000',
+          description: 'Local development server',
+        },
+      ],
+      tags: [
+        { name: 'Battles', description: 'Battle reconstruction and querying' },
+        { name: 'Killmails', description: 'Killmail feed and streaming' },
+        { name: 'Dashboard', description: 'Statistical summaries' },
+        { name: 'Rules', description: 'Ruleset configuration' },
+      ],
+    },
+    transform: jsonSchemaTransform,
+  });
+
+  // Register Swagger UI
+  void app.register(swaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+    },
+  });
 
   const allowedOrigins = new Set(config.corsAllowedOrigins);
 
