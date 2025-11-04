@@ -6,7 +6,12 @@ import type {
   RulesetRecord,
   KillmailFeedItem,
   DashboardSummary,
+  KillmailEnrichmentStatusSchema,
 } from '@battlescope/database';
+import type { SpaceType } from '@battlescope/shared';
+import type { z } from 'zod';
+
+type EnrichmentStatus = z.infer<typeof KillmailEnrichmentStatusSchema>;
 
 export type NameLookup = Map<string, string>;
 
@@ -62,7 +67,7 @@ export interface BattleSummaryResponse {
   id: string;
   systemId: string;
   systemName: string | null;
-  spaceType: string;
+  spaceType: SpaceType;
   startTime: string;
   endTime: string;
   totalKills: string;
@@ -90,7 +95,7 @@ export interface BattleDetailResponse extends BattleSummaryResponse {
     iskValue: string | null;
     zkbUrl: string;
     enrichment: {
-      status: string;
+      status: EnrichmentStatus;
       payload: Record<string, unknown> | null;
       error: string | null;
       fetchedAt: string | null;
@@ -210,7 +215,7 @@ export interface KillmailFeedItemResponse {
   systemId: string;
   systemName: string | null;
   occurredAt: string;
-  spaceType: string;
+  spaceType: SpaceType;
   victimAllianceId: string | null;
   victimAllianceName: string | null;
   victimCorpId: string | null;

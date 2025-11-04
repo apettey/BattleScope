@@ -1,5 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { trace } from '@opentelemetry/api';
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { z } from 'zod';
 import type { BattleRepository, BattleFilters, BattleCursor } from '@battlescope/database';
 import type { NameEnricher } from '../services/name-enricher.js';
 import {

@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: BattleScope API
+  version: 2.0.0
+  description: >-
+    BattleScope is a data intelligence platform that reconstructs and classifies
+    battles in EVE Online by clustering related killmails from zKillboard.
+
+
+    ## Key Features
+
+    - Battle reconstruction from killmail clustering
+
+    - Real-time killmail feed with Server-Sent Events
+
+    - Entity name resolution via ESI API
+
+    - Configurable ruleset filtering
+
+
+    ## Data Types
+
+    All EVE Online entity IDs (killmail, character, corporation, alliance,
+    system, ship type) are transmitted as strings to support bigint values that
+    exceed JavaScript's Number.MAX_SAFE_INTEGER.
+  contact:
+    name: BattleScope Support
+  license:
+    name: MIT
+components:
+  schemas: {}
+paths: {}
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Battles
+    description: Battle reconstruction and querying
+  - name: Killmails
+    description: Killmail feed and streaming
+  - name: Dashboard
+    description: Statistical summaries
+  - name: Rules
+    description: Ruleset configuration
