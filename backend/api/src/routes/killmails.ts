@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { KillmailRepository, RulesetRepository, SpaceType } from '@battlescope/database';
 import { SpaceTypeSchema } from '@battlescope/database';
 import { toKillmailFeedItemResponse } from '../types.js';
+import { ensureCorsHeaders, type ResolveCorsOrigin } from '../cors.js';
 
 const tracer = trace.getTracer('battlescope.api.killmails');
 
@@ -53,6 +54,7 @@ export const registerKillmailRoutes = (
   app: FastifyInstance,
   repository: KillmailRepository,
   rulesetRepository: RulesetRepository,
+  resolveCorsOrigin: ResolveCorsOrigin,
 ): void => {
   app.get('/killmails/recent', async (request, reply) => {
     const query = RecentQuerySchema.parse(request.query);
@@ -84,6 +86,7 @@ export const registerKillmailRoutes = (
     const pollIntervalMs = query.pollIntervalMs ?? DEFAULT_STREAM_INTERVAL;
     const ruleset = await rulesetRepository.getActiveRuleset();
 
+    ensureCorsHeaders(request, reply, resolveCorsOrigin);
     setSseHeaders(reply);
 
     const spaceTypes = normalizeSpaceTypes(query.spaceType);

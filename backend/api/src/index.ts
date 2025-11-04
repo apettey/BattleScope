@@ -6,12 +6,14 @@ import {
   DashboardRepository,
   createDb,
 } from '@battlescope/database';
+import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { loadConfig } from './config.js';
 import { buildServer } from './server.js';
 
 const logger = pino({ name: 'api-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 
 export const start = async (): Promise<void> => {
+  await startTelemetry();
   const config = loadConfig();
   const db = createDb();
   const battleRepository = new BattleRepository(db);
@@ -31,6 +33,7 @@ export const start = async (): Promise<void> => {
     logger.info('Shutting down API server');
     await app.close();
     await db.destroy();
+    await stopTelemetry();
   };
 
   process.once('SIGINT', () => {
@@ -45,8 +48,9 @@ export const start = async (): Promise<void> => {
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  start().catch((error) => {
+  start().catch(async (error) => {
     logger.error({ err: error }, 'API server failed to start');
+    await stopTelemetry();
     process.exitCode = 1;
   });
 }

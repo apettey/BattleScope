@@ -1,7 +1,13 @@
 import { Queue } from 'bullmq';
 import { Redis as IORedis } from 'ioredis';
 import { createDb, KillmailRepository } from '@battlescope/database';
-import { ENRICHMENT_QUEUE_NAME, assertEnv, type EnrichmentJobPayload } from '@battlescope/shared';
+import {
+  ENRICHMENT_QUEUE_NAME,
+  assertEnv,
+  startTelemetry,
+  stopTelemetry,
+  type EnrichmentJobPayload,
+} from '@battlescope/shared';
 import { loadConfig } from './config.js';
 import { IngestionService, type KillmailEnrichmentProducer } from './service.js';
 import { MockKillmailSource, ZKillboardRedisQSource } from './source.js';
@@ -11,6 +17,7 @@ import { pino } from 'pino';
 const logger = pino({ name: 'ingest-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 
 export const start = async (): Promise<void> => {
+  await startTelemetry();
   const config = loadConfig();
   const db = createDb();
   const repository = new KillmailRepository(db);
@@ -44,6 +51,7 @@ export const start = async (): Promise<void> => {
     await healthServer.close();
     await enrichmentQueue.close();
     await db.destroy();
+    await stopTelemetry();
   };
 
   process.once('SIGINT', () => {
@@ -60,8 +68,9 @@ export const start = async (): Promise<void> => {
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  start().catch((error) => {
+  start().catch(async (error) => {
     logger.error({ err: error }, 'Ingestion service failed to start');
+    await stopTelemetry();
     process.exitCode = 1;
   });
 }

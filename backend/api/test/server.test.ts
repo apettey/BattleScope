@@ -332,6 +332,97 @@ describe('API routes', () => {
     expect(payload[0].killmailId).toBe('2001');
   });
 
+  it('includes CORS headers on killmail stream responses for allowed origins', async () => {
+    const corsApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: {
+        ...baseConfig,
+        corsAllowedOrigins: ['https://app.example.com'],
+      },
+    });
+    await corsApp.ready();
+
+    const response = await corsApp.inject({
+      method: 'GET',
+      url: '/killmails/stream?once=true&limit=1',
+      headers: {
+        origin: 'https://app.example.com',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('https://app.example.com');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    await corsApp.close();
+  });
+
+  it('includes CORS headers on killmail stream responses in developer mode for localhost', async () => {
+    const devApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: {
+        ...baseConfig,
+        developerMode: true,
+      },
+    });
+    await devApp.ready();
+
+    const response = await devApp.inject({
+      method: 'GET',
+      url: '/killmails/stream?once=true&limit=1',
+      headers: {
+        origin: 'http://localhost:5173',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    await devApp.close();
+  });
+
+  it('includes CORS headers on standard responses in developer mode for localhost', async () => {
+    const devApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: {
+        ...baseConfig,
+        developerMode: true,
+      },
+    });
+    await devApp.ready();
+
+    const response = await devApp.inject({
+      method: 'GET',
+      url: '/killmails/recent?limit=1',
+      headers: {
+        origin: 'http://127.0.0.1:4200',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('http://127.0.0.1:4200');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    const varyHeader = response.headers['vary'];
+    expect(varyHeader).toBeDefined();
+    if (Array.isArray(varyHeader)) {
+      expect(varyHeader.map((value) => value.toLowerCase())).toContain('origin');
+    } else {
+      expect((varyHeader as string).toLowerCase()).toContain('origin');
+    }
+    await devApp.close();
+  });
+
   it('returns dashboard statistics summary', async () => {
     const response = await app.inject({ method: 'GET', url: '/stats/summary' });
     expect(response.statusCode).toBe(200);

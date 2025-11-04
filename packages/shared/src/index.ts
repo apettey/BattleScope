@@ -99,3 +99,5 @@ export interface DashboardSummaryDto {
   topCorporations: Array<{ corpId: string; battleCount: number }>;
   generatedAt: string;
 }
+
+export { startTelemetry, stopTelemetry } from './otel/index.js';

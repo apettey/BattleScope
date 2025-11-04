@@ -1,4 +1,5 @@
 import { BattleRepository, KillmailRepository, createDb } from '@battlescope/database';
+import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { loadConfig } from './config.js';
 import { ClusteringEngine } from './engine.js';
 import { ClustererService } from './service.js';
@@ -8,6 +9,7 @@ import { pino } from 'pino';
 const logger = pino({ name: 'clusterer-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
 
 export const start = async (): Promise<void> => {
+  await startTelemetry();
   const config = loadConfig();
   const db = createDb();
   const battleRepository = new BattleRepository(db);
@@ -29,6 +31,7 @@ export const start = async (): Promise<void> => {
     logger.info('Shutting down clusterer service');
     await healthServer.close();
     await db.destroy();
+    await stopTelemetry();
   };
 
   process.once('SIGINT', () => {
@@ -45,8 +48,9 @@ export const start = async (): Promise<void> => {
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  start().catch((error) => {
+  start().catch(async (error) => {
     logger.error({ err: error }, 'Clusterer service failed to start');
+    await stopTelemetry();
     process.exitCode = 1;
   });
 }

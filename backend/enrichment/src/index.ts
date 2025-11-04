@@ -6,6 +6,7 @@ export {
 export type { EnrichmentJobData } from './queue.js';
 
 import { createDb, KillmailEnrichmentRepository } from '@battlescope/database';
+import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { Redis as IORedis } from 'ioredis';
 import { QueueEvents, Worker } from 'bullmq';
 import { pino } from 'pino';
@@ -17,6 +18,7 @@ import { ENRICHMENT_QUEUE_NAME, type EnrichmentJobData } from './queue.js';
 const logger = pino({ name: 'enrichment-worker', level: process.env.LOG_LEVEL ?? 'info' });
 
 export const start = async (): Promise<void> => {
+  await startTelemetry();
   const config = loadConfig();
   const db = createDb();
   const repository = new KillmailEnrichmentRepository(db);
@@ -106,6 +108,7 @@ export const start = async (): Promise<void> => {
         }
       })(),
     ]);
+    await stopTelemetry();
   };
 
   process.once('SIGINT', () => {
@@ -126,6 +129,7 @@ const run = async () => {
     await start();
   } catch (error) {
     logger.error({ err: error }, 'Enrichment worker failed to start');
+    await stopTelemetry();
     process.exitCode = 1;
   }
 };

@@ -55,6 +55,7 @@ All application code lives in a single repository, with the React frontend under
 - Include tests for new modules and utilities.
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
 - Validate code against ESLint and Prettier.
+- Run `make ci` after applying changes and confirm it passes so the pipeline stays green.
 
 ### 3.4 Testability
 - **Backend coverage first:** treat backend modules as critical path and require unit and integration tests that cover happy paths, edge cases, and failure handling before merging.

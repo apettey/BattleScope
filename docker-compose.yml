@@ -66,6 +66,9 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-api
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
@@ -92,6 +95,9 @@ services:
       ZKILLBOARD_REDISQ_ID: battlescope-local
       PORT: 3002
       LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-ingest
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
@@ -119,6 +125,9 @@ services:
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
       PORT: 3003
       LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-clusterer
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
@@ -146,6 +155,9 @@ services:
       HOST: 0.0.0.0
       PORT: 3004
       LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-enrichment
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
@@ -171,6 +183,9 @@ services:
     environment:
       NODE_ENV: development
       LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-scheduler
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
@@ -205,6 +220,59 @@ services:
       api:
         condition: service_started
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.94.0
+    container_name: battlescope-otel-collector
+    command: ['--config=/etc/otel/collector.yaml']
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otel/collector.yaml:ro
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+      - '9464:9464'
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: battlescope-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '9090:9090'
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: battlescope-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - '3030:3000'
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: battlescope-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686'
+      - '14268:14268'
+      - '14250:14250'
 volumes:
   postgres-data:
   node_modules:
+  prometheus-data:
+  grafana-data:

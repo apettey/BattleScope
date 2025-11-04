@@ -13,6 +13,7 @@ import { registerRulesRoutes } from './routes/rules.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import type { ApiConfig } from './config.js';
+import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;
@@ -39,27 +40,47 @@ export const buildServer = ({
     /^https?:\/\/localhost(:\d+)?$/i.test(origin) ||
     /^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(origin);
 
+  const resolveCorsOrigin: ResolveCorsOrigin = (origin) => {
+    if (!origin) {
+      return undefined;
+    }
+
+    if (config.developerMode && isLocalhostOrigin(origin)) {
+      return origin;
+    }
+
+    if (allowedOrigins.size === 0) {
+      return origin;
+    }
+
+    if (allowedOrigins.has(origin)) {
+      return origin;
+    }
+
+    return false;
+  };
+
   void app.register(cors, {
     origin: (origin, callback) => {
       if (!origin) {
         return callback(null, true);
       }
 
-      if (config.developerMode && isLocalhostOrigin(origin)) {
-        return callback(null, origin);
+      const resolved = resolveCorsOrigin(origin);
+      if (resolved === false) {
+        return callback(null, false);
       }
 
-      if (allowedOrigins.size === 0) {
-        return callback(null, origin);
-      }
-
-      if (allowedOrigins.has(origin)) {
-        return callback(null, origin);
-      }
-
-      return callback(null, false);
+      return callback(null, resolved ?? origin);
     },
     credentials: true,
+  });
+
+  app.addHook('onSend', (request, reply, payload, done) => {
+    if (!reply.hasHeader('access-control-allow-origin')) {
+      ensureCorsHeaders(request, reply, resolveCorsOrigin);
+    }
+    done(null, payload);
   });
 
   app.setErrorHandler((error, request, reply) => {
@@ -78,7 +99,7 @@ export const buildServer = ({
 
   registerBattleRoutes(app, battleRepository);
   registerRulesRoutes(app, rulesetRepository);
-  registerKillmailRoutes(app, killmailRepository, rulesetRepository);
+  registerKillmailRoutes(app, killmailRepository, rulesetRepository, resolveCorsOrigin);
   registerDashboardRoutes(app, dashboardRepository);
 
   return app;

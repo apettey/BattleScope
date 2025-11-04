@@ -11,6 +11,14 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.51.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.51.1",
+    "@opentelemetry/resources": "^1.9.0",
+    "@opentelemetry/sdk-metrics": "^1.9.0",
+    "@opentelemetry/sdk-node": "^0.51.1",
+    "@opentelemetry/semantic-conventions": "^1.9.0"
+  },
   "devDependencies": {}
 }
