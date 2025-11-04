@@ -10,8 +10,30 @@ import {
   createInMemoryDatabase,
 } from '@battlescope/database';
 import type { KillmailEventInsert } from '@battlescope/database';
+import type { EsiClient, UniverseName } from '@battlescope/esi-client';
 import { buildServer } from '../src/server.js';
 import type { ApiConfig } from '../src/config.js';
+import { NameEnricher } from '../src/services/name-enricher.js';
+
+const createNameEnricher = (): NameEnricher => {
+  const cache = new Map<number, UniverseName>();
+  const client = {
+    async getUniverseNames(ids: readonly number[]) {
+      const result = new Map<number, UniverseName>();
+      for (const id of ids) {
+        let entry = cache.get(id);
+        if (!entry) {
+          entry = { id, name: `Name ${id}`, category: 'alliance' } as UniverseName;
+          cache.set(id, entry);
+        }
+        result.set(id, entry);
+      }
+      return result;
+    },
+  };
+
+  return new NameEnricher(client as unknown as EsiClient);
+};
 
 const createBattle = async (
   battleRepository: BattleRepository,
@@ -67,7 +89,14 @@ describe('API routes', () => {
     host: '0.0.0.0',
     developerMode: false,
     corsAllowedOrigins: [],
+    esiBaseUrl: 'https://esi.evetech.net/latest/',
+    esiDatasource: 'tranquility',
+    esiCompatibilityDate: '2025-09-30',
+    esiTimeoutMs: 10_000,
+    esiCacheTtlSeconds: 300,
+    esiRedisCacheUrl: undefined,
   };
+  let nameEnricher: NameEnricher;
 
   beforeAll(async () => {
     db = await createInMemoryDatabase();
@@ -142,6 +171,7 @@ describe('API routes', () => {
     await killmailRepository.markAsProcessed([2001n], secondBattleId);
     await enrichmentRepository.markFailed(2001n, 'timeout');
 
+    nameEnricher = createNameEnricher();
     app = buildServer({
       battleRepository,
       killmailRepository,
@@ -149,6 +179,7 @@ describe('API routes', () => {
       dashboardRepository,
       db: db.db,
       config: baseConfig,
+      nameEnricher,
     });
     await app.ready();
   });
@@ -172,6 +203,7 @@ describe('API routes', () => {
     expect(body.items[0]).toMatchObject({
       zkillRelatedUrl: expect.stringContaining('https://zkillboard.com/related/'),
     });
+    expect(body.items[0].systemName).toBe(`Name ${body.items[0].systemId}`);
     expect(body.nextCursor).toBeTruthy();
   });
 
@@ -201,6 +233,7 @@ describe('API routes', () => {
       iskValue: expect.any(String),
       attackerCharacterIds: expect.arrayContaining([expect.any(String)]),
       victimAllianceId: '99001234',
+      victimAllianceName: 'Name 99001234',
     });
   });
 
@@ -240,6 +273,10 @@ describe('API routes', () => {
       trackedCorpIds: [],
       ignoreUnlisted: false,
     });
+    expect(body.trackedAllianceNames).toEqual(
+      body.trackedAllianceIds.map((id: string) => `Name ${id}`),
+    );
+    expect(body.trackedCorpNames).toEqual(body.trackedCorpIds.map((id: string) => `Name ${id}`));
   });
 
   it('updates ruleset configuration', async () => {
@@ -265,6 +302,10 @@ describe('API routes', () => {
       trackedCorpIds: ['12345'],
       updatedBy: 'vitest',
     });
+    expect(body.trackedAllianceNames).toEqual(
+      body.trackedAllianceIds.map((id: string) => `Name ${id}`),
+    );
+    expect(body.trackedCorpNames).toEqual(body.trackedCorpIds.map((id: string) => `Name ${id}`));
 
     // revert to default for other tests
     await rulesetRepository.updateActiveRuleset({
@@ -281,7 +322,12 @@ describe('API routes', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.count).toBeGreaterThan(0);
-    expect(body.items[0]).toMatchObject({ killmailId: '2001', spaceType: 'kspace' });
+    expect(body.items[0]).toMatchObject({
+      killmailId: '2001',
+      spaceType: 'kspace',
+    });
+    expect(body.items[0].systemName).toBe(`Name ${body.items[0].systemId}`);
+    expect(body.items[0].attackerAllianceNames).toContain('Name 99004444');
 
     const filtered = await app.inject({ method: 'GET', url: '/killmails/recent?spaceType=jspace' });
     const filteredBody = filtered.json();
@@ -343,6 +389,7 @@ describe('API routes', () => {
         ...baseConfig,
         corsAllowedOrigins: ['https://app.example.com'],
       },
+      nameEnricher: createNameEnricher(),
     });
     await corsApp.ready();
 
@@ -371,6 +418,7 @@ describe('API routes', () => {
         ...baseConfig,
         developerMode: true,
       },
+      nameEnricher: createNameEnricher(),
     });
     await devApp.ready();
 
@@ -399,6 +447,7 @@ describe('API routes', () => {
         ...baseConfig,
         developerMode: true,
       },
+      nameEnricher: createNameEnricher(),
     });
     await devApp.ready();
 
@@ -435,6 +484,7 @@ describe('API routes', () => {
       topAlliances: expect.any(Array),
       topCorporations: expect.any(Array),
     });
+    expect(summary.topAlliances[0]?.allianceName).toMatch(/^Name /);
   });
 
   it('allows cross-origin requests when no allowlist is configured', async () => {
@@ -461,6 +511,7 @@ describe('API routes', () => {
         ...baseConfig,
         corsAllowedOrigins: ['https://app.example.com'],
       },
+      nameEnricher: createNameEnricher(),
     });
     await corsApp.ready();
 
@@ -484,6 +535,7 @@ describe('API routes', () => {
       dashboardRepository: new DashboardRepository(db.db),
       db: db.db,
       config: { ...baseConfig, developerMode: true },
+      nameEnricher: createNameEnricher(),
     });
     await devApp.ready();
 
@@ -508,6 +560,7 @@ describe('API routes', () => {
       dashboardRepository: new DashboardRepository(db.db),
       db: db.db,
       config: { ...baseConfig, corsAllowedOrigins: ['https://app.example.com'] },
+      nameEnricher: createNameEnricher(),
     });
     await restrictedApp.ready();
 

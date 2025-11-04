@@ -3,7 +3,7 @@ import { trace } from '@opentelemetry/api';
 import { z } from 'zod';
 import { SpaceTypeSchema } from '@battlescope/database';
 import type { BattleRepository, BattleFilters, BattleCursor } from '@battlescope/database';
-import { toBattleDetailResponse, toBattleSummaryResponse } from '../types.js';
+import type { NameEnricher } from '../services/name-enricher.js';
 
 const tracer = trace.getTracer('battlescope.api.battles');
 
@@ -77,6 +77,7 @@ const handleListRequest = async (
   repository: BattleRepository,
   request: FastifyRequest,
   reply: FastifyReply,
+  nameEnricher: NameEnricher,
   overrides: Partial<BattleFilters> = {},
 ) => {
   const query = ListQuerySchema.parse(request.query);
@@ -106,6 +107,8 @@ const handleListRequest = async (
     }
   });
 
+  const enriched = await nameEnricher.enrichBattleSummaries(battles);
+
   const nextCursor =
     battles.length === limit
       ? encodeCursor({
@@ -115,30 +118,36 @@ const handleListRequest = async (
       : null;
 
   return reply.send({
-    items: battles.map(toBattleSummaryResponse),
+    items: enriched,
     nextCursor,
   });
 };
 
-export const registerBattleRoutes = (app: FastifyInstance, repository: BattleRepository): void => {
+export const registerBattleRoutes = (
+  app: FastifyInstance,
+  repository: BattleRepository,
+  nameEnricher: NameEnricher,
+): void => {
   app.get('/battles', async (request, reply) => {
-    return handleListRequest(repository, request, reply);
+    return handleListRequest(repository, request, reply, nameEnricher);
   });
 
   app.get('/alliances/:id/battles', async (request, reply) => {
     const params = AllianceParamsSchema.parse(request.params);
-    return handleListRequest(repository, request, reply, { allianceId: params.id });
+    return handleListRequest(repository, request, reply, nameEnricher, { allianceId: params.id });
   });
 
   app.get('/corporations/:id/battles', async (request, reply) => {
     const params = CorpParamsSchema.parse(request.params);
-    return handleListRequest(repository, request, reply, { corpId: params.id });
+    return handleListRequest(repository, request, reply, nameEnricher, { corpId: params.id });
   });
 
   app.get('/characters/:id/battles', async (request, reply) => {
     const params = CharacterParamsSchema.parse(request.params);
     try {
-      return handleListRequest(repository, request, reply, { characterId: BigInt(params.id) });
+      return handleListRequest(repository, request, reply, nameEnricher, {
+        characterId: BigInt(params.id),
+      });
     } catch {
       return reply.status(400).send({ message: 'Invalid character id' });
     }
@@ -158,6 +167,7 @@ export const registerBattleRoutes = (app: FastifyInstance, repository: BattleRep
       return reply.status(404).send({ message: 'Battle not found' });
     }
 
-    return reply.send(toBattleDetailResponse(battle));
+    const response = await nameEnricher.enrichBattleDetail(battle);
+    return reply.send(response);
   });
 };

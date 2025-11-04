@@ -3,8 +3,8 @@ import { trace } from '@opentelemetry/api';
 import { z } from 'zod';
 import type { KillmailRepository, RulesetRepository, SpaceType } from '@battlescope/database';
 import { SpaceTypeSchema } from '@battlescope/database';
-import { toKillmailFeedItemResponse } from '../types.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from '../cors.js';
+import type { NameEnricher } from '../services/name-enricher.js';
 
 const tracer = trace.getTracer('battlescope.api.killmails');
 
@@ -55,6 +55,7 @@ export const registerKillmailRoutes = (
   repository: KillmailRepository,
   rulesetRepository: RulesetRepository,
   resolveCorsOrigin: ResolveCorsOrigin,
+  nameEnricher: NameEnricher,
 ): void => {
   app.get('/killmails/recent', async (request, reply) => {
     const query = RecentQuerySchema.parse(request.query);
@@ -74,9 +75,11 @@ export const registerKillmailRoutes = (
       }
     });
 
+    const enriched = await nameEnricher.enrichKillmailFeed(items);
+
     return reply.send({
-      items: items.map(toKillmailFeedItemResponse),
-      count: items.length,
+      items: enriched,
+      count: enriched.length,
     });
   });
 
@@ -98,7 +101,7 @@ export const registerKillmailRoutes = (
       ruleset,
       enforceTracked: trackedOnly,
     });
-    const snapshot = initialItems.map(toKillmailFeedItemResponse);
+    const snapshot = await nameEnricher.enrichKillmailFeed(initialItems);
     sendEvent(reply, 'snapshot', snapshot);
 
     if (query.once) {
@@ -131,7 +134,7 @@ export const registerKillmailRoutes = (
         });
 
         if (updates.length > 0) {
-          const responses = updates.map(toKillmailFeedItemResponse);
+          const responses = await nameEnricher.enrichKillmailFeed(updates);
           for (const payload of responses) {
             sendEvent(reply, 'killmail', payload);
           }

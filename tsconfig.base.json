@@ -7,6 +7,7 @@
     "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -16,6 +17,7 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
+      "@battlescope/esi-client": ["packages/esi-client/src/index.ts"],
       "@battlescope/shared": ["packages/shared/src/index.ts"],
       "@battlescope/database": ["packages/database/src/index.ts"],
       "@battlescope/database/testing": ["packages/database/src/testing.ts"]

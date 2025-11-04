@@ -1,13 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { trace } from '@opentelemetry/api';
 import type { DashboardRepository } from '@battlescope/database';
-import { toDashboardSummaryResponse } from '../types.js';
+import type { NameEnricher } from '../services/name-enricher.js';
 
 const tracer = trace.getTracer('battlescope.api.dashboard');
 
 export const registerDashboardRoutes = (
   app: FastifyInstance,
   repository: DashboardRepository,
+  nameEnricher: NameEnricher,
 ): void => {
   app.get('/stats/summary', async (_, reply) => {
     const summary = await tracer.startActiveSpan('getDashboardSummary', async (span) => {
@@ -18,6 +19,7 @@ export const registerDashboardRoutes = (
       }
     });
 
-    return reply.send(toDashboardSummaryResponse(summary));
+    const enriched = await nameEnricher.enrichDashboardSummary(summary);
+    return reply.send(enriched);
   });
 };

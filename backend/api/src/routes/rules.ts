@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { RulesetRepository } from '@battlescope/database';
-import { toRulesetResponse } from '../types.js';
+import type { NameEnricher } from '../services/name-enricher.js';
 
 const TrackedIdSchema = z.union([z.coerce.bigint(), z.string(), z.number()]);
 
@@ -32,10 +32,15 @@ const coerceIds = (values: readonly (bigint | string | number)[] | undefined): b
   return Array.from(set);
 };
 
-export const registerRulesRoutes = (app: FastifyInstance, repository: RulesetRepository): void => {
+export const registerRulesRoutes = (
+  app: FastifyInstance,
+  repository: RulesetRepository,
+  nameEnricher: NameEnricher,
+): void => {
   app.get('/rulesets/current', async (_, reply) => {
     const ruleset = await repository.getActiveRuleset();
-    return reply.send(toRulesetResponse(ruleset));
+    const enriched = await nameEnricher.enrichRuleset(ruleset);
+    return reply.send(enriched);
   });
 
   app.put('/rulesets/current', async (request, reply) => {
@@ -48,6 +53,7 @@ export const registerRulesRoutes = (app: FastifyInstance, repository: RulesetRep
       updatedBy: body.updatedBy ?? null,
     });
 
-    return reply.send(toRulesetResponse(ruleset));
+    const enriched = await nameEnricher.enrichRuleset(ruleset);
+    return reply.send(enriched);
   });
 };

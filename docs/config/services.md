@@ -38,3 +38,12 @@ Environment variables are validated on startup via Zod; missing required values 
 - `ENRICHMENT_THROTTLE_MS` (default `0`): Delay applied between upstream zKillboard fetches.
 - `HOST` (default `0.0.0.0`) and `PORT` (default `3004`): HTTP listener for `/healthz`.
 - `LOG_LEVEL` (default `info`): Pino log level shared across backend services.
+
+## API Service
+
+- `ESI_BASE_URL` (default `https://esi.evetech.net/latest/`): Root endpoint for ESI requests. Trailing slash optional.
+- `ESI_DATASOURCE` (default `tranquility`): Datasource query parameter supplied with every ESI request.
+- `ESI_COMPATIBILITY_DATE` (default `2025-09-30`): Compatibility date appended to guarantees schema stability.
+- `ESI_TIMEOUT_MS` (default `10000`): Request timeout applied to each ESI call.
+- `ESI_CACHE_TTL_SECONDS` (default `300`): TTL for cached public ESI responses (Redis or in-memory fallback).
+- `ESI_REDIS_CACHE_URL` (optional): Redis connection string enabling shared caching across API instances.

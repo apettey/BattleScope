@@ -14,6 +14,7 @@ import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
+import type { NameEnricher } from './services/name-enricher.js';
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;
@@ -22,6 +23,7 @@ interface BuildServerOptions {
   dashboardRepository: DashboardRepository;
   db: DatabaseClient;
   config: ApiConfig;
+  nameEnricher: NameEnricher;
 }
 
 export const buildServer = ({
@@ -31,6 +33,7 @@ export const buildServer = ({
   dashboardRepository,
   db,
   config,
+  nameEnricher,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: true });
 
@@ -97,10 +100,16 @@ export const buildServer = ({
     return { status: 'ok' };
   });
 
-  registerBattleRoutes(app, battleRepository);
-  registerRulesRoutes(app, rulesetRepository);
-  registerKillmailRoutes(app, killmailRepository, rulesetRepository, resolveCorsOrigin);
-  registerDashboardRoutes(app, dashboardRepository);
+  registerBattleRoutes(app, battleRepository, nameEnricher);
+  registerRulesRoutes(app, rulesetRepository, nameEnricher);
+  registerKillmailRoutes(
+    app,
+    killmailRepository,
+    rulesetRepository,
+    resolveCorsOrigin,
+    nameEnricher,
+  );
+  registerDashboardRoutes(app, dashboardRepository, nameEnricher);
 
   return app;
 };
