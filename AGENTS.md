@@ -56,6 +56,7 @@ All application code lives in a single repository, with the React frontend under
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
 - Validate code against ESLint and Prettier.
 - Run `make ci` after applying changes and confirm it passes so the pipeline stays green.
+- **OpenAPI Specification Updates**: Whenever API routes, schemas, or request/response types change in `backend/api`, regenerate the OpenAPI specification by running `make generate-openapi` and commit the updated spec files (`docs/openapi.json` and `docs/openapi-generated.yaml`) in the same changeset to maintain API documentation accuracy.
 
 ### 3.4 Testability
 - **Backend coverage first:** treat backend modules as critical path and require unit and integration tests that cover happy paths, edge cases, and failure handling before merging.
@@ -92,6 +93,22 @@ All application code lives in a single repository, with the React frontend under
 - **Documentation by domain:** keep configuration reference files per domain (e.g., `docs/config/otel.md`, `docs/config/grafana.md`, `docs/config/logging.md`, `docs/config/services.md`) detailing required env vars, default values, and sample `.env.example` snippets.
 - **Runtime validation:** add schema validation (e.g., Zod) on startup to fail fast when required environment variables are missing or malformed.
 - **Local orchestration:** whenever services or dependencies change, update the root `docker-compose.yml` to ensure all components required for local development (databases, Redis, workers, API, frontend) start together with sane defaults.
+
+### 3.10 API Documentation & OpenAPI Workflow
+- **Automatic generation:** the OpenAPI 3.1.0 specification is automatically generated from code using `@fastify/swagger` with Zod schemas, ensuring documentation always reflects the actual implementation.
+- **Schema-first approach:** all API routes must include schema definitions in their route configuration using Zod schemas from `backend/api/src/schemas.ts` for request/response validation and documentation.
+- **Mandatory regeneration:** after any change to API routes, parameters, request bodies, response types, or schemas:
+  1. Update or create Zod schemas in `backend/api/src/schemas.ts`
+  2. Add/update schema annotations in route handlers (`backend/api/src/routes/*.ts`)
+  3. Run `make generate-openapi` to regenerate `docs/openapi.json` and `docs/openapi-generated.yaml`
+  4. Commit all changes (code + generated specs) in the same PR
+- **CI validation:** the CI pipeline should verify that OpenAPI specs are up-to-date by running generation and checking for uncommitted changes.
+- **Documentation location:** 
+  - Generated specs: `docs/openapi.json`, `docs/openapi-generated.yaml`
+  - Generation guide: `docs/openapi-generation.md`
+  - Interactive UI: Available at `/docs` when the API server runs
+- **Type safety:** Zod schemas provide both TypeScript types (via inference) and runtime validation, eliminating drift between types and actual request/response handling.
+- **Breaking changes:** when making breaking API changes, update the version in `backend/api/src/server.ts` following semantic versioning (major.minor.patch) and document migration steps.
 
 ---
 
