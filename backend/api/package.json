@@ -10,12 +10,13 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@battlescope/database": "workspace:*",
     "@battlescope/shared": "workspace:*",
+    "@fastify/cors": "^9.0.0",
     "@opentelemetry/api": "^1.9.0",
     "fastify": "^4.26.2",
     "pino": "^8.17.0",

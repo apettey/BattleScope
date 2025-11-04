@@ -16,10 +16,16 @@ export async function up(db: Kysely<Database>): Promise<void> {
   await sql`ALTER TABLE battle_killmails
     ADD COLUMN attacker_alliance_ids_tmp bigint[] DEFAULT ARRAY[]::bigint[] NOT NULL`.execute(db);
   await sql`UPDATE battle_killmails
-    SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::bigint[], ARRAY[]::bigint[])`.execute(db);
+    SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::bigint[], ARRAY[]::bigint[])`.execute(
+    db,
+  );
   await sql`ALTER TABLE battle_killmails DROP COLUMN attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE battle_killmails RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE battle_killmails ALTER COLUMN attacker_alliance_ids DROP DEFAULT`.execute(db);
+  await sql`ALTER TABLE battle_killmails RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE battle_killmails ALTER COLUMN attacker_alliance_ids DROP DEFAULT`.execute(
+    db,
+  );
 
   await sql`ALTER TABLE battle_participants
     ALTER COLUMN alliance_id TYPE bigint,
@@ -37,13 +43,23 @@ export async function up(db: Kysely<Database>): Promise<void> {
     ADD COLUMN attacker_corp_ids_tmp bigint[] DEFAULT ARRAY[]::bigint[] NOT NULL`.execute(db);
   await sql`UPDATE killmail_events
     SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::bigint[], ARRAY[]::bigint[]),
-        attacker_corp_ids_tmp = COALESCE(attacker_corp_ids::bigint[], ARRAY[]::bigint[])`.execute(db);
+        attacker_corp_ids_tmp = COALESCE(attacker_corp_ids::bigint[], ARRAY[]::bigint[])`.execute(
+    db,
+  );
   await sql`ALTER TABLE killmail_events DROP COLUMN attacker_alliance_ids`.execute(db);
   await sql`ALTER TABLE killmail_events DROP COLUMN attacker_corp_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_corp_ids_tmp TO attacker_corp_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_alliance_ids SET DEFAULT ARRAY[]::bigint[]`.execute(db);
-  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_corp_ids SET DEFAULT ARRAY[]::bigint[]`.execute(db);
+  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_corp_ids_tmp TO attacker_corp_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_alliance_ids SET DEFAULT ARRAY[]::bigint[]`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_corp_ids SET DEFAULT ARRAY[]::bigint[]`.execute(
+    db,
+  );
 
   await db.schema
     .createIndex('battles_system_time_idx')
@@ -73,10 +89,16 @@ export async function down(db: Kysely<Database>): Promise<void> {
   await sql`ALTER TABLE battle_killmails
     ADD COLUMN attacker_alliance_ids_tmp integer[] DEFAULT ARRAY[]::integer[] NOT NULL`.execute(db);
   await sql`UPDATE battle_killmails
-    SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::integer[], ARRAY[]::integer[])`.execute(db);
+    SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::integer[], ARRAY[]::integer[])`.execute(
+    db,
+  );
   await sql`ALTER TABLE battle_killmails DROP COLUMN attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE battle_killmails RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE battle_killmails ALTER COLUMN attacker_alliance_ids DROP DEFAULT`.execute(db);
+  await sql`ALTER TABLE battle_killmails RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE battle_killmails ALTER COLUMN attacker_alliance_ids DROP DEFAULT`.execute(
+    db,
+  );
 
   await sql`ALTER TABLE battle_participants
     ALTER COLUMN alliance_id TYPE integer,
@@ -94,13 +116,23 @@ export async function down(db: Kysely<Database>): Promise<void> {
     ADD COLUMN attacker_corp_ids_tmp integer[] DEFAULT ARRAY[]::integer[] NOT NULL`.execute(db);
   await sql`UPDATE killmail_events
     SET attacker_alliance_ids_tmp = COALESCE(attacker_alliance_ids::integer[], ARRAY[]::integer[]),
-        attacker_corp_ids_tmp = COALESCE(attacker_corp_ids::integer[], ARRAY[]::integer[])`.execute(db);
+        attacker_corp_ids_tmp = COALESCE(attacker_corp_ids::integer[], ARRAY[]::integer[])`.execute(
+    db,
+  );
   await sql`ALTER TABLE killmail_events DROP COLUMN attacker_alliance_ids`.execute(db);
   await sql`ALTER TABLE killmail_events DROP COLUMN attacker_corp_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_corp_ids_tmp TO attacker_corp_ids`.execute(db);
-  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_alliance_ids SET DEFAULT ARRAY[]::integer[]`.execute(db);
-  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_corp_ids SET DEFAULT ARRAY[]::integer[]`.execute(db);
+  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_alliance_ids_tmp TO attacker_alliance_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events RENAME COLUMN attacker_corp_ids_tmp TO attacker_corp_ids`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_alliance_ids SET DEFAULT ARRAY[]::integer[]`.execute(
+    db,
+  );
+  await sql`ALTER TABLE killmail_events ALTER COLUMN attacker_corp_ids SET DEFAULT ARRAY[]::integer[]`.execute(
+    db,
+  );
 
   await db.schema
     .createIndex('battles_system_time_idx')

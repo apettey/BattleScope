@@ -26,7 +26,12 @@ describe('RulesView', () => {
     fetchCurrentRuleset.mockReset();
     updateRuleset.mockReset();
     fetchCurrentRuleset.mockResolvedValue(baseRuleset);
-    updateRuleset.mockResolvedValue({ ...baseRuleset, minPilots: 2, trackedAllianceIds: ['99001234'], updatedBy: 'ops' });
+    updateRuleset.mockResolvedValue({
+      ...baseRuleset,
+      minPilots: 2,
+      trackedAllianceIds: ['99001234'],
+      updatedBy: 'ops',
+    });
   });
 
   it('submits updated ruleset', async () => {

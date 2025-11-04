@@ -3,8 +3,7 @@ import type { SpaceType } from '@battlescope/shared';
 
 export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
 
-const nonNegativeBigint = z
-  .coerce
+const nonNegativeBigint = z.coerce
   .bigint()
   .refine((value) => value >= 0n, { message: 'Expected non-negative bigint' });
 
@@ -146,13 +145,7 @@ export const RulesetUpdateSchema = z.object({
   trackedAllianceIds: trackedIdArray,
   trackedCorpIds: trackedIdArray,
   ignoreUnlisted: z.boolean().default(false),
-  updatedBy: z
-    .string()
-    .trim()
-    .min(1)
-    .max(128)
-    .nullable()
-    .optional(),
+  updatedBy: z.string().trim().min(1).max(128).nullable().optional(),
 });
 
 export type RulesetUpdate = z.infer<typeof RulesetUpdateSchema>;

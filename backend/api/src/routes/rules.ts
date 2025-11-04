@@ -32,10 +32,7 @@ const coerceIds = (values: readonly (bigint | string | number)[] | undefined): b
   return Array.from(set);
 };
 
-export const registerRulesRoutes = (
-  app: FastifyInstance,
-  repository: RulesetRepository,
-): void => {
+export const registerRulesRoutes = (app: FastifyInstance, repository: RulesetRepository): void => {
   app.get('/rulesets/current', async (_, reply) => {
     const ruleset = await repository.getActiveRuleset();
     return reply.send(toRulesetResponse(ruleset));

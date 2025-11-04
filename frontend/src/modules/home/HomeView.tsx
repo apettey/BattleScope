@@ -91,7 +91,10 @@ export const HomeView = () => {
         )}
       </header>
 
-      <section aria-label="Summary statistics" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <section
+        aria-label="Summary statistics"
+        style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}
+      >
         {[
           { label: 'Total Battles', value: summary?.totalBattles },
           { label: 'Killmails Indexed', value: summary?.totalKillmails },

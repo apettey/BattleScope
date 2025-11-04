@@ -67,7 +67,17 @@ export interface KillmailStreamOptions {
 }
 
 export const createKillmailStream = (options: KillmailStreamOptions) => {
-  const { limit, spaceTypes, trackedOnly, pollIntervalMs, baseUrl, fetchFn, onSnapshot, onUpdate, onError } = options;
+  const {
+    limit,
+    spaceTypes,
+    trackedOnly,
+    pollIntervalMs,
+    baseUrl,
+    fetchFn,
+    onSnapshot,
+    onUpdate,
+    onError,
+  } = options;
   const params: Record<string, string | readonly string[] | null | undefined> = {
     limit: limit ? String(limit) : undefined,
     trackedOnly: trackedOnly ? 'true' : undefined,
@@ -75,7 +85,8 @@ export const createKillmailStream = (options: KillmailStreamOptions) => {
   };
   const url = buildUrl('/killmails/stream', params, baseUrl);
 
-  const supportsEventSource = typeof window !== 'undefined' && typeof window.EventSource !== 'undefined';
+  const supportsEventSource =
+    typeof window !== 'undefined' && typeof window.EventSource !== 'undefined';
 
   if (supportsEventSource) {
     const source = new EventSource(url);
@@ -145,4 +156,5 @@ export const createKillmailStream = (options: KillmailStreamOptions) => {
   };
 };
 
-export const formatParticipantCount = (count: number): string => `${count} pilot${count === 1 ? '' : 's'}`;
+export const formatParticipantCount = (count: number): string =>
+  `${count} pilot${count === 1 ? '' : 's'}`;

@@ -13,7 +13,8 @@ const formatBigInt = (value: bigint | null | undefined): string | null =>
 
 const formatDate = (value: Date): string => value.toISOString();
 
-const formatBigIntArray = (values: readonly bigint[]): string[] => values.map((value) => value.toString());
+const formatBigIntArray = (values: readonly bigint[]): string[] =>
+  values.map((value) => value.toString());
 
 export interface BattleSummaryResponse {
   id: string;
@@ -147,9 +148,7 @@ export interface KillmailFeedItemResponse {
   participantCount: number;
 }
 
-export const toKillmailFeedItemResponse = (
-  item: KillmailFeedItem,
-): KillmailFeedItemResponse => ({
+export const toKillmailFeedItemResponse = (item: KillmailFeedItem): KillmailFeedItemResponse => ({
   killmailId: item.killmailId.toString(),
   systemId: item.systemId.toString(),
   occurredAt: formatDate(item.occurredAt),

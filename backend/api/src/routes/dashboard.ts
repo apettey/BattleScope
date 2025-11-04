@@ -9,15 +9,15 @@ export const registerDashboardRoutes = (
   app: FastifyInstance,
   repository: DashboardRepository,
 ): void => {
-    app.get('/stats/summary', async (_, reply) => {
-      const summary = await tracer.startActiveSpan('getDashboardSummary', async (span) => {
-        try {
-          return await repository.getSummary();
-        } finally {
-          span.end();
-        }
-      });
-
-      return reply.send(toDashboardSummaryResponse(summary));
+  app.get('/stats/summary', async (_, reply) => {
+    const summary = await tracer.startActiveSpan('getDashboardSummary', async (span) => {
+      try {
+        return await repository.getSummary();
+      } finally {
+        span.end();
+      }
     });
+
+    return reply.send(toDashboardSummaryResponse(summary));
+  });
 };

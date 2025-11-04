@@ -103,7 +103,12 @@ export const RulesView = () => {
     if (!ruleset || !form) {
       return false;
     }
-    const normalize = (value: string[]) => value.map((entry) => entry.trim()).filter(Boolean).sort().join(',');
+    const normalize = (value: string[]) =>
+      value
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .sort()
+        .join(',');
     return (
       ruleset.minPilots !== form.minPilots ||
       ruleset.ignoreUnlisted !== form.ignoreUnlisted ||
@@ -122,7 +127,10 @@ export const RulesView = () => {
   }, [ruleset]);
 
   return (
-    <section aria-labelledby="rules-heading" style={{ display: 'grid', gap: '1.5rem', maxWidth: '48rem' }}>
+    <section
+      aria-labelledby="rules-heading"
+      style={{ display: 'grid', gap: '1.5rem', maxWidth: '48rem' }}
+    >
       <header>
         <h2 id="rules-heading">Rules Configuration</h2>
         <p>

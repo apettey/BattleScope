@@ -18,8 +18,7 @@ const spaceTypeLabels: Record<SpaceType, string> = {
   pochven: 'Pochven',
 };
 
-const limitItems = (items: KillmailFeedItem[]): KillmailFeedItem[] =>
-  items.slice(0, MAX_ITEMS);
+const limitItems = (items: KillmailFeedItem[]): KillmailFeedItem[] => items.slice(0, MAX_ITEMS);
 
 const formatTimestamp = (value: string): string => {
   const date = new Date(value);
@@ -171,7 +170,15 @@ export const RecentKillsView = () => {
               {entries.length === 0 ? (
                 <p>No kills recorded yet.</p>
               ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0,
+                    display: 'grid',
+                    gap: '0.75rem',
+                  }}
+                >
                   {entries.map((item) => (
                     <li
                       key={item.killmailId}
@@ -201,7 +208,9 @@ export const RecentKillsView = () => {
                         <dt>System</dt>
                         <dd style={{ margin: 0 }}>#{item.systemId}</dd>
                         <dt>Pilots</dt>
-                        <dd style={{ margin: 0 }}>{formatParticipantCount(item.participantCount)}</dd>
+                        <dd style={{ margin: 0 }}>
+                          {formatParticipantCount(item.participantCount)}
+                        </dd>
                         <dt>Alliances</dt>
                         <dd style={{ margin: 0 }}>
                           {[item.victimAllianceId, ...item.attackerAllianceIds]
@@ -217,7 +226,9 @@ export const RecentKillsView = () => {
                             .join(', ') || '—'}
                         </dd>
                         <dt>ISK</dt>
-                        <dd style={{ margin: 0 }}>{item.iskValue ? `${item.iskValue} ISK` : '—'}</dd>
+                        <dd style={{ margin: 0 }}>
+                          {item.iskValue ? `${item.iskValue} ISK` : '—'}
+                        </dd>
                       </dl>
                       <a href={item.zkbUrl} target="_blank" rel="noreferrer">
                         View on zKillboard ↗

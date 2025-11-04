@@ -26,7 +26,7 @@ const isUniqueViolation = (error: unknown): boolean => {
     return true;
   }
 
-const message = (error as { message?: string }).message ?? '';
+  const message = (error as { message?: string }).message ?? '';
   return message.includes('duplicate key value');
 };
 

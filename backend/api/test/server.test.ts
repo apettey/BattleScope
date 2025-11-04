@@ -10,6 +10,7 @@ import {
   createInMemoryDatabase,
 } from '@battlescope/database';
 import { buildServer } from '../src/server.js';
+import type { ApiConfig } from '../src/config.js';
 
 const createBattle = async (
   battleRepository: BattleRepository,
@@ -72,6 +73,12 @@ describe('API routes', () => {
   let rulesetRepository: RulesetRepository;
   let firstBattleId: string;
   let secondBattleId: string;
+  const baseConfig: ApiConfig = {
+    port: 3000,
+    host: '0.0.0.0',
+    developerMode: false,
+    corsAllowedOrigins: [],
+  };
 
   beforeAll(async () => {
     db = await createInMemoryDatabase();
@@ -152,6 +159,7 @@ describe('API routes', () => {
       rulesetRepository,
       dashboardRepository,
       db: db.db,
+      config: baseConfig,
     });
     await app.ready();
   });
@@ -195,7 +203,9 @@ describe('API routes', () => {
     const response = await app.inject({ method: 'GET', url: `/battles/${firstBattleId}` });
     expect(response.statusCode).toBe(200);
     const detail = response.json();
-    const killmail = detail.killmails.find((km: { killmailId: string }) => km.killmailId === '1001');
+    const killmail = detail.killmails.find(
+      (km: { killmailId: string }) => km.killmailId === '1001',
+    );
     expect(killmail).toMatchObject({
       killmailId: '1001',
       zkbUrl: expect.stringContaining('/kill/'),
@@ -345,5 +355,103 @@ describe('API routes', () => {
       topAlliances: expect.any(Array),
       topCorporations: expect.any(Array),
     });
+  });
+
+  it('allows cross-origin requests when no allowlist is configured', async () => {
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/healthz',
+      headers: {
+        origin: 'https://example.com',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(response.headers['access-control-allow-origin']).toBe('https://example.com');
+  });
+
+  it('sends CORS headers on simple requests for configured origins', async () => {
+    const corsApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: {
+        ...baseConfig,
+        corsAllowedOrigins: ['https://app.example.com'],
+      },
+    });
+    await corsApp.ready();
+
+    const response = await corsApp.inject({
+      method: 'GET',
+      url: '/healthz',
+      headers: {
+        origin: 'https://app.example.com',
+      },
+    });
+
+    expect(response.headers['access-control-allow-origin']).toBe('https://app.example.com');
+    await corsApp.close();
+  });
+
+  it('allows localhost origins when developer mode is enabled', async () => {
+    const devApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: { ...baseConfig, developerMode: true },
+    });
+    await devApp.ready();
+
+    const response = await devApp.inject({
+      method: 'OPTIONS',
+      url: '/healthz',
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    await devApp.close();
+  });
+
+  it('blocks disallowed origins when allowlist is configured', async () => {
+    const restrictedApp = buildServer({
+      battleRepository,
+      killmailRepository,
+      rulesetRepository,
+      dashboardRepository: new DashboardRepository(db.db),
+      db: db.db,
+      config: { ...baseConfig, corsAllowedOrigins: ['https://app.example.com'] },
+    });
+    await restrictedApp.ready();
+
+    const allowedResponse = await restrictedApp.inject({
+      method: 'OPTIONS',
+      url: '/healthz',
+      headers: {
+        origin: 'https://app.example.com',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(allowedResponse.headers['access-control-allow-origin']).toBe('https://app.example.com');
+
+    const blockedResponse = await restrictedApp.inject({
+      method: 'OPTIONS',
+      url: '/healthz',
+      headers: {
+        origin: 'https://blocked.example.com',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(blockedResponse.headers['access-control-allow-origin']).toBeUndefined();
+    await restrictedApp.close();
   });
 });

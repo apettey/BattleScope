@@ -20,9 +20,7 @@ export interface FetchRulesetOptions {
   signal?: AbortSignal;
 }
 
-export const fetchCurrentRuleset = async (
-  options: FetchRulesetOptions = {},
-): Promise<Ruleset> => {
+export const fetchCurrentRuleset = async (options: FetchRulesetOptions = {}): Promise<Ruleset> => {
   const { baseUrl, fetchFn, signal } = options;
   const url = buildUrl('/rulesets/current', {}, baseUrl);
   const data = await fetchJson(url, { signal }, fetchFn ?? defaultFetch);

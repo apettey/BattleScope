@@ -44,7 +44,9 @@ const sendEvent = (reply: FastifyReply, event: string, payload: unknown) => {
   reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
 };
 
-const normalizeSpaceTypes = (spaceTypes: readonly SpaceType[] | undefined): readonly SpaceType[] | undefined =>
+const normalizeSpaceTypes = (
+  spaceTypes: readonly SpaceType[] | undefined,
+): readonly SpaceType[] | undefined =>
   spaceTypes && spaceTypes.length > 0 ? spaceTypes : undefined;
 
 export const registerKillmailRoutes = (

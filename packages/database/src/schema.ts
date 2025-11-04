@@ -18,7 +18,11 @@ export interface BattleKillmailsTable {
   killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   zkbUrl: string;
   occurredAt: ColumnType<Date, Date, Date>;
-  victimAllianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  victimAllianceId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
   attackerAllianceIds: ColumnType<
     bigint[],
     (string | number | bigint)[],
@@ -29,16 +33,36 @@ export interface BattleKillmailsTable {
     string | number | bigint | null,
     string | number | bigint | null
   >;
-  sideId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  sideId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
 }
 
 export interface BattleParticipantsTable {
   battleId: string;
   characterId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
-  allianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
-  corpId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
-  shipTypeId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
-  sideId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  allianceId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  corpId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  shipTypeId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  sideId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
   isVictim: ColumnType<boolean, boolean, boolean>;
 }
 
@@ -46,8 +70,16 @@ export interface KillmailEventsTable {
   killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   systemId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   occurredAt: ColumnType<Date, Date, Date>;
-  victimAllianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
-  victimCorpId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  victimAllianceId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  victimCorpId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
   victimCharacterId: ColumnType<
     bigint | null,
     string | number | bigint | null,
@@ -58,11 +90,7 @@ export interface KillmailEventsTable {
     (string | number | bigint)[],
     (string | number | bigint)[]
   >;
-  attackerCorpIds: ColumnType<
-    bigint[],
-    (string | number | bigint)[],
-    (string | number | bigint)[]
-  >;
+  attackerCorpIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
   attackerCharacterIds: ColumnType<
     bigint[],
     (string | number | bigint)[],
@@ -101,11 +129,7 @@ export interface RulesetsTable {
     (string | number | bigint)[],
     (string | number | bigint)[]
   >;
-  trackedCorpIds: ColumnType<
-    bigint[],
-    (string | number | bigint)[],
-    (string | number | bigint)[]
-  >;
+  trackedCorpIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
   ignoreUnlisted: ColumnType<boolean, boolean | undefined, boolean>;
   updatedBy: string | null;
   createdAt: ColumnType<Date, Date | undefined, never>;

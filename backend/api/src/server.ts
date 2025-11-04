@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { ZodError } from 'zod';
 import type {
   BattleRepository,
@@ -11,6 +12,7 @@ import { registerBattleRoutes } from './routes/battles.js';
 import { registerRulesRoutes } from './routes/rules.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
+import type { ApiConfig } from './config.js';
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;
@@ -18,6 +20,7 @@ interface BuildServerOptions {
   rulesetRepository: RulesetRepository;
   dashboardRepository: DashboardRepository;
   db: DatabaseClient;
+  config: ApiConfig;
 }
 
 export const buildServer = ({
@@ -26,8 +29,38 @@ export const buildServer = ({
   rulesetRepository,
   dashboardRepository,
   db,
+  config,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: true });
+
+  const allowedOrigins = new Set(config.corsAllowedOrigins);
+
+  const isLocalhostOrigin = (origin: string) =>
+    /^https?:\/\/localhost(:\d+)?$/i.test(origin) ||
+    /^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(origin);
+
+  void app.register(cors, {
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (config.developerMode && isLocalhostOrigin(origin)) {
+        return callback(null, origin);
+      }
+
+      if (allowedOrigins.size === 0) {
+        return callback(null, origin);
+      }
+
+      if (allowedOrigins.has(origin)) {
+        return callback(null, origin);
+      }
+
+      return callback(null, false);
+    },
+    credentials: true,
+  });
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {

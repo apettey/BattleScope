@@ -34,7 +34,10 @@ export const start = async (): Promise<void> => {
     async (job) => {
       const { killmailId } = job.data;
       const killmailBigInt = BigInt(killmailId);
-      logger.debug({ killmailId: killmailBigInt.toString(), jobId: job.id }, 'Processing enrichment job');
+      logger.debug(
+        { killmailId: killmailBigInt.toString(), jobId: job.id },
+        'Processing enrichment job',
+      );
       await service.process(killmailBigInt);
     },
     {

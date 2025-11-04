@@ -24,6 +24,7 @@ export const start = async (): Promise<void> => {
     rulesetRepository,
     dashboardRepository,
     db,
+    config,
   });
 
   const shutdown = async () => {

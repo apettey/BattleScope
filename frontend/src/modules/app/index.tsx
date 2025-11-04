@@ -14,8 +14,7 @@ const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element }> = [
   { id: 'battles', label: 'Battles', render: () => <BattlesView /> },
 ];
 
-const isValidTab = (value: string): value is TabId =>
-  tabs.some((tab) => tab.id === value);
+const isValidTab = (value: string): value is TabId => tabs.some((tab) => tab.id === value);
 
 const getInitialTab = (): TabId => {
   if (typeof window === 'undefined') {

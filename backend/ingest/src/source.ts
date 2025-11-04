@@ -62,7 +62,9 @@ const toKillmailReference = (payload: RedisQKillmail['package']): KillmailRefere
   const victimAllianceId =
     typeof killmail.victim?.alliance_id === 'number' ? BigInt(killmail.victim.alliance_id) : null;
   const victimCorpId =
-    typeof killmail.victim?.corporation_id === 'number' ? BigInt(killmail.victim.corporation_id) : null;
+    typeof killmail.victim?.corporation_id === 'number'
+      ? BigInt(killmail.victim.corporation_id)
+      : null;
   const victimCharacterId =
     typeof killmail.victim?.character_id === 'number' ? BigInt(killmail.victim.character_id) : null;
 
