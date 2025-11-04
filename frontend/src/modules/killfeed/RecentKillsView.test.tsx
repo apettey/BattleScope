@@ -17,14 +17,21 @@ const createKillmailStreamMock = vi.mocked(createKillmailStream);
 const baseItem = {
   killmailId: '1',
   systemId: '30000123',
+  systemName: 'Jita',
   occurredAt: '2024-05-01T10:00:00.000Z',
   spaceType: 'kspace' as const,
   victimAllianceId: '99001234',
+  victimAllianceName: 'Test Alliance',
   victimCorpId: '123456',
+  victimCorpName: 'Test Corp',
   victimCharacterId: '7000001',
+  victimCharacterName: 'Test Pilot',
   attackerAllianceIds: ['99002345'],
+  attackerAllianceNames: ['Attacker Alliance'],
   attackerCorpIds: ['654321'],
+  attackerCorpNames: ['Attacker Corp'],
   attackerCharacterIds: ['8000002'],
+  attackerCharacterNames: ['Attacker Pilot'],
   iskValue: '100000000',
   zkbUrl: 'https://zkillboard.com/kill/1/',
   battleId: null,
@@ -48,7 +55,7 @@ describe('RecentKillsView', () => {
 
     render(<RecentKillsView />);
 
-    expect(await screen.findByText(/Kill #1/)).toBeInTheDocument();
+    expect(await screen.findByText(/Jita/)).toBeInTheDocument();
     expect(createKillmailStreamMock).toHaveBeenCalled();
 
     await act(async () => {
@@ -56,17 +63,18 @@ describe('RecentKillsView', () => {
         ...baseItem,
         killmailId: '2',
         systemId: '31000123',
+        systemName: 'J115422',
         spaceType: 'jspace',
         occurredAt: '2024-05-01T10:01:00.000Z',
       });
     });
 
-    expect(await screen.findByText(/Kill #2/)).toBeInTheDocument();
+    expect(await screen.findByText(/J115422/)).toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('checkbox', { name: /Known Space/ }));
 
-    expect(await screen.findByText(/Kill #2/)).toBeInTheDocument();
-    expect(screen.queryByText(/Kill #1/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/J115422/)).toBeInTheDocument();
+    expect(screen.queryByText(/Jita/)).not.toBeInTheDocument();
   });
 });

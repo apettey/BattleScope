@@ -3,11 +3,13 @@ import { buildUrl, defaultFetch, fetchJson } from '../api/http.js';
 
 const TopAllianceSchema = z.object({
   allianceId: z.string(),
+  allianceName: z.string().nullable(),
   battleCount: z.number(),
 });
 
 const TopCorporationSchema = z.object({
   corpId: z.string(),
+  corpName: z.string().nullable(),
   battleCount: z.number(),
 });
 

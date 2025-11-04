@@ -21,8 +21,8 @@ describe('HomeView', () => {
       totalKillmails: 100,
       uniqueAlliances: 10,
       uniqueCorporations: 12,
-      topAlliances: [{ allianceId: '99001234', battleCount: 8 }],
-      topCorporations: [{ corpId: '123456', battleCount: 6 }],
+      topAlliances: [{ allianceId: '99001234', allianceName: 'Test Alliance', battleCount: 8 }],
+      topCorporations: [{ corpId: '123456', corpName: 'Test Corporation', battleCount: 6 }],
       generatedAt: '2024-05-01T12:00:00.000Z',
     });
 
@@ -30,7 +30,7 @@ describe('HomeView', () => {
 
     expect(await screen.findByText(/Total Battles/)).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
-    expect(screen.getByText(/Alliance 99001234/)).toBeInTheDocument();
+    expect(screen.getByText(/Test Alliance/)).toBeInTheDocument();
     expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1);
   });
 
