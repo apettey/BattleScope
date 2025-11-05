@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: enrichment
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3004"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: enrichment
@@ -28,6 +32,8 @@ spec:
               value: '3004'
             - name: HOST
               value: '0.0.0.0'
+            - name: OTEL_SERVICE_NAME
+              value: 'battlescope-enrichment'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

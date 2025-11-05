@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: api
@@ -28,6 +32,8 @@ spec:
               value: '3000'
             - name: HOST
               value: '0.0.0.0'
+            - name: OTEL_SERVICE_NAME
+              value: 'battlescope-api'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

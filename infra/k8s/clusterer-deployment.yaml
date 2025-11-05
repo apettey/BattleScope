@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: clusterer
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3003"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: clusterer
@@ -26,6 +30,8 @@ spec:
           env:
             - name: PORT
               value: '3003'
+            - name: OTEL_SERVICE_NAME
+              value: 'battlescope-clusterer'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

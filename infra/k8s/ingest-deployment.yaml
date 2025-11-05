@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: ingest
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: ingest
@@ -26,6 +30,8 @@ spec:
           env:
             - name: PORT
               value: '3002'
+            - name: OTEL_SERVICE_NAME
+              value: 'battlescope-ingest'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

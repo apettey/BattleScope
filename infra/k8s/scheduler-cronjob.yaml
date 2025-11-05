@@ -22,6 +22,9 @@ spec:
               command:
                 - node
                 - dist/backend/scheduler/src/index.js
+              env:
+                - name: OTEL_SERVICE_NAME
+                  value: 'battlescope-scheduler'
               envFrom:
                 - secretRef:
                     name: battlescope-secrets
