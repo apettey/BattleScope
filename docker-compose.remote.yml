@@ -1,0 +1,197 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    pull_policy: always
+    container_name: battlescope-postgres
+    environment:
+      POSTGRES_DB: battlescope
+      POSTGRES_USER: battlescope
+      POSTGRES_PASSWORD: battlescope
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U battlescope -d battlescope']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    pull_policy: always
+    container_name: battlescope-redis
+    ports:
+      - '6379:6379'
+
+  api:
+    image: docker.io/petdog/battlescope-api:latest
+    pull_policy: always
+    container_name: battlescope-api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      HOST: 0.0.0.0
+      PORT: 3000
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-api
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  ingest:
+    image: docker.io/petdog/battlescope-ingest:latest
+    pull_policy: always
+    container_name: battlescope-ingest
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      ZKILLBOARD_REDISQ_URL: https://zkillredisq.stream/listen.php
+      ZKILLBOARD_REDISQ_ID: battlescope-remote
+      PORT: 3002
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-ingest
+    ports:
+      - '3002:3002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  clusterer:
+    image: docker.io/petdog/battlescope-clusterer:latest
+    pull_policy: always
+    container_name: battlescope-clusterer
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      PORT: 3003
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-clusterer
+    ports:
+      - '3003:3003'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  enrichment:
+    image: docker.io/petdog/battlescope-enrichment:latest
+    pull_policy: always
+    container_name: battlescope-enrichment
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
+      REDIS_URL: redis://redis:6379/0
+      HOST: 0.0.0.0
+      PORT: 3004
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-enrichment
+    ports:
+      - '3004:3004'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  scheduler:
+    image: docker.io/petdog/battlescope-scheduler:latest
+    pull_policy: always
+    container_name: battlescope-scheduler
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SERVICE_NAME: battlescope-scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: docker.io/petdog/battlescope-frontend:latest
+    pull_policy: always
+    container_name: battlescope-frontend
+    environment:
+      NODE_ENV: production
+    ports:
+      - '3001:80'
+    depends_on:
+      api:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.94.0
+    pull_policy: always
+    container_name: battlescope-otel-collector
+    command: ['--config=/etc/otel/collector.yaml']
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otel/collector.yaml:ro
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+      - '9464:9464'
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    pull_policy: always
+    container_name: battlescope-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '9090:9090'
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    pull_policy: always
+    container_name: battlescope-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - '3030:3000'
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    pull_policy: always
+    container_name: battlescope-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686'
+      - '14268:14268'
+      - '14250:14250'
+
+volumes:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean
 
 install:
 	pnpm install
@@ -62,3 +62,20 @@ compose-down:
 
 compose-logs:
 	docker compose logs -f
+
+compose-remote-up:
+	docker compose -f docker-compose.remote.yml up --pull always
+
+compose-remote-down:
+	docker compose -f docker-compose.remote.yml down --remove-orphans
+
+battlescope-images-clean:
+	@set -e; \
+	images=$$(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep 'battlescope' || true); \
+	if [ -n "$$images" ]; then \
+		echo "Removing Battlescope images:"; \
+		echo "$$images"; \
+		docker image rm -f $$images; \
+	else \
+		echo "No Battlescope images found."; \
+	fi
