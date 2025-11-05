@@ -120,6 +120,9 @@ importers:
       fastify:
         specifier: ^4.26.2
         version: 4.29.1
+      kysely:
+        specifier: ^0.27.2
+        version: 0.27.6
       pino:
         specifier: ^8.17.0
         version: 8.21.0

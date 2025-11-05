@@ -18,6 +18,7 @@
     "@battlescope/shared": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "fastify": "^4.26.2",
+    "kysely": "^0.27.2",
     "pino": "^8.17.0",
     "zod": "^3.22.4"
   },
