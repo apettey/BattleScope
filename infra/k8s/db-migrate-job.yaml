@@ -5,7 +5,7 @@ metadata:
   namespace: battlescope
   annotations:
     # This annotation can be used to trigger re-runs by changing the value
-    deployment.timestamp: '1762375124'
+    deployment.timestamp: 'REPLACE_WITH_TIMESTAMP'
 spec:
   # Don't retry on failure - migrations should be idempotent
   backoffLimit: 0
