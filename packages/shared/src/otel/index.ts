@@ -3,10 +3,7 @@ import { diag, DiagConsoleLogger, DiagLogLevel, metrics } from '@opentelemetry/a
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import {
-  MeterProvider as SdkMeterProvider,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 
@@ -74,21 +71,27 @@ const createSdk = (
   endpoint: string,
   serviceName: string,
   headers: Record<string, string>,
-): NodeSDK =>
-  new NodeSDK({
-    resource: new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-      [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'battlescope',
-      [SemanticResourceAttributes.SERVICE_INSTANCE_ID]:
-        process.env.SERVICE_INSTANCE_ID ?? os.hostname(),
-      [SemanticResourceAttributes.SERVICE_VERSION]:
-        process.env.SERVICE_VERSION ?? process.env.npm_package_version ?? '0.0.0',
-    }),
+  metricReader: PeriodicExportingMetricReader,
+): NodeSDK => {
+  const resource = new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
+    [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'battlescope',
+    [SemanticResourceAttributes.SERVICE_INSTANCE_ID]:
+      process.env.SERVICE_INSTANCE_ID ?? os.hostname(),
+    [SemanticResourceAttributes.SERVICE_VERSION]:
+      process.env.SERVICE_VERSION ?? process.env.npm_package_version ?? '0.0.0',
+  });
+
+  return new NodeSDK({
+    resource,
     traceExporter: new OTLPTraceExporter({
       url: buildSignalUrl(endpoint, 'traces'),
       headers,
     }),
+    // @ts-expect-error - MetricReader type mismatch due to pnpm dependency hoisting
+    metricReader,
   });
+};
 
 const createMetricReader = (
   endpoint: string,
@@ -101,18 +104,6 @@ const createMetricReader = (
     }),
     exportIntervalMillis: getMetricInterval(),
   });
-
-const installMetricReader = (reader: PeriodicExportingMetricReader): void => {
-  const meterProvider = metrics.getMeterProvider();
-  if (meterProvider instanceof SdkMeterProvider) {
-    meterProvider.addMetricReader(reader);
-    return;
-  }
-
-  diag.error(
-    'Failed to register OTLP metric reader: global meter provider is not an instance of the SDK meter provider.',
-  );
-};
 
 export const startTelemetry = async (): AwaitableNodeSdk => {
   if (process.env.NODE_ENV === 'test') {
@@ -140,14 +131,13 @@ export const startTelemetry = async (): AwaitableNodeSdk => {
 
   telemetryEnabled = true;
   const headers = parseHeaders(process.env.OTEL_EXPORTER_OTLP_HEADERS);
-  const telemetrySdk = createSdk(endpoint, serviceName, headers);
   const metricReader = createMetricReader(endpoint, headers);
+  const telemetrySdk = createSdk(endpoint, serviceName, headers, metricReader);
 
   const startPromise: AwaitableNodeSdk = (async () => {
     try {
       telemetrySdk.start();
       sdk = telemetrySdk;
-      installMetricReader(metricReader);
       registerProcessMetrics();
       return sdk;
     } catch (error) {

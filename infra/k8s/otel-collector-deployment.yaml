@@ -30,6 +30,9 @@ spec:
             - name: metrics
               containerPort: 8888
               protocol: TCP
+            - name: health
+              containerPort: 13133
+              protocol: TCP
           volumeMounts:
             - name: config
               mountPath: /etc/otel
@@ -43,13 +46,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /
-              port: 13133
+              port: health
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /
-              port: 13133
+              port: health
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
