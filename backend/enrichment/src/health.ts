@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import type { DatabaseClient } from '@battlescope/database';
 import type { Redis } from 'ioredis';
 
-const DEFAULT_EXTERNAL_URL = 'https://zkillboard.com/api/history/';
+const DEFAULT_EXTERNAL_URL = 'https://zkillboard.com/';
 const DEFAULT_TIMEOUT_MS = 2_000;
 
 export interface HealthServerOptions {

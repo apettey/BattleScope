@@ -37,21 +37,21 @@ spec:
             httpGet:
               path: /healthz
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 60
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 60
             periodSeconds: 20
           resources:
             requests:
-              cpu: 50m
-              memory: 128Mi
+              cpu: 1
+              memory: 1Gi
             limits:
-              cpu: 250m
-              memory: 256Mi
+              cpu: 1
+              memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
