@@ -19,6 +19,9 @@ spec:
             - name: scheduler
               image: docker.io/petdog/battlescope-scheduler:latest
               imagePullPolicy: Always
+              command:
+                - node
+                - dist/backend/scheduler/src/index.js
               envFrom:
                 - secretRef:
                     name: battlescope-secrets

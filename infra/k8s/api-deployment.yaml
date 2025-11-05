@@ -17,6 +17,9 @@ spec:
         - name: api
           image: docker.io/petdog/battlescope-api:latest
           imagePullPolicy: Always
+          command:
+            - node
+            - dist/backend/api/src/index.js
           ports:
             - name: http
               containerPort: 3000
@@ -33,13 +36,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 20
           resources:

@@ -17,6 +17,9 @@ spec:
         - name: enrichment
           image: docker.io/petdog/battlescope-enrichment:latest
           imagePullPolicy: Always
+          command:
+            - node
+            - dist/backend/enrichment/src/index.js
           ports:
             - name: http
               containerPort: 3004
