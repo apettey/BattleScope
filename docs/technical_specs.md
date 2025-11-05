@@ -158,78 +158,26 @@ kind: Namespace
 metadata:
   name: battlescope
 ```
+ 
+### Deployments & Stateful Workloads
+- `k8s/deployments.yaml` captures every controller that runs pods. Draft replicas stay minimal (two for user-facing API/frontend, one for workers) so we can validate scheduling pressure before scaling up.
+- Stateful services (Postgres, Redis) sit in the same file while we prototype. This keeps storage plumbing visible next to the consumers and avoids introducing Helm or Kustomize before we prove the baseline cluster boot.
+- Readiness and liveness probes are wired to `/healthz` so our OTEL + probe checks stay aligned from the first deploy.
+- Images reference `ghcr.io/battlescope/*:latest` until CI publishes signed digests; pinning is called out with inline TODOs to make the follow-up obvious.
 
-### Secrets and ConfigMap
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: battlescope-secrets
-  namespace: battlescope
-type: Opaque
-data:
-  DB_URL: <base64>
-  REDIS_URL: <base64>
-  ZKB_USERAGENT: <base64>
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: battlescope-config
-  namespace: battlescope
-data:
-  WINDOW_MINUTES: "30"
-  GAP_MAX_MINUTES: "15"
-  MIN_KILLS: "2"
-```
+### Services
+- `k8s/services.yaml` exposes ClusterIP endpoints per workload so internal callers stay decoupled from pod DNS and we can bolt on an Ingress later without rewriting manifests.
+- Ports normalise on `:80` for HTTP services and native ports for stateful dependencies to simplify ConfigMap/Secret wiring when we add them.
 
-### API Deployment
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-  namespace: battlescope
-spec:
-  replicas: 2
-  selector:
-    matchLabels: { app: api }
-  template:
-    metadata:
-      labels: { app: api }
-    spec:
-      containers:
-        - name: api
-          image: ghcr.io/you/battlescope-api:{{ .Chart.AppVersion }}
-          ports:
-            - containerPort: 3000
-          envFrom:
-            - secretRef: { name: battlescope-secrets }
-            - configMapRef: { name: battlescope-config }
-```
+### Secrets
+- `k8s/secrets.yaml` declares placeholder `Secret` objects for every component with `stringData` keys mapped to environment variables so we can inject values at apply time.
+- Operators export the required variables (for example `export API_DATABASE_URL=...`) and run `envsubst < k8s/secrets.yaml | kubectl apply -f -`, keeping sensitive values out of git while preserving the contract in code review.
+- The same approach works for CI pipelines or SOPS decrypt hooks because we only rely on standard shell expansion.
 
-### Ingest Deployment
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ingest
-  namespace: battlescope
-spec:
-  replicas: 1
-  selector:
-    matchLabels: { app: ingest }
-  template:
-    metadata:
-      labels: { app: ingest }
-    spec:
-      containers:
-        - name: ingest
-          image: ghcr.io/you/battlescope-ingest:{{ .Chart.AppVersion }}
-          envFrom:
-            - secretRef: { name: battlescope-secrets }
-            - configMapRef: { name: battlescope-config }
-```
+### Why this layout
+- Keeping manifests grouped by resource type (`deployments`, `services`, `secrets`) shortens the feedback loop while we iterate in the monorepo-driven workflow and mirrors how we discuss responsibilities across teams.
+- Drafting everything in plain YAML ensures GitHub Actions and Ops tooling can consume the same source without templating indirection—once the spec stabilises we can promote these files into Helm charts inside `infra/`.
+- Documented probes, resources, and namespace scoping establish the guardrails we expect in production, preventing rework when observability policies land.
 
 ---
 
@@ -286,6 +234,7 @@ jobs:
             ghcr.io/${{ github.repository }}-api:${{ github.sha }}
           namespace: battlescope
 ```
+- **DockerHub publishing:** the `publish-images` job (main branch only) builds the `api`, `ingest`, `clusterer`, and `scheduler` containers from the shared `Dockerfile`, tagging each as `${GITHUB_SHA}` and `latest` under `docker.io/<DOCKERHUB_USERNAME>/battlescope-<service>`. Configure repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` with your Docker Hub credentials before enabling deploys.
 
 ---
 
