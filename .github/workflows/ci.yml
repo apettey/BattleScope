@@ -35,21 +35,37 @@ jobs:
       matrix:
         include:
           - name: api
-            service_scope: "@battlescope/api"
-            build_target: "backend/api"
-            expose_port: "3000"
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/api
+              BUILD_TARGET=backend/api
+              EXPOSE_PORT=3000
           - name: ingest
-            service_scope: "@battlescope/ingest"
-            build_target: "backend/ingest"
-            expose_port: "3002"
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/ingest
+              BUILD_TARGET=backend/ingest
+              EXPOSE_PORT=3002
           - name: clusterer
-            service_scope: "@battlescope/clusterer"
-            build_target: "backend/clusterer"
-            expose_port: "3003"
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/clusterer
+              BUILD_TARGET=backend/clusterer
+              EXPOSE_PORT=3003
           - name: scheduler
-            service_scope: "@battlescope/scheduler"
-            build_target: "backend/scheduler"
-            expose_port: "3004"
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/scheduler
+              BUILD_TARGET=backend/scheduler
+              EXPOSE_PORT=3004
+          - name: frontend
+            dockerfile: ./frontend/Dockerfile
+            context: .
+            build_args: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -72,14 +88,11 @@ jobs:
       - name: Build and push ${{ matrix.name }} image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           platforms: linux/amd64,linux/arm64
-          build-args: |
-            SERVICE_SCOPE=${{ matrix.service_scope }}
-            BUILD_TARGET=${{ matrix.build_target }}
-            EXPOSE_PORT=${{ matrix.expose_port }}
+          build-args: ${{ matrix.build_args }}
           tags: |
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest
