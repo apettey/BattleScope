@@ -16,7 +16,7 @@ spec:
       containers:
         - name: ingest
           image: docker.io/petdog/battlescope-ingest:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3002

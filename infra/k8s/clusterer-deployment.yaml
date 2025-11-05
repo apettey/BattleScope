@@ -16,7 +16,7 @@ spec:
       containers:
         - name: clusterer
           image: docker.io/petdog/battlescope-clusterer:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3003

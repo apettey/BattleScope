@@ -16,7 +16,7 @@ spec:
       containers:
         - name: frontend
           image: docker.io/petdog/battlescope-frontend:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 4173

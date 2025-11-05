@@ -16,7 +16,7 @@ spec:
       containers:
         - name: enrichment
           image: docker.io/petdog/battlescope-enrichment:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3004

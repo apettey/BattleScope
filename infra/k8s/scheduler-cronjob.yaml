@@ -18,7 +18,7 @@ spec:
           containers:
             - name: scheduler
               image: docker.io/petdog/battlescope-scheduler:latest
-              imagePullPolicy: IfNotPresent
+              imagePullPolicy: Always
               envFrom:
                 - secretRef:
                     name: battlescope-secrets
