@@ -37,5 +37,5 @@ module.exports = {
     '@typescript-eslint/no-floating-promises': 'error',
     '@typescript-eslint/no-misused-promises': 'error',
   },
-  ignorePatterns: ['dist', 'coverage', 'node_modules', '**/generated/**', 'vitest.config.ts'],
+  ignorePatterns: ['dist', 'coverage', 'node_modules', '**/generated/**', 'vitest.config.ts', 'frontend/public/**'],
 };
