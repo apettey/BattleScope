@@ -1,0 +1,15 @@
+.git
+.github
+.gitignore
+node_modules
+**/node_modules
+pnpm-store
+coverage
+dist
+**/dist
+frontend/dist
+*.log
+.env
+.env.*
+docker-compose.yml
+pnpm-debug.log

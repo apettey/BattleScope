@@ -234,6 +234,7 @@ jobs:
             ghcr.io/${{ github.repository }}-api:${{ github.sha }}
           namespace: battlescope
 ```
+- **DockerHub publishing:** the `publish-images` job (main branch only) builds the `api`, `ingest`, `clusterer`, and `scheduler` containers from the shared `Dockerfile`, tagging each as `${GITHUB_SHA}` and `latest` under `docker.io/<DOCKERHUB_USERNAME>/battlescope-<service>`. Configure repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` with your Docker Hub credentials before enabling deploys.
 
 ---
 
