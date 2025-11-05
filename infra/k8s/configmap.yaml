@@ -15,3 +15,5 @@ data:
   LOG_LEVEL: 'info'
   POSTGRES_PORT: '5432'
   HOST: 0.0.0.0
+  # Frontend configuration - API endpoint for the browser
+  VITE_API_BASE_URL: http://10.0.1.5:32298

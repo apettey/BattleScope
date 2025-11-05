@@ -6,6 +6,12 @@ export const resolveBaseUrl = (override?: string): string => {
   if (override) {
     return override.replace(/\/$/, '');
   }
+  // Try runtime config first (for production deployments)
+  const fromRuntime = window.__RUNTIME_CONFIG__?.API_BASE_URL;
+  if (fromRuntime) {
+    return fromRuntime.replace(/\/$/, '');
+  }
+  // Fall back to build-time env var (for development)
   const fromEnv = import.meta.env.VITE_API_BASE_URL as string | undefined;
   return (fromEnv ?? 'http://localhost:3000').replace(/\/$/, '');
 };

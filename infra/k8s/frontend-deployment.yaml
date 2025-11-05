@@ -4,7 +4,7 @@ metadata:
   name: frontend
   namespace: battlescope
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -20,19 +20,19 @@ spec:
           ports:
             - name: http
               containerPort: 80
-          env:
-            - name: VITE_API_URL
-              value: http://10.0.1.5:32298
+          envFrom:
+            - configMapRef:
+                name: battlescope-config
           readinessProbe:
             httpGet:
-              path: /healthz
-              port: http
+              path: /
+              port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /healthz
-              port: http
+              path: /
+              port: 80
             initialDelaySeconds: 30
             periodSeconds: 30
           resources:
@@ -54,5 +54,5 @@ spec:
     app: frontend
   ports:
     - name: http
-      port: 3001
+      port: 80
       targetPort: http
