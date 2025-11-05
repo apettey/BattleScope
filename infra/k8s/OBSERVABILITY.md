@@ -86,10 +86,12 @@ Each service is configured with:
 
 ### Data Flow
 
-1. **Applications** → Send traces/metrics via OTLP → **OTEL Collector**
-2. **OTEL Collector** → Forwards traces → **Jaeger**
-3. **OTEL Collector** → Forwards metrics → **Prometheus**
+1. **Applications** → Push traces/metrics via OTLP HTTP → **OTEL Collector** (port 4318)
+2. **OTEL Collector** → Forwards traces → **Jaeger** (port 4317)
+3. **OTEL Collector** → Pushes metrics via Remote Write → **Prometheus** (port 9090/api/v1/write)
 4. **Grafana** → Queries data from → **Prometheus** & **Jaeger**
+
+Note: This setup uses **push-based metrics** (OTLP → Remote Write), not pull-based scraping.
 
 ## Usage Examples
 
@@ -142,7 +144,56 @@ battlescope_process_uptime_seconds
 rate(http_requests_total[5m])
 ```
 
+## How Metrics Work
+
+### Metrics Flow Architecture
+
+The metrics system uses OpenTelemetry's push-based approach with Prometheus remote write:
+
+1. **Application Instrumentation**: Services use `@battlescope/shared` package which:
+   - Initializes the OpenTelemetry SDK
+   - Exports custom metrics like `battlescope_service_up` and `battlescope_process_uptime_seconds`
+   - Pushes metrics to OTEL Collector via OTLP HTTP (port 4318)
+
+2. **OTEL Collector**: Receives metrics and:
+   - Processes them with batch and memory_limiter processors
+   - Pushes them to Prometheus using the Remote Write API (`http://prometheus:9090/api/v1/write`)
+
+3. **Prometheus**: Receives pushed metrics via the remote write receiver (enabled with `--web.enable-remote-write-receiver`)
+
+### Available Metrics
+
+Default metrics exported by all services:
+
+- `battlescope_service_up{service_name="..."}` - Always 1 when service is running
+- `battlescope_process_uptime_seconds{service_name="..."}` - Service uptime in seconds
+
 ## Troubleshooting
+
+### No Metrics Appearing in Prometheus
+
+1. **Verify Prometheus remote write receiver is enabled**:
+```bash
+# Check Prometheus args include --web.enable-remote-write-receiver
+kubectl describe deployment/prometheus -n battlescope | grep enable-remote-write-receiver
+```
+
+2. **Check OTEL Collector is sending metrics**:
+```bash
+# Look for remote write logs in OTEL Collector
+kubectl logs -n battlescope deployment/otel-collector | grep -i "remote\|metric"
+```
+
+3. **Check application is sending metrics**:
+```bash
+# Look for OTEL initialization in application logs
+kubectl logs -n battlescope deployment/api | grep -i telemetry
+```
+
+4. **Verify environment variables are set**:
+```bash
+kubectl exec -n battlescope deployment/api -- env | grep OTEL
+```
 
 ### Check OTEL Collector Status
 ```bash
@@ -156,14 +207,23 @@ kubectl get pods -n battlescope -l app=otel-collector
 kubectl logs -n battlescope deployment/api | grep -i otel
 ```
 
-### Verify Prometheus is Scraping
+### Verify Metrics in Prometheus
 1. Open Prometheus UI: http://\<node-ip\>:30090
-2. Go to Status → Targets
-3. Check that otel-collector and jaeger targets are "UP"
+2. Go to Graph
+3. Query: `battlescope_service_up`
+4. You should see metrics with labels like `service_name="battlescope-api"`
 
 ### Check Jaeger is Receiving Traces
 ```bash
 kubectl logs -n battlescope deployment/jaeger
+```
+
+### Test Metrics End-to-End
+
+```bash
+# Query Prometheus for battlescope metrics
+kubectl run -n battlescope curl-test --image=curlimages/curl --rm -it --restart=Never -- \
+  curl -s 'http://prometheus:9090/api/v1/query?query=battlescope_service_up'
 ```
 
 ## Environment Variables
@@ -204,9 +264,16 @@ const counter = meter.createCounter('my_counter', {
 counter.add(1, { label: 'value' });
 ```
 
-### Adding Prometheus Scrape Annotations
+### Using Remote Write
 
-To have Prometheus scrape your service directly (in addition to OTEL):
+The current setup uses **Prometheus Remote Write** instead of scraping. This means:
+
+- ✅ Applications push metrics to OTEL Collector (no need to expose `/metrics` endpoints)
+- ✅ OTEL Collector pushes metrics to Prometheus (no scraping configuration needed per service)
+- ✅ Simplified configuration - just set OTEL environment variables
+- ✅ Consistent telemetry pipeline (traces and metrics both use OTLP)
+
+If you need to add direct scraping for a service, add these annotations to the pod template:
 
 ```yaml
 metadata:
@@ -216,30 +283,40 @@ metadata:
     prometheus.io/path: "/metrics"
 ```
 
+And ensure the service exposes a `/metrics` endpoint in Prometheus format.
+
 ## Architecture Diagram
 
 ```
-┌─────────────┐
-│ Application │
-│  Services   │
-└─────┬───────┘
-      │ OTLP (HTTP/gRPC)
-      ▼
-┌─────────────────┐
-│ OTEL Collector  │
-└────┬────────┬───┘
-     │        │
-     │        └─────────────┐
-     │ Traces              │ Metrics
-     ▼                     ▼
-┌────────┐          ┌────────────┐
-│ Jaeger │          │ Prometheus │
-└────┬───┘          └─────┬──────┘
-     │                    │
-     └──────┬─────────────┘
-            │ Datasources
-            ▼
-       ┌─────────┐
-       │ Grafana │
-       └─────────┘
+┌─────────────────────────────────────────┐
+│     Application Services                │
+│  (api, ingest, enrichment, clusterer)   │
+│         OpenTelemetry SDK               │
+└─────────────┬───────────────────────────┘
+              │ Push OTLP HTTP
+              │ (port 4318)
+              ▼
+      ┌───────────────┐
+      │ OTEL Collector│
+      │  - Receives   │
+      │  - Processes  │
+      │  - Exports    │
+      └───┬───────┬───┘
+          │       │
+   Traces │       │ Metrics
+   (gRPC) │       │ (Remote Write)
+          │       │
+          ▼       ▼
+     ┌────────┐  ┌────────────┐
+     │ Jaeger │  │ Prometheus │
+     │        │  │ (Remote    │
+     │        │  │  Write RX) │
+     └────┬───┘  └─────┬──────┘
+          │            │
+          └──────┬─────┘
+           Query │ Datasources
+                 ▼
+            ┌─────────┐
+            │ Grafana │
+            └─────────┘
 ```

@@ -26,26 +26,9 @@ data:
         static_configs:
           - targets: ['jaeger:14269']
 
-      # Scrape BattleScope backend services directly
-      - job_name: 'battlescope-api'
-        static_configs:
-          - targets: ['api:3000']
-        metrics_path: '/metrics'
-
-      - job_name: 'battlescope-ingest'
-        static_configs:
-          - targets: ['ingest:3002']
-        metrics_path: '/metrics'
-
-      - job_name: 'battlescope-enrichment'
-        static_configs:
-          - targets: ['enrichment:3004']
-        metrics_path: '/metrics'
-
-      - job_name: 'battlescope-clusterer'
-        static_configs:
-          - targets: ['clusterer:3003']
-        metrics_path: '/metrics'
+      # Note: BattleScope backend services (api, ingest, enrichment, clusterer)
+      # push metrics via OTLP to the OTEL Collector, which forwards them to
+      # Prometheus using the remote write API. They do not expose /metrics endpoints.
 
       # Scrape all services in the battlescope namespace with prometheus.io annotations
       - job_name: 'kubernetes-pods'
