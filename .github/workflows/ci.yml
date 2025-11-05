@@ -62,10 +62,17 @@ jobs:
               SERVICE_SCOPE=@battlescope/scheduler
               BUILD_TARGET=backend/scheduler
               EXPOSE_PORT=3004
+          - name: enrichment
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/enrichment
+              BUILD_TARGET=backend/enrichment
+              EXPOSE_PORT=3005
           - name: frontend
             dockerfile: ./frontend/Dockerfile
             context: .
-            build_args: ""
+            build_args: ''
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
