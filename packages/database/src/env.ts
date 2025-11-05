@@ -7,7 +7,10 @@ const DatabaseEnvSchema = z
   .object({
     DATABASE_URL: z.string().url().optional(),
     POSTGRES_HOST: z.string().optional(),
-    POSTGRES_PORT: z.coerce.number().int().optional(),
+    POSTGRES_PORT: z.preprocess(
+      (val) => (val === '' || val === undefined ? undefined : val),
+      z.coerce.number().int().optional(),
+    ),
     POSTGRES_DB: z.string().optional(),
     POSTGRES_USER: z.string().optional(),
     POSTGRES_PASSWORD: z.string().optional(),
