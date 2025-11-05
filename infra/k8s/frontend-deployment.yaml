@@ -19,10 +19,10 @@ spec:
           imagePullPolicy: Always
           ports:
             - name: http
-              containerPort: 4173
+              containerPort: 80
           env:
             - name: VITE_API_URL
-              value: http://api.battlescope.svc.cluster.local:3000
+              value: http://10.0.1.5:32298
           readinessProbe:
             httpGet:
               path: /healthz

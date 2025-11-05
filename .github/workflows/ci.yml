@@ -69,6 +69,13 @@ jobs:
               SERVICE_SCOPE=@battlescope/enrichment
               BUILD_TARGET=backend/enrichment
               EXPOSE_PORT=3005
+          - name: db-migrate
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/database
+              BUILD_TARGET=packages/database
+              EXPOSE_PORT=3000
           - name: frontend
             dockerfile: ./frontend/Dockerfile
             context: .
