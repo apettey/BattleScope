@@ -28,6 +28,7 @@ services:
     image: docker.io/petdog/battlescope-api:latest
     pull_policy: always
     container_name: battlescope-api
+    command: ['node', 'dist/backend/api/src/index.js']
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
@@ -50,6 +51,7 @@ services:
     image: docker.io/petdog/battlescope-ingest:latest
     pull_policy: always
     container_name: battlescope-ingest
+    command: ['node', 'dist/backend/ingest/src/index.js']
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
@@ -73,6 +75,7 @@ services:
     image: docker.io/petdog/battlescope-clusterer:latest
     pull_policy: always
     container_name: battlescope-clusterer
+    command: ['node', 'dist/backend/clusterer/src/index.js']
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
@@ -91,6 +94,7 @@ services:
     image: docker.io/petdog/battlescope-enrichment:latest
     pull_policy: always
     container_name: battlescope-enrichment
+    command: ['node', 'dist/backend/enrichment/src/index.js']
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
@@ -113,6 +117,7 @@ services:
     image: docker.io/petdog/battlescope-scheduler:latest
     pull_policy: always
     container_name: battlescope-scheduler
+    command: ['node', 'dist/backend/scheduler/src/index.js']
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
