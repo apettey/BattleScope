@@ -189,7 +189,7 @@ metadata:
   name: scheduler
   namespace: battlescope
 spec:
-  schedule: "*/15 * * * *"
+  schedule: '*/15 * * * *'
   jobTemplate:
     spec:
       template:
@@ -263,7 +263,7 @@ spec:
     - metadata:
         name: data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes: ['ReadWriteOnce']
         resources:
           requests:
             storage: 10Gi
@@ -306,7 +306,7 @@ spec:
     - metadata:
         name: data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes: ['ReadWriteOnce']
         resources:
           requests:
             storage: 5Gi

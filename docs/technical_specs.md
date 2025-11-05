@@ -235,6 +235,7 @@ jobs:
           namespace: battlescope
 ```
 - **DockerHub publishing:** the `publish-images` job (main branch only) builds the `api`, `ingest`, `clusterer`, and `scheduler` containers from the shared `Dockerfile`, tagging each as `${GITHUB_SHA}` and `latest` under `docker.io/<DOCKERHUB_USERNAME>/battlescope-<service>`. Configure repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` with your Docker Hub credentials before enabling deploys.
+- Images are published as multi-arch manifests covering `linux/amd64` and `linux/arm64` via Buildx + QEMU, so both x86 and Apple/Graviton nodes run the same tags.
 
 ---
 
