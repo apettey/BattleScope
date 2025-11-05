@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: enrichment
-          image: ghcr.io/your-org/battlescope-enrichment:latest
+          image: docker.io/petdog/battlescope-enrichment:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

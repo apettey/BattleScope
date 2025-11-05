@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ingest
-          image: ghcr.io/your-org/battlescope-ingest:latest
+          image: docker.io/petdog/battlescope-ingest:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

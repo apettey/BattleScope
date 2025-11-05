@@ -17,7 +17,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: scheduler
-              image: ghcr.io/your-org/battlescope-scheduler:latest
+              image: docker.io/petdog/battlescope-scheduler:latest
               imagePullPolicy: IfNotPresent
               envFrom:
                 - secretRef:
