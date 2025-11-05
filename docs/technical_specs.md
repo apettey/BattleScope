@@ -163,7 +163,7 @@ metadata:
 - `k8s/deployments.yaml` captures every controller that runs pods. Draft replicas stay minimal (two for user-facing API/frontend, one for workers) so we can validate scheduling pressure before scaling up.
 - Stateful services (Postgres, Redis) sit in the same file while we prototype. This keeps storage plumbing visible next to the consumers and avoids introducing Helm or Kustomize before we prove the baseline cluster boot.
 - Readiness and liveness probes are wired to `/healthz` so our OTEL + probe checks stay aligned from the first deploy.
-- Images reference `ghcr.io/battlescope/*:latest` until CI publishes signed digests; pinning is called out with inline TODOs to make the follow-up obvious.
+- Images reference `docker.io/petdog/battlescope-*` tags (defaulting to `:latest`) until CI publishes signed digests; pinning is called out with inline TODOs to make the follow-up obvious.
 
 ### Services
 - `k8s/services.yaml` exposes ClusterIP endpoints per workload so internal callers stay decoupled from pod DNS and we can bolt on an Ingress later without rewriting manifests.

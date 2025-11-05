@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/battlescope/api:latest # TODO: pin to CI-published tag
+          image: petdog/battlescope-api:latest # TODO: pin to CI-published tag
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/battlescope/frontend:latest # TODO: pin to CI-published tag
+          image: petdog/battlescope-frontend:latest # TODO: pin to CI-published tag
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4173
@@ -114,7 +114,7 @@ spec:
     spec:
       containers:
         - name: ingest
-          image: ghcr.io/battlescope/ingest:latest # TODO: pin to CI-published tag
+          image: petdog/battlescope-ingest:latest # TODO: pin to CI-published tag
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
@@ -158,7 +158,7 @@ spec:
     spec:
       containers:
         - name: clusterer
-          image: ghcr.io/battlescope/clusterer:latest # TODO: pin to CI-published tag
+          image: petdog/battlescope-clusterer:latest # TODO: pin to CI-published tag
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
@@ -200,7 +200,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: scheduler
-              image: ghcr.io/battlescope/scheduler:latest # TODO: pin to CI-published tag
+              image: petdog/battlescope-scheduler:latest # TODO: pin to CI-published tag
               imagePullPolicy: IfNotPresent
               envFrom:
                 - secretRef:
