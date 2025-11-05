@@ -86,6 +86,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push ${{ matrix.name }} image
+        if: ${{ matrix.build_args != '' }}
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
@@ -93,6 +94,18 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           build-args: ${{ matrix.build_args }}
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest
+
+      - name: Build and push ${{ matrix.name }} image (no args)
+        if: ${{ matrix.build_args == '' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest

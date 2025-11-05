@@ -18,6 +18,7 @@ coverage/
 # environment
 .env
 .env.*
+infra/k8s/secrets.yaml
 
 # misc
 *.log
