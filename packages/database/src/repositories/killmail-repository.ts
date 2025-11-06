@@ -122,11 +122,13 @@ export class KillmailRepository {
     }
   }
 
-  async fetchUnprocessed(limit = 500): Promise<KillmailEventRecord[]> {
+  async fetchUnprocessed(limit = 500, delayMinutes = 30): Promise<KillmailEventRecord[]> {
+    const cutoffTime = new Date(Date.now() - delayMinutes * 60 * 1000);
     const rows = await this.db
       .selectFrom('killmail_events')
       .selectAll()
       .where('processedAt', 'is', null)
+      .where('occurredAt', '<=', cutoffTime)
       .orderBy('occurredAt', 'asc')
       .limit(limit)
       .execute();

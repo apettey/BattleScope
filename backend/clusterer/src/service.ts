@@ -21,12 +21,16 @@ export class ClustererService {
     private readonly battleRepository: BattleRepository,
     private readonly killmailRepository: KillmailRepository,
     private readonly engine: ClusteringEngine,
+    private readonly processingDelayMinutes = 30,
   ) {}
 
   async processBatch(limit: number): Promise<ClustererStats> {
     return tracer.startActiveSpan('clusterer.processBatch', async (span) => {
       try {
-        const killmails = await this.killmailRepository.fetchUnprocessed(limit);
+        const killmails = await this.killmailRepository.fetchUnprocessed(
+          limit,
+          this.processingDelayMinutes,
+        );
         span.setAttribute('killmail.batch.size', killmails.length);
 
         if (killmails.length === 0) {

@@ -19,7 +19,12 @@ export const start = async (): Promise<void> => {
     gapMaxMinutes: config.gapMaxMinutes,
     minKills: config.minKills,
   });
-  const service = new ClustererService(battleRepository, killmailRepository, engine);
+  const service = new ClustererService(
+    battleRepository,
+    killmailRepository,
+    engine,
+    config.processingDelayMinutes,
+  );
   const healthServer = createHealthServer(db);
   const abortController = new AbortController();
 

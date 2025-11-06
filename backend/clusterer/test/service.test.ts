@@ -27,7 +27,7 @@ describe('ClustererService', () => {
     testDb = await createTestDb();
     battleRepository = new BattleRepository(testDb.db);
     killmailRepository = new KillmailRepository(testDb.db);
-    service = new ClustererService(battleRepository, killmailRepository, engine);
+    service = new ClustererService(battleRepository, killmailRepository, engine, 0);
   });
 
   afterEach(async () => {
@@ -58,7 +58,7 @@ describe('ClustererService', () => {
     expect(battles).toHaveLength(1);
     expect(BigInt(battles[0].totalKills)).toBe(2n);
 
-    const events = await killmailRepository.fetchUnprocessed();
+    const events = await killmailRepository.fetchUnprocessed(500, 0);
     expect(events).toHaveLength(0);
   });
 
@@ -75,7 +75,7 @@ describe('ClustererService', () => {
     expect(stats.battles).toBe(0);
     expect(stats.ignored).toBe(1);
 
-    const events = await killmailRepository.fetchUnprocessed();
+    const events = await killmailRepository.fetchUnprocessed(500, 0);
     expect(events).toHaveLength(0);
   });
 });

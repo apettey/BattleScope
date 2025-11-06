@@ -38,7 +38,7 @@ describe('KillmailRepository', () => {
     expect(firstInsert).toBe(true);
     expect(secondInsert).toBe(false);
 
-    const events = await repository.fetchUnprocessed();
+    const events = await repository.fetchUnprocessed(500, 0);
     expect(events).toHaveLength(1);
     expect(events[0].iskValue).toBe(200_000_000n);
     expect(events[0].victimCharacterId).toBe(555_666_777n);
@@ -46,12 +46,12 @@ describe('KillmailRepository', () => {
   });
 
   it('marks killmails as processed without battle association', async () => {
-    const events = await repository.fetchUnprocessed();
+    const events = await repository.fetchUnprocessed(500, 0);
     expect(events).toHaveLength(1);
 
     await repository.markAsProcessed([events[0].killmailId], null);
 
-    const remaining = await repository.fetchUnprocessed();
+    const remaining = await repository.fetchUnprocessed(500, 0);
     expect(remaining).toHaveLength(0);
   });
 });

@@ -49,7 +49,7 @@ describe('IngestionService', () => {
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue).toHaveBeenCalledWith(reference.killmailId);
 
-    const remaining = await repository.fetchUnprocessed();
+    const remaining = await repository.fetchUnprocessed(500, 0);
     expect(remaining).toHaveLength(1);
     expect(remaining[0].killmailId).toBe(reference.killmailId);
   });
