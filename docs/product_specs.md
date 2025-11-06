@@ -216,7 +216,8 @@ This enables performant historical and tactical insights while maintaining low s
     - Win/loss ratio (based on ISK efficiency)
     - Most frequent opponents
     - Most used ship types
-    - Favorite systems/regions
+    - Top systems by battles (systems with most battle participation)
+    - Top systems by kills (systems where entity gets most kills)
   - All entity names link to their respective detail pages or zKillboard
 
 ---
@@ -398,6 +399,10 @@ This enables performant historical and tactical insights while maintaining low s
     "topSystems": [
       { "systemId": "31000123", "systemName": "J115422", "battleCount": 15 },
       { "systemId": "30002187", "systemName": "M-OEE8", "battleCount": 12 }
+    ],
+    "topSystemsByKills": [
+      { "systemId": "30002187", "systemName": "M-OEE8", "killCount": 234 },
+      { "systemId": "31000123", "systemName": "J115422", "killCount": 189 }
     ]
   }
 }
@@ -460,6 +465,10 @@ This enables performant historical and tactical insights while maintaining low s
     ],
     "topPilots": [
       { "characterId": "90012345", "characterName": "John Doe", "battleCount": 32 }
+    ],
+    "topSystemsByKills": [
+      { "systemId": "30002187", "systemName": "M-OEE8", "killCount": 156 },
+      { "systemId": "31000123", "systemName": "J115422", "killCount": 98 }
     ]
   }
 }

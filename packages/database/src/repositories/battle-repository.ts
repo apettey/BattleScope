@@ -418,32 +418,23 @@ export class BattleRepository {
 
     // Get top opponents (alliances that fought against this alliance)
     const topOpponents = await this.db
-      .selectFrom('killmail_events')
-      .select((eb) => [
-        sql<string>`
-          CASE
-            WHEN victim_alliance_id = CAST(${serializeBigIntRequired(allianceId)} AS bigint)
-            THEN UNNEST(attacker_alliance_ids)
-            ELSE victim_alliance_id
-          END
-        `.as('opponentAllianceId'),
-        eb.fn.countAll().as('battleCount'),
-      ])
-      .where('battleId', 'in', battleIdList)
-      .where(
-        sql<boolean>`
-          (victim_alliance_id = CAST(${serializeBigIntRequired(
-            allianceId,
-          )} AS bigint) OR CAST(${serializeBigIntRequired(
-            allianceId,
-          )} AS bigint) = ANY(attacker_alliance_ids))
-          AND (victim_alliance_id != CAST(${serializeBigIntRequired(
-            allianceId,
-          )} AS bigint) OR CAST(${serializeBigIntRequired(
-            allianceId,
-          )} AS bigint) != ALL(COALESCE(attacker_alliance_ids, '{}')))
-        `,
+      .selectFrom(
+        sql<{ opponentAllianceId: string }>`
+          (
+            SELECT victim_alliance_id as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND CAST(${serializeBigIntRequired(allianceId)} AS bigint) = ANY(attacker_alliance_ids)
+              AND victim_alliance_id IS NOT NULL
+            UNION ALL
+            SELECT UNNEST(attacker_alliance_ids) as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND victim_alliance_id = CAST(${serializeBigIntRequired(allianceId)} AS bigint)
+          )
+        `.as('opponents'),
       )
+      .select((eb) => ['opponentAllianceId', eb.fn.countAll().as('battleCount')])
       .groupBy('opponentAllianceId')
       .orderBy('battleCount', 'desc')
       .limit(10)
@@ -558,27 +549,23 @@ export class BattleRepository {
 
     // Get top opponents
     const topOpponents = await this.db
-      .selectFrom('killmail_events')
-      .select((eb) => [
-        sql<string>`
-          CASE
-            WHEN victim_corp_id = CAST(${serializeBigIntRequired(corpId)} AS bigint)
-            THEN UNNEST(attacker_alliance_ids)
-            ELSE victim_alliance_id
-          END
-        `.as('opponentAllianceId'),
-        eb.fn.countAll().as('battleCount'),
-      ])
-      .where('battleId', 'in', battleIdList)
-      .where(
-        sql<boolean>`
-          (victim_corp_id = CAST(${serializeBigIntRequired(
-            corpId,
-          )} AS bigint) OR CAST(${serializeBigIntRequired(
-            corpId,
-          )} AS bigint) = ANY(attacker_corp_ids))
-        `,
+      .selectFrom(
+        sql<{ opponentAllianceId: string }>`
+          (
+            SELECT victim_alliance_id as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND CAST(${serializeBigIntRequired(corpId)} AS bigint) = ANY(attacker_corp_ids)
+              AND victim_alliance_id IS NOT NULL
+            UNION ALL
+            SELECT UNNEST(attacker_alliance_ids) as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND victim_corp_id = CAST(${serializeBigIntRequired(corpId)} AS bigint)
+          )
+        `.as('opponents'),
       )
+      .select((eb) => ['opponentAllianceId', eb.fn.countAll().as('battleCount')])
       .groupBy('opponentAllianceId')
       .orderBy('battleCount', 'desc')
       .limit(10)
@@ -696,27 +683,23 @@ export class BattleRepository {
 
     // Get top opponents
     const topOpponents = await this.db
-      .selectFrom('killmail_events')
-      .select((eb) => [
-        sql<string>`
-          CASE
-            WHEN victim_character_id = CAST(${serializeBigIntRequired(characterId)} AS bigint)
-            THEN UNNEST(attacker_alliance_ids)
-            ELSE victim_alliance_id
-          END
-        `.as('opponentAllianceId'),
-        eb.fn.countAll().as('battleCount'),
-      ])
-      .where('battleId', 'in', battleIdList)
-      .where(
-        sql<boolean>`
-          (victim_character_id = CAST(${serializeBigIntRequired(
-            characterId,
-          )} AS bigint) OR CAST(${serializeBigIntRequired(
-            characterId,
-          )} AS bigint) = ANY(attacker_character_ids))
-        `,
+      .selectFrom(
+        sql<{ opponentAllianceId: string }>`
+          (
+            SELECT victim_alliance_id as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND CAST(${serializeBigIntRequired(characterId)} AS bigint) = ANY(attacker_character_ids)
+              AND victim_alliance_id IS NOT NULL
+            UNION ALL
+            SELECT UNNEST(attacker_alliance_ids) as opponent_alliance_id
+            FROM killmail_events
+            WHERE battle_id IN (${sql.join(battleIdList.map((id) => sql.lit(id)))})
+              AND victim_character_id = CAST(${serializeBigIntRequired(characterId)} AS bigint)
+          )
+        `.as('opponents'),
       )
+      .select((eb) => ['opponentAllianceId', eb.fn.countAll().as('battleCount')])
       .groupBy('opponentAllianceId')
       .orderBy('battleCount', 'desc')
       .limit(10)
