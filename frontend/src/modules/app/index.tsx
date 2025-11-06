@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { BattlesView } from '../battles/components/BattlesView.js';
 import { HomeView } from '../home/HomeView.js';
