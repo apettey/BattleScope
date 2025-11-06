@@ -37,6 +37,12 @@ export class ClustererService {
           return { battles: 0, processedKillmails: 0, ignored: 0 };
         }
 
+        const timeRange =
+          killmails.length > 0
+            ? `${killmails[0].occurredAt.toISOString()} to ${killmails[killmails.length - 1].occurredAt.toISOString()}`
+            : 'N/A';
+        this.logger.info({ count: killmails.length, timeRange }, 'Processing killmail batch');
+
         const { battles, ignoredKillmailIds } = this.engine.cluster(killmails);
 
         for (const plan of battles) {

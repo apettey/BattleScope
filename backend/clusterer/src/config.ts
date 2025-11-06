@@ -4,8 +4,8 @@ const ConfigSchema = z.object({
   windowMinutes: z.number().int().min(1).default(30),
   gapMaxMinutes: z.number().int().min(1).default(15),
   minKills: z.number().int().min(1).default(2),
-  processingDelayMinutes: z.number().int().min(0).default(30),
-  batchSize: z.number().int().min(1).max(2000).default(500),
+  processingDelayMinutes: z.number().int().min(0).default(90),
+  batchSize: z.number().int().min(1).max(5000).default(2000),
   intervalMs: z.number().int().min(500).default(10000),
   port: z.number().int().min(0).max(65535).default(3003),
 });
