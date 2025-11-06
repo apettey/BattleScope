@@ -341,4 +341,417 @@ export class BattleRepository {
       totalIskDestroyed: toBigInt(row.totalIskDestroyed) ?? 0n,
     }));
   }
+
+  async getAllianceStatistics(allianceId: bigint) {
+    // Get all battles involving this alliance
+    const battleIds = await this.db
+      .selectFrom('killmail_events')
+      .select('battleId')
+      .distinct()
+      .where('battleId', 'is not', null)
+      .where(
+        sql<boolean>`("killmail_events"."victim_alliance_id" = CAST(${serializeBigIntRequired(
+          allianceId,
+        )} AS bigint) OR CAST(${serializeBigIntRequired(
+          allianceId,
+        )} AS bigint) = ANY("killmail_events"."attacker_alliance_ids"))`,
+      )
+      .execute();
+
+    const battleIdList = battleIds
+      .map((row) => row.battleId)
+      .filter((id): id is string => id !== null);
+
+    if (battleIdList.length === 0) {
+      return null;
+    }
+
+    // Get total killmails and ISK statistics
+    const killmailStats = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        eb.fn.count('killmailId').distinct().as('totalKillmails'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when('victimAllianceId', '=', allianceId)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskLost'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when(sql<boolean>`${allianceId} = ANY(attacker_alliance_ids)`, '=', true)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskDestroyed'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .executeTakeFirst();
+
+    // Get participant statistics
+    const participantStats = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => [eb.fn.avg(eb.fn.count('characterId')).over().as('avgParticipants')])
+      .where('battleId', 'in', battleIdList)
+      .where('allianceId', '=', allianceId)
+      .groupBy('battleId')
+      .executeTakeFirst();
+
+    // Get most used ships
+    const mostUsedShips = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => ['shipTypeId', eb.fn.count('shipTypeId').as('count')])
+      .where('battleId', 'in', battleIdList)
+      .where('allianceId', '=', allianceId)
+      .where('shipTypeId', 'is not', null)
+      .groupBy('shipTypeId')
+      .orderBy('count', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get top opponents (alliances that fought against this alliance)
+    const topOpponents = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        sql<string>`
+          CASE
+            WHEN victim_alliance_id = CAST(${serializeBigIntRequired(allianceId)} AS bigint)
+            THEN UNNEST(attacker_alliance_ids)
+            ELSE victim_alliance_id
+          END
+        `.as('opponentAllianceId'),
+        eb.fn.countAll().as('battleCount'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .where(
+        sql<boolean>`
+          (victim_alliance_id = CAST(${serializeBigIntRequired(
+            allianceId,
+          )} AS bigint) OR CAST(${serializeBigIntRequired(
+            allianceId,
+          )} AS bigint) = ANY(attacker_alliance_ids))
+          AND (victim_alliance_id != CAST(${serializeBigIntRequired(
+            allianceId,
+          )} AS bigint) OR CAST(${serializeBigIntRequired(
+            allianceId,
+          )} AS bigint) != ALL(COALESCE(attacker_alliance_ids, '{}')))
+        `,
+      )
+      .groupBy('opponentAllianceId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get top systems
+    const topSystems = await this.db
+      .selectFrom('battles')
+      .select((eb) => ['systemId', eb.fn.countAll().as('battleCount')])
+      .where('id', 'in', battleIdList)
+      .groupBy('systemId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    return {
+      totalBattles: battleIdList.length,
+      totalKillmails: Number(killmailStats?.totalKillmails ?? 0),
+      totalIskDestroyed: toBigInt(killmailStats?.totalIskDestroyed) ?? 0n,
+      totalIskLost: toBigInt(killmailStats?.totalIskLost) ?? 0n,
+      averageParticipants: Number(participantStats?.avgParticipants ?? 0),
+      mostUsedShips: mostUsedShips.map((ship) => ({
+        shipTypeId: toBigInt(ship.shipTypeId) ?? 0n,
+        count: Number(ship.count),
+      })),
+      topOpponents: topOpponents
+        .map((opponent) => ({
+          allianceId: toBigInt(opponent.opponentAllianceId) ?? 0n,
+          battleCount: Number(opponent.battleCount),
+        }))
+        .filter((o) => o.allianceId !== 0n),
+      topSystems: topSystems.map((system) => ({
+        systemId: toBigInt(system.systemId) ?? 0n,
+        battleCount: Number(system.battleCount),
+      })),
+    };
+  }
+
+  async getCorporationStatistics(corpId: bigint) {
+    // Get all battles involving this corporation
+    const battleIds = await this.db
+      .selectFrom('killmail_events')
+      .select('battleId')
+      .distinct()
+      .where('battleId', 'is not', null)
+      .where(
+        sql<boolean>`("killmail_events"."victim_corp_id" = CAST(${serializeBigIntRequired(
+          corpId,
+        )} AS bigint) OR CAST(${serializeBigIntRequired(
+          corpId,
+        )} AS bigint) = ANY("killmail_events"."attacker_corp_ids"))`,
+      )
+      .execute();
+
+    const battleIdList = battleIds
+      .map((row) => row.battleId)
+      .filter((id): id is string => id !== null);
+
+    if (battleIdList.length === 0) {
+      return null;
+    }
+
+    // Get total killmails and ISK statistics
+    const killmailStats = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        eb.fn.count('killmailId').distinct().as('totalKillmails'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when('victimCorpId', '=', corpId)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskLost'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when(sql<boolean>`${corpId} = ANY(attacker_corp_ids)`, '=', true)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskDestroyed'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .executeTakeFirst();
+
+    // Get participant statistics
+    const participantStats = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => [eb.fn.avg(eb.fn.count('characterId')).over().as('avgParticipants')])
+      .where('battleId', 'in', battleIdList)
+      .where('corpId', '=', corpId)
+      .groupBy('battleId')
+      .executeTakeFirst();
+
+    // Get most used ships
+    const mostUsedShips = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => ['shipTypeId', eb.fn.count('shipTypeId').as('count')])
+      .where('battleId', 'in', battleIdList)
+      .where('corpId', '=', corpId)
+      .where('shipTypeId', 'is not', null)
+      .groupBy('shipTypeId')
+      .orderBy('count', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get top opponents
+    const topOpponents = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        sql<string>`
+          CASE
+            WHEN victim_corp_id = CAST(${serializeBigIntRequired(corpId)} AS bigint)
+            THEN UNNEST(attacker_alliance_ids)
+            ELSE victim_alliance_id
+          END
+        `.as('opponentAllianceId'),
+        eb.fn.countAll().as('battleCount'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .where(
+        sql<boolean>`
+          (victim_corp_id = CAST(${serializeBigIntRequired(
+            corpId,
+          )} AS bigint) OR CAST(${serializeBigIntRequired(
+            corpId,
+          )} AS bigint) = ANY(attacker_corp_ids))
+        `,
+      )
+      .groupBy('opponentAllianceId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get top pilots
+    const topPilots = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => ['characterId', eb.fn.count('battleId').distinct().as('battleCount')])
+      .where('battleId', 'in', battleIdList)
+      .where('corpId', '=', corpId)
+      .groupBy('characterId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    return {
+      totalBattles: battleIdList.length,
+      totalKillmails: Number(killmailStats?.totalKillmails ?? 0),
+      totalIskDestroyed: toBigInt(killmailStats?.totalIskDestroyed) ?? 0n,
+      totalIskLost: toBigInt(killmailStats?.totalIskLost) ?? 0n,
+      averageParticipants: Number(participantStats?.avgParticipants ?? 0),
+      mostUsedShips: mostUsedShips.map((ship) => ({
+        shipTypeId: toBigInt(ship.shipTypeId) ?? 0n,
+        count: Number(ship.count),
+      })),
+      topOpponents: topOpponents
+        .map((opponent) => ({
+          allianceId: toBigInt(opponent.opponentAllianceId) ?? 0n,
+          battleCount: Number(opponent.battleCount),
+        }))
+        .filter((o) => o.allianceId !== 0n),
+      topPilots: topPilots.map((pilot) => ({
+        characterId: toBigInt(pilot.characterId) ?? 0n,
+        battleCount: Number(pilot.battleCount),
+      })),
+    };
+  }
+
+  async getCharacterStatistics(characterId: bigint) {
+    // Get all battles involving this character
+    const battleIds = await this.db
+      .selectFrom('killmail_events')
+      .select('battleId')
+      .distinct()
+      .where('battleId', 'is not', null)
+      .where(
+        sql<boolean>`("killmail_events"."victim_character_id" = CAST(${serializeBigIntRequired(
+          characterId,
+        )} AS bigint) OR CAST(${serializeBigIntRequired(
+          characterId,
+        )} AS bigint) = ANY("killmail_events"."attacker_character_ids"))`,
+      )
+      .execute();
+
+    const battleIdList = battleIds
+      .map((row) => row.battleId)
+      .filter((id): id is string => id !== null);
+
+    if (battleIdList.length === 0) {
+      return null;
+    }
+
+    // Get kills and losses count
+    const killLossStats = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        eb.fn
+          .count(eb.case().when('victimCharacterId', '=', characterId).then(1).end())
+          .as('totalLosses'),
+        eb.fn
+          .count(
+            eb
+              .case()
+              .when(sql<boolean>`${characterId} = ANY(attacker_character_ids)`, '=', true)
+              .then(1)
+              .end(),
+          )
+          .as('totalKills'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when('victimCharacterId', '=', characterId)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskLost'),
+        eb.fn
+          .sum(
+            eb
+              .case()
+              .when(sql<boolean>`${characterId} = ANY(attacker_character_ids)`, '=', true)
+              .then(sql<string>`COALESCE(isk_value, 0)`)
+              .else(sql<string>`0`)
+              .end(),
+          )
+          .as('totalIskDestroyed'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .executeTakeFirst();
+
+    // Get most used ships
+    const mostUsedShips = await this.db
+      .selectFrom('battle_participants')
+      .select((eb) => ['shipTypeId', eb.fn.count('shipTypeId').as('count')])
+      .where('battleId', 'in', battleIdList)
+      .where('characterId', '=', characterId)
+      .where('shipTypeId', 'is not', null)
+      .groupBy('shipTypeId')
+      .orderBy('count', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get top opponents
+    const topOpponents = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => [
+        sql<string>`
+          CASE
+            WHEN victim_character_id = CAST(${serializeBigIntRequired(characterId)} AS bigint)
+            THEN UNNEST(attacker_alliance_ids)
+            ELSE victim_alliance_id
+          END
+        `.as('opponentAllianceId'),
+        eb.fn.countAll().as('battleCount'),
+      ])
+      .where('battleId', 'in', battleIdList)
+      .where(
+        sql<boolean>`
+          (victim_character_id = CAST(${serializeBigIntRequired(
+            characterId,
+          )} AS bigint) OR CAST(${serializeBigIntRequired(
+            characterId,
+          )} AS bigint) = ANY(attacker_character_ids))
+        `,
+      )
+      .groupBy('opponentAllianceId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    // Get favorite systems
+    const favoriteSystems = await this.db
+      .selectFrom('battles')
+      .select((eb) => ['systemId', eb.fn.countAll().as('battleCount')])
+      .where('id', 'in', battleIdList)
+      .groupBy('systemId')
+      .orderBy('battleCount', 'desc')
+      .limit(10)
+      .execute();
+
+    return {
+      totalBattles: battleIdList.length,
+      totalKills: Number(killLossStats?.totalKills ?? 0),
+      totalLosses: Number(killLossStats?.totalLosses ?? 0),
+      totalIskDestroyed: toBigInt(killLossStats?.totalIskDestroyed) ?? 0n,
+      totalIskLost: toBigInt(killLossStats?.totalIskLost) ?? 0n,
+      mostUsedShips: mostUsedShips.map((ship) => ({
+        shipTypeId: toBigInt(ship.shipTypeId) ?? 0n,
+        count: Number(ship.count),
+      })),
+      topOpponents: topOpponents
+        .map((opponent) => ({
+          allianceId: toBigInt(opponent.opponentAllianceId) ?? 0n,
+          battleCount: Number(opponent.battleCount),
+        }))
+        .filter((o) => o.allianceId !== 0n),
+      favoriteSystems: favoriteSystems.map((system) => ({
+        systemId: toBigInt(system.systemId) ?? 0n,
+        battleCount: Number(system.battleCount),
+      })),
+    };
+  }
 }

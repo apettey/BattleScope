@@ -11,6 +11,9 @@ import {
   BattleListResponseSchema,
   BattleDetailSchema,
   ErrorResponseSchema,
+  AllianceDetailSchema,
+  CorporationDetailSchema,
+  CharacterDetailSchema,
 } from '../schemas.js';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
@@ -255,6 +258,226 @@ export const registerBattleRoutes = (
 
       const response = await nameEnricher.enrichBattleDetail(battle);
       return reply.send(response);
+    },
+  });
+
+  app.get('/alliances/:id', {
+    schema: {
+      tags: ['Entities'],
+      summary: 'Get alliance details',
+      description: 'Returns detailed statistics and information about a specific alliance',
+      params: EntityIdParamSchema,
+      response: {
+        200: AllianceDetailSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = AllianceParamsSchema.parse(request.params);
+      const allianceId = BigInt(params.id);
+
+      const statistics = await tracer.startActiveSpan('getAllianceStatistics', async (span) => {
+        try {
+          return await repository.getAllianceStatistics(allianceId);
+        } finally {
+          span.end();
+        }
+      });
+
+      if (!statistics) {
+        return reply.status(404).send({ message: 'Alliance not found or no battles recorded' });
+      }
+
+      // Collect IDs for name resolution
+      const idsToResolve = new Set<string>();
+      idsToResolve.add(params.id);
+      statistics.topOpponents.forEach((o) => idsToResolve.add(o.allianceId.toString()));
+      statistics.mostUsedShips.forEach((s) => idsToResolve.add(s.shipTypeId.toString()));
+      statistics.topSystems.forEach((s) => idsToResolve.add(s.systemId.toString()));
+
+      const names = await nameEnricher.lookupNames(Array.from(idsToResolve).map(Number));
+
+      const totalIsk = statistics.totalIskDestroyed + statistics.totalIskLost;
+      const iskEfficiency =
+        totalIsk > 0n ? Number((statistics.totalIskDestroyed * 10000n) / totalIsk) / 100 : 0;
+
+      return reply.send({
+        allianceId: params.id,
+        allianceName: names.get(params.id) ?? null,
+        ticker: null,
+        statistics: {
+          totalBattles: statistics.totalBattles,
+          totalKillmails: statistics.totalKillmails,
+          totalIskDestroyed: statistics.totalIskDestroyed.toString(),
+          totalIskLost: statistics.totalIskLost.toString(),
+          iskEfficiency,
+          averageParticipants: statistics.averageParticipants,
+          mostUsedShips: statistics.mostUsedShips.map((s) => ({
+            shipTypeId: s.shipTypeId.toString(),
+            shipTypeName: names.get(s.shipTypeId.toString()) ?? null,
+            count: s.count,
+          })),
+          topOpponents: statistics.topOpponents.map((o) => ({
+            allianceId: o.allianceId.toString(),
+            allianceName: names.get(o.allianceId.toString()) ?? null,
+            battleCount: o.battleCount,
+          })),
+          topSystems: statistics.topSystems.map((s) => ({
+            systemId: s.systemId.toString(),
+            systemName: names.get(s.systemId.toString()) ?? null,
+            battleCount: s.battleCount,
+          })),
+        },
+      });
+    },
+  });
+
+  app.get('/corporations/:id', {
+    schema: {
+      tags: ['Entities'],
+      summary: 'Get corporation details',
+      description: 'Returns detailed statistics and information about a specific corporation',
+      params: EntityIdParamSchema,
+      response: {
+        200: CorporationDetailSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = CorpParamsSchema.parse(request.params);
+      const corpId = BigInt(params.id);
+
+      const statistics = await tracer.startActiveSpan('getCorporationStatistics', async (span) => {
+        try {
+          return await repository.getCorporationStatistics(corpId);
+        } finally {
+          span.end();
+        }
+      });
+
+      if (!statistics) {
+        return reply.status(404).send({ message: 'Corporation not found or no battles recorded' });
+      }
+
+      // Get corp info to find alliance
+      const idsToResolve = new Set<string>();
+      idsToResolve.add(params.id);
+      statistics.topOpponents.forEach((o) => idsToResolve.add(o.allianceId.toString()));
+      statistics.mostUsedShips.forEach((s) => idsToResolve.add(s.shipTypeId.toString()));
+      statistics.topPilots.forEach((p) => idsToResolve.add(p.characterId.toString()));
+
+      const names = await nameEnricher.lookupNames(Array.from(idsToResolve).map(Number));
+
+      const totalIsk = statistics.totalIskDestroyed + statistics.totalIskLost;
+      const iskEfficiency =
+        totalIsk > 0n ? Number((statistics.totalIskDestroyed * 10000n) / totalIsk) / 100 : 0;
+
+      return reply.send({
+        corpId: params.id,
+        corpName: names.get(params.id) ?? null,
+        ticker: null,
+        allianceId: null,
+        allianceName: null,
+        statistics: {
+          totalBattles: statistics.totalBattles,
+          totalKillmails: statistics.totalKillmails,
+          totalIskDestroyed: statistics.totalIskDestroyed.toString(),
+          totalIskLost: statistics.totalIskLost.toString(),
+          iskEfficiency,
+          averageParticipants: statistics.averageParticipants,
+          mostUsedShips: statistics.mostUsedShips.map((s) => ({
+            shipTypeId: s.shipTypeId.toString(),
+            shipTypeName: names.get(s.shipTypeId.toString()) ?? null,
+            count: s.count,
+          })),
+          topOpponents: statistics.topOpponents.map((o) => ({
+            allianceId: o.allianceId.toString(),
+            allianceName: names.get(o.allianceId.toString()) ?? null,
+            battleCount: o.battleCount,
+          })),
+          topPilots: statistics.topPilots.map((p) => ({
+            characterId: p.characterId.toString(),
+            characterName: names.get(p.characterId.toString()) ?? null,
+            battleCount: p.battleCount,
+          })),
+        },
+      });
+    },
+  });
+
+  app.get('/characters/:id', {
+    schema: {
+      tags: ['Entities'],
+      summary: 'Get character details',
+      description: 'Returns detailed statistics and information about a specific character',
+      params: EntityIdParamSchema,
+      response: {
+        200: CharacterDetailSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const params = CharacterParamsSchema.parse(request.params);
+      const characterId = BigInt(params.id);
+
+      const statistics = await tracer.startActiveSpan('getCharacterStatistics', async (span) => {
+        try {
+          return await repository.getCharacterStatistics(characterId);
+        } finally {
+          span.end();
+        }
+      });
+
+      if (!statistics) {
+        return reply.status(404).send({ message: 'Character not found or no battles recorded' });
+      }
+
+      const idsToResolve = new Set<string>();
+      idsToResolve.add(params.id);
+      statistics.topOpponents.forEach((o) => idsToResolve.add(o.allianceId.toString()));
+      statistics.mostUsedShips.forEach((s) => idsToResolve.add(s.shipTypeId.toString()));
+      statistics.favoriteSystems.forEach((s) => idsToResolve.add(s.systemId.toString()));
+
+      const names = await nameEnricher.lookupNames(Array.from(idsToResolve).map(Number));
+
+      const totalIsk = statistics.totalIskDestroyed + statistics.totalIskLost;
+      const iskEfficiency =
+        totalIsk > 0n ? Number((statistics.totalIskDestroyed * 10000n) / totalIsk) / 100 : 0;
+
+      return reply.send({
+        characterId: params.id,
+        characterName: names.get(params.id) ?? null,
+        corpId: null,
+        corpName: null,
+        allianceId: null,
+        allianceName: null,
+        statistics: {
+          totalBattles: statistics.totalBattles,
+          totalKills: statistics.totalKills,
+          totalLosses: statistics.totalLosses,
+          totalIskDestroyed: statistics.totalIskDestroyed.toString(),
+          totalIskLost: statistics.totalIskLost.toString(),
+          iskEfficiency,
+          mostUsedShips: statistics.mostUsedShips.map((s) => ({
+            shipTypeId: s.shipTypeId.toString(),
+            shipTypeName: names.get(s.shipTypeId.toString()) ?? null,
+            count: s.count,
+          })),
+          topOpponents: statistics.topOpponents.map((o) => ({
+            allianceId: o.allianceId.toString(),
+            allianceName: names.get(o.allianceId.toString()) ?? null,
+            battleCount: o.battleCount,
+          })),
+          favoriteSystems: statistics.favoriteSystems.map((s) => ({
+            systemId: s.systemId.toString(),
+            systemName: names.get(s.systemId.toString()) ?? null,
+            battleCount: s.battleCount,
+          })),
+        },
+      });
     },
   });
 };

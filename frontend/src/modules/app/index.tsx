@@ -4,8 +4,23 @@ import { BattlesView } from '../battles/components/BattlesView.js';
 import { HomeView } from '../home/HomeView.js';
 import { RecentKillsView } from '../killfeed/RecentKillsView.js';
 import { RulesView } from '../rules/RulesView.js';
+import { AllianceView } from '../entities/AllianceView.js';
+import { CorporationView } from '../entities/CorporationView.js';
+import { CharacterView } from '../entities/CharacterView.js';
 
 type TabId = 'home' | 'recent' | 'rules' | 'battles';
+type EntityType = 'alliance' | 'corporation' | 'character';
+
+type RouteState =
+  | {
+      type: 'tab';
+      tabId: TabId;
+    }
+  | {
+      type: 'entity';
+      entityType: EntityType;
+      entityId: string;
+    };
 
 const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element }> = [
   { id: 'home', label: 'Home', render: () => <HomeView /> },
@@ -16,34 +31,77 @@ const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element }> = [
 
 const isValidTab = (value: string): value is TabId => tabs.some((tab) => tab.id === value);
 
-const getInitialTab = (): TabId => {
-  if (typeof window === 'undefined') {
-    return 'home';
+const isValidEntityType = (value: string): value is EntityType =>
+  value === 'alliance' || value === 'corporation' || value === 'character';
+
+const parseRoute = (hash: string): RouteState => {
+  const cleaned = hash.replace(/^#/, '');
+
+  // Check for entity route: alliance:123, corporation:456, character:789
+  const entityMatch = cleaned.match(/^(alliance|corporation|character):(\d+)$/);
+  if (entityMatch) {
+    const [, entityType, entityId] = entityMatch;
+    if (isValidEntityType(entityType)) {
+      return { type: 'entity', entityType, entityId };
+    }
   }
-  const fromHash = window.location.hash.replace(/^#/, '');
-  return isValidTab(fromHash) ? fromHash : 'home';
+
+  // Check for tab route
+  if (isValidTab(cleaned)) {
+    return { type: 'tab', tabId: cleaned };
+  }
+
+  // Default to home
+  return { type: 'tab', tabId: 'home' };
+};
+
+const getInitialRoute = (): RouteState => {
+  if (typeof window === 'undefined') {
+    return { type: 'tab', tabId: 'home' };
+  }
+  return parseRoute(window.location.hash);
 };
 
 export const App: FC = () => {
-  const [activeTab, setActiveTab] = useState<TabId>(() => getInitialTab());
+  const [route, setRoute] = useState<RouteState>(() => getInitialRoute());
 
   useEffect(() => {
     const handleHashChange = () => {
-      const next = getInitialTab();
-      setActiveTab(next);
+      const next = parseRoute(window.location.hash);
+      setRoute(next);
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   useEffect(() => {
-    const nextHash = `#${activeTab}`;
+    let nextHash: string;
+    if (route.type === 'tab') {
+      nextHash = `#${route.tabId}`;
+    } else {
+      nextHash = `#${route.entityType}:${route.entityId}`;
+    }
     if (window.location.hash !== nextHash) {
       window.location.hash = nextHash;
     }
-  }, [activeTab]);
+  }, [route]);
 
-  const view = useMemo(() => tabs.find((tab) => tab.id === activeTab) ?? tabs[0], [activeTab]);
+  const activeTab = route.type === 'tab' ? route.tabId : null;
+
+  const renderView = () => {
+    if (route.type === 'entity') {
+      switch (route.entityType) {
+        case 'alliance':
+          return <AllianceView allianceId={route.entityId} />;
+        case 'corporation':
+          return <CorporationView corpId={route.entityId} />;
+        case 'character':
+          return <CharacterView characterId={route.entityId} />;
+      }
+    }
+    const tab = tabs.find((t) => t.id === route.tabId) ?? tabs[0];
+    return tab.render();
+  };
 
   return (
     <main
@@ -80,7 +138,7 @@ export const App: FC = () => {
                 <li key={tab.id}>
                   <button
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => setRoute({ type: 'tab', tabId: tab.id })}
                     aria-current={isActive ? 'page' : undefined}
                     style={{
                       padding: '0.75rem 1.25rem',
@@ -109,7 +167,7 @@ export const App: FC = () => {
           boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
         }}
       >
-        {view.render()}
+        {renderView()}
       </section>
     </main>
   );

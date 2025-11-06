@@ -179,4 +179,14 @@ export class NameEnricher {
     const lookup = await buildLookup(this.esiClient, ids);
     return toDashboardSummaryResponse(summary, lookup);
   }
+
+  async lookupNames(ids: number[]): Promise<NameLookup> {
+    const idSet = new Set<number>();
+    for (const id of ids) {
+      if (Number.isSafeInteger(id) && id > 0) {
+        idSet.add(id);
+      }
+    }
+    return buildLookup(this.esiClient, idSet);
+  }
 }

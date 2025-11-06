@@ -150,6 +150,7 @@ This enables performant historical and tactical insights while maintaining low s
 | F12 | Expose a streaming-friendly recent killmail feed segmented by space type for the Recent Kills page | Medium |
 | F13 | Offer read/write APIs for rulesets (min pilots, tracked alliances/corps, ignore-unlisted toggle) surfaced in the Rules UI | High |
 | F14 | Resolve and include entity names (alliances, corps, characters, systems, ships) in all API responses via ESI integration | High |
+| F15 | Provide entity detail pages (Alliance, Corporation, Character) showing battle history, statistics, and opponent analysis | High |
 
 ### Frontend MVP Experience
 
@@ -157,6 +158,7 @@ This enables performant historical and tactical insights while maintaining low s
 - **Recent Kills:** Auto-update a list of recent killmails by space type (kspace, jspace, pochven) using the streaming feed from F12 with graceful fallback polling.
 - **Rules:** Allow operators to configure minimum pilot thresholds and tracked alliances/corps, persisting changes through F13 while signalling that authentication will arrive in a future iteration.
 - **Battles:** Display list of recent battles with detail view showing participants and killmails.
+- **Entity Pages (Alliance/Corporation/Character):** Show entity-specific battle history with opponent breakdown, participant counts, ship type composition, and direct links to battle reports.
 
 ### UI Display Requirements (F14)
 
@@ -197,6 +199,25 @@ This enables performant historical and tactical insights while maintaining low s
   - Battle detail: Show all participant names with roles (victim/attacker)
   - Killmail list: Show victim and attacker entity names
   - All entity names link to zKillboard
+
+- **Entity Detail Pages (Alliance/Corporation/Character)**:
+  - Header: Display entity name, icon/logo (if available), and basic statistics
+  - Battle History: Paginated list of battles involving this entity
+  - Battle Summary Cards: Each battle should show:
+    - Battle date/time and duration
+    - System name with space type indicator
+    - Opposing alliances/corporations (those they fought against)
+    - Participant count (total pilots involved)
+    - Ship composition (breakdown by ship type/class)
+    - ISK destroyed/lost ratio
+    - Link to full battle report
+  - Statistics Panel:
+    - Total battles participated in
+    - Win/loss ratio (based on ISK efficiency)
+    - Most frequent opponents
+    - Most used ship types
+    - Favorite systems/regions
+  - All entity names link to their respective detail pages or zKillboard
 
 ---
 
@@ -350,6 +371,189 @@ This enables performant historical and tactical insights while maintaining low s
     }
   ],
   "count": 50
+}
+```
+
+### GET /alliances/:id
+```json
+{
+  "allianceId": "99001234",
+  "allianceName": "Pandemic Legion",
+  "ticker": "PL",
+  "statistics": {
+    "totalBattles": 87,
+    "totalKillmails": 1245,
+    "totalIskDestroyed": "450000000000",
+    "totalIskLost": "320000000000",
+    "iskEfficiency": 58.44,
+    "averageParticipants": 12.5,
+    "mostUsedShips": [
+      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 145 },
+      { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 98 }
+    ],
+    "topOpponents": [
+      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 23 },
+      { "allianceId": "99002345", "allianceName": "Test Alliance Please Ignore", "battleCount": 18 }
+    ],
+    "topSystems": [
+      { "systemId": "31000123", "systemName": "J115422", "battleCount": 15 },
+      { "systemId": "30002187", "systemName": "M-OEE8", "battleCount": 12 }
+    ]
+  }
+}
+```
+
+### GET /alliances/:id/battles?limit=20&cursor=xyz
+```json
+{
+  "items": [
+    {
+      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "spaceType": "jspace",
+      "startTime": "2025-11-03T18:42:00Z",
+      "endTime": "2025-11-03T19:05:00Z",
+      "duration": 1380,
+      "totalKills": 14,
+      "totalParticipants": 28,
+      "totalIskDestroyed": "3600000000",
+      "allianceIskDestroyed": "2100000000",
+      "allianceIskLost": "1500000000",
+      "allianceParticipants": 15,
+      "opponents": [
+        { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "participants": 13 }
+      ],
+      "shipComposition": [
+        { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 5 },
+        { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 3 }
+      ],
+      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
+    }
+  ],
+  "nextCursor": "abc123",
+  "hasMore": true
+}
+```
+
+### GET /corporations/:id
+```json
+{
+  "corpId": "98001234",
+  "corpName": "Sniggerdly",
+  "ticker": "SNGGR",
+  "allianceId": "99001234",
+  "allianceName": "Pandemic Legion",
+  "statistics": {
+    "totalBattles": 45,
+    "totalKillmails": 678,
+    "totalIskDestroyed": "230000000000",
+    "totalIskLost": "180000000000",
+    "iskEfficiency": 56.10,
+    "averageParticipants": 8.2,
+    "mostUsedShips": [
+      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 89 },
+      { "shipTypeId": "11969", "shipTypeName": "Sabre", "count": 54 }
+    ],
+    "topOpponents": [
+      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 15 }
+    ],
+    "topPilots": [
+      { "characterId": "90012345", "characterName": "John Doe", "battleCount": 32 }
+    ]
+  }
+}
+```
+
+### GET /corporations/:id/battles?limit=20&cursor=xyz
+```json
+{
+  "items": [
+    {
+      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "spaceType": "jspace",
+      "startTime": "2025-11-03T18:42:00Z",
+      "endTime": "2025-11-03T19:05:00Z",
+      "duration": 1380,
+      "totalKills": 14,
+      "totalParticipants": 28,
+      "corpParticipants": 8,
+      "corpIskDestroyed": "1200000000",
+      "corpIskLost": "900000000",
+      "opponents": [
+        { "corpId": "98005678", "corpName": "KarmaFleet", "allianceId": "99005678", "allianceName": "Goonswarm Federation", "participants": 10 }
+      ],
+      "shipComposition": [
+        { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 3 }
+      ],
+      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
+    }
+  ],
+  "nextCursor": "def456",
+  "hasMore": true
+}
+```
+
+### GET /characters/:id
+```json
+{
+  "characterId": "90012345",
+  "characterName": "John Doe",
+  "corpId": "98001234",
+  "corpName": "Sniggerdly",
+  "allianceId": "99001234",
+  "allianceName": "Pandemic Legion",
+  "statistics": {
+    "totalBattles": 32,
+    "totalKills": 45,
+    "totalLosses": 12,
+    "totalIskDestroyed": "15000000000",
+    "totalIskLost": "8000000000",
+    "iskEfficiency": 65.22,
+    "mostUsedShips": [
+      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 18 },
+      { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 8 }
+    ],
+    "topOpponents": [
+      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 12 }
+    ],
+    "favoriteSystems": [
+      { "systemId": "31000123", "systemName": "J115422", "battleCount": 8 }
+    ]
+  }
+}
+```
+
+### GET /characters/:id/battles?limit=20&cursor=xyz
+```json
+{
+  "items": [
+    {
+      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "spaceType": "jspace",
+      "startTime": "2025-11-03T18:42:00Z",
+      "endTime": "2025-11-03T19:05:00Z",
+      "duration": 1380,
+      "totalKills": 14,
+      "characterKills": 2,
+      "characterLosses": 0,
+      "characterIskDestroyed": "450000000",
+      "characterIskLost": "0",
+      "shipsFlown": [
+        { "shipTypeId": "11567", "shipTypeName": "Loki" }
+      ],
+      "opponents": [
+        { "allianceId": "99005678", "allianceName": "Goonswarm Federation" }
+      ],
+      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
+    }
+  ],
+  "nextCursor": "ghi789",
+  "hasMore": true
 }
 ```
 

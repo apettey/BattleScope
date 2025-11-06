@@ -193,6 +193,151 @@ export const RulesetUpdateSchema = z.object({
   updatedBy: z.string().trim().min(1).max(128).optional(),
 });
 
+// Entity detail schemas
+export const ShipUsageSchema = z.object({
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  count: z.number().int(),
+});
+
+export const OpponentAllianceSchema = z.object({
+  allianceId: z.string(),
+  allianceName: z.string().nullable(),
+  battleCount: z.number().int(),
+});
+
+export const OpponentCorpSchema = z.object({
+  corpId: z.string(),
+  corpName: z.string().nullable(),
+  allianceId: z.string().nullable(),
+  allianceName: z.string().nullable(),
+  battleCount: z.number().int(),
+});
+
+export const SystemUsageSchema = z.object({
+  systemId: z.string(),
+  systemName: z.string().nullable(),
+  battleCount: z.number().int(),
+});
+
+export const TopPilotSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  battleCount: z.number().int(),
+});
+
+export const AllianceStatisticsSchema = z.object({
+  totalBattles: z.number().int(),
+  totalKillmails: z.number().int(),
+  totalIskDestroyed: z.string(),
+  totalIskLost: z.string(),
+  iskEfficiency: z.number(),
+  averageParticipants: z.number(),
+  mostUsedShips: z.array(ShipUsageSchema),
+  topOpponents: z.array(OpponentAllianceSchema),
+  topSystems: z.array(SystemUsageSchema),
+});
+
+export const AllianceDetailSchema = z.object({
+  allianceId: z.string(),
+  allianceName: z.string().nullable(),
+  ticker: z.string().nullable(),
+  statistics: AllianceStatisticsSchema,
+});
+
+export const CorporationStatisticsSchema = z.object({
+  totalBattles: z.number().int(),
+  totalKillmails: z.number().int(),
+  totalIskDestroyed: z.string(),
+  totalIskLost: z.string(),
+  iskEfficiency: z.number(),
+  averageParticipants: z.number(),
+  mostUsedShips: z.array(ShipUsageSchema),
+  topOpponents: z.array(OpponentAllianceSchema),
+  topPilots: z.array(TopPilotSchema),
+});
+
+export const CorporationDetailSchema = z.object({
+  corpId: z.string(),
+  corpName: z.string().nullable(),
+  ticker: z.string().nullable(),
+  allianceId: z.string().nullable(),
+  allianceName: z.string().nullable(),
+  statistics: CorporationStatisticsSchema,
+});
+
+export const CharacterStatisticsSchema = z.object({
+  totalBattles: z.number().int(),
+  totalKills: z.number().int(),
+  totalLosses: z.number().int(),
+  totalIskDestroyed: z.string(),
+  totalIskLost: z.string(),
+  iskEfficiency: z.number(),
+  mostUsedShips: z.array(ShipUsageSchema),
+  topOpponents: z.array(OpponentAllianceSchema),
+  favoriteSystems: z.array(SystemUsageSchema),
+});
+
+export const CharacterDetailSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  corpId: z.string().nullable(),
+  corpName: z.string().nullable(),
+  allianceId: z.string().nullable(),
+  allianceName: z.string().nullable(),
+  statistics: CharacterStatisticsSchema,
+});
+
+export const BattleOpponentSchema = z.object({
+  allianceId: z.string().nullable(),
+  allianceName: z.string().nullable(),
+  corpId: z.string().nullable(),
+  corpName: z.string().nullable(),
+  participants: z.number().int(),
+});
+
+export const EntityBattleSummarySchema = BattleSummarySchema.extend({
+  duration: z.number().int(),
+  totalParticipants: z.number().int(),
+  opponents: z.array(BattleOpponentSchema),
+  shipComposition: z.array(ShipUsageSchema),
+});
+
+export const AllianceBattleSummarySchema = EntityBattleSummarySchema.extend({
+  allianceParticipants: z.number().int(),
+  allianceIskDestroyed: z.string(),
+  allianceIskLost: z.string(),
+});
+
+export const AllianceBattleListResponseSchema = z.object({
+  items: z.array(AllianceBattleSummarySchema),
+  nextCursor: z.string().nullable(),
+});
+
+export const CorporationBattleSummarySchema = EntityBattleSummarySchema.extend({
+  corpParticipants: z.number().int(),
+  corpIskDestroyed: z.string(),
+  corpIskLost: z.string(),
+});
+
+export const CorporationBattleListResponseSchema = z.object({
+  items: z.array(CorporationBattleSummarySchema),
+  nextCursor: z.string().nullable(),
+});
+
+export const CharacterBattleSummarySchema = EntityBattleSummarySchema.extend({
+  characterKills: z.number().int(),
+  characterLosses: z.number().int(),
+  characterIskDestroyed: z.string(),
+  characterIskLost: z.string(),
+  shipsFlown: z.array(ShipUsageSchema),
+});
+
+export const CharacterBattleListResponseSchema = z.object({
+  items: z.array(CharacterBattleSummarySchema),
+  nextCursor: z.string().nullable(),
+});
+
 // Type exports
 export type SpaceType = z.infer<typeof SpaceTypeSchema>;
 export type BattleSummary = z.infer<typeof BattleSummarySchema>;
@@ -203,3 +348,9 @@ export type KillmailFeedResponse = z.infer<typeof KillmailFeedResponseSchema>;
 export type DashboardSummary = z.infer<typeof DashboardSummarySchema>;
 export type Ruleset = z.infer<typeof RulesetSchema>;
 export type RulesetUpdate = z.infer<typeof RulesetUpdateSchema>;
+export type AllianceDetail = z.infer<typeof AllianceDetailSchema>;
+export type CorporationDetail = z.infer<typeof CorporationDetailSchema>;
+export type CharacterDetail = z.infer<typeof CharacterDetailSchema>;
+export type AllianceBattleSummary = z.infer<typeof AllianceBattleSummarySchema>;
+export type CorporationBattleSummary = z.infer<typeof CorporationBattleSummarySchema>;
+export type CharacterBattleSummary = z.infer<typeof CharacterBattleSummarySchema>;

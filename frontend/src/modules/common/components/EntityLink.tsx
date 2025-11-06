@@ -9,6 +9,7 @@ interface EntityLinkProps {
   showAvatar?: boolean;
   avatarSize?: number;
   children?: ReactNode;
+  linkToInternal?: boolean;
 }
 
 const getZkillboardUrl = (type: EntityType, id: string): string => {
@@ -20,7 +21,7 @@ const getZkillboardUrl = (type: EntityType, id: string): string => {
 const getValidImageSize = (requestedSize: number): number => {
   const validSizes = [32, 64, 128, 256, 512, 1024];
   // Find the smallest valid size that is >= requested size
-  const validSize = validSizes.find(size => size >= requestedSize);
+  const validSize = validSizes.find((size) => size >= requestedSize);
   return validSize || 32; // Default to 32 if requested size is too large
 };
 
@@ -55,20 +56,23 @@ export const EntityLink: FC<EntityLinkProps> = ({
   showAvatar = false,
   avatarSize = 32,
   children,
+  linkToInternal = true,
 }) => {
   if (!id) {
     return <span style={{ color: '#94a3b8' }}>—</span>;
   }
 
   const displayName = name || `Unknown ${getEntityTypeLabel(type)} #${id}`;
+  const internalUrl = `#${type}:${id}`;
   const zkbUrl = getZkillboardUrl(type, id);
+  const href = linkToInternal ? internalUrl : zkbUrl;
   const imageUrl = showAvatar ? getEveImageUrl(type, id, avatarSize) : null;
 
   return (
     <a
-      href={zkbUrl}
-      target="_blank"
-      rel="noreferrer"
+      href={href}
+      target={linkToInternal ? undefined : '_blank'}
+      rel={linkToInternal ? undefined : 'noreferrer'}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -85,7 +89,7 @@ export const EntityLink: FC<EntityLinkProps> = ({
         e.currentTarget.style.color = '#0ea5e9';
         e.currentTarget.style.textDecoration = 'none';
       }}
-      title={`View ${displayName} on zKillboard`}
+      title={linkToInternal ? `View ${displayName} details` : `View ${displayName} on zKillboard`}
     >
       {showAvatar && imageUrl && (
         <img

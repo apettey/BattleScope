@@ -39,6 +39,8 @@ Each service runs as its own Deployment with a ConfigMap for parameters and Secr
 - **Home:** Displays total battle reports, recent battle delta, and top alliances/corps derived from the aggregated stats endpoint.
 - **Recent Kills:** Streams killmail summaries partitioned by space type (kspace, jspace, pochven) over Server-Sent Events with automatic reconnection and a timed polling fallback.
 - **Rules:** Presents form controls for minimum pilot thresholds, tracked alliance/corp allowlists, and ignore-unlisted toggles; persists through ruleset APIs with optimistic UI feedback.
+- **Battles:** Two-column layout showing battle list and detailed view with participants and killmails.
+- **Entity Pages (Alliance/Corporation/Character):** Detail views showing entity statistics, battle history with opponent analysis, ship composition breakdowns, and performance metrics; each battle links to the full battle report.
 - **Shared Types:** Consumes generated clients from `@battlescope/shared` to stay aligned with backend schemas.
 - **Authentication:** Deliberately deferred—UI must signal that access is currently open and that login will arrive in the next iteration.
 
@@ -122,8 +124,12 @@ for (const system of systems) {
 |-----------|--------------|
 | `GET /battles` | Filter by space, time, corp, alliance, character |
 | `GET /battles/{id}` | Get detailed battle info |
-| `GET /characters/{id}/battles` | Battles involving a character |
-| `GET /alliances/{id}/battles` | Battles involving an alliance |
+| `GET /alliances/{id}` | Get alliance details and statistics |
+| `GET /alliances/{id}/battles` | Battles involving an alliance with opponent analysis |
+| `GET /corporations/{id}` | Get corporation details and statistics |
+| `GET /corporations/{id}/battles` | Battles involving a corporation with opponent analysis |
+| `GET /characters/{id}` | Get character details and statistics |
+| `GET /characters/{id}/battles` | Battles involving a character with performance metrics |
 | `GET /stats/summary` | Aggregated totals for battles, alliances, and corporations powering the homepage |
 | `GET /killmails/recent` | Pollable recent killmail list filtered by space type |
 | `GET /killmails/stream` | Server-Sent Events stream pushing killmail summaries by space type |
