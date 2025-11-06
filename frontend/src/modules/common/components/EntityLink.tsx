@@ -16,15 +16,24 @@ const getZkillboardUrl = (type: EntityType, id: string): string => {
   return `${baseUrl}/${type}/${id}/`;
 };
 
+// EVE Tech image API only accepts specific sizes: 32, 64, 128, 256, 512, 1024
+const getValidImageSize = (requestedSize: number): number => {
+  const validSizes = [32, 64, 128, 256, 512, 1024];
+  // Find the smallest valid size that is >= requested size
+  const validSize = validSizes.find(size => size >= requestedSize);
+  return validSize || 32; // Default to 32 if requested size is too large
+};
+
 const getEveImageUrl = (type: EntityType, id: string, size: number): string => {
   const baseUrl = 'https://images.evetech.net';
+  const validSize = getValidImageSize(size);
   switch (type) {
     case 'alliance':
-      return `${baseUrl}/alliances/${id}/logo?size=${size}`;
+      return `${baseUrl}/alliances/${id}/logo?size=${validSize}`;
     case 'corporation':
-      return `${baseUrl}/corporations/${id}/logo?size=${size}`;
+      return `${baseUrl}/corporations/${id}/logo?size=${validSize}`;
     case 'character':
-      return `${baseUrl}/characters/${id}/portrait?size=${size}`;
+      return `${baseUrl}/characters/${id}/portrait?size=${validSize}`;
   }
 };
 
