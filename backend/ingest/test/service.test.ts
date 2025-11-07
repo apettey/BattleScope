@@ -34,11 +34,16 @@ class InMemoryRulesetCache implements RulesetCache {
  * Mock system security resolver for testing
  */
 const createMockSystemSecurityResolver = (): SystemSecurityResolver => {
+  const mockEsiClient = {
+    getSystemInfo: vi.fn().mockResolvedValue({ security_status: 0.9 }),
+  };
   const mock: SystemSecurityResolver = {
     getSecurityType: vi.fn().mockResolvedValue('highsec' as SecurityType),
     getSecurityTypes: vi.fn().mockResolvedValue(new Map<bigint, SecurityType>()),
     invalidateCache: vi.fn().mockResolvedValue(undefined),
-  };
+    esiClient: mockEsiClient,
+    getCacheKey: vi.fn().mockReturnValue('test-cache-key'),
+  } as unknown as SystemSecurityResolver;
   return mock;
 };
 
