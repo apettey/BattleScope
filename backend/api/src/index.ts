@@ -60,6 +60,7 @@ export const start = async (): Promise<void> => {
     db,
     config,
     nameEnricher,
+    redis: redis ?? undefined,
   });
 
   const shutdown = async () => {

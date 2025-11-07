@@ -1,8 +1,33 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { KillmailRepository } from '@battlescope/database';
+import { KillmailRepository, RulesetRepository, type RulesetRecord } from '@battlescope/database';
 import { IngestionService } from '../src/service.js';
 import { MockKillmailSource } from '../src/source.js';
 import { createTestDb } from './helpers.js';
+import type { RulesetCache } from '../src/ruleset-cache.js';
+
+/**
+ * In-memory cache for testing
+ */
+class InMemoryRulesetCache implements RulesetCache {
+  private ruleset: RulesetRecord | null = null;
+
+  constructor(private readonly repository: RulesetRepository) {}
+
+  async get(): Promise<RulesetRecord> {
+    if (!this.ruleset) {
+      this.ruleset = await this.repository.getActiveRuleset();
+    }
+    return this.ruleset;
+  }
+
+  async invalidate(): Promise<void> {
+    this.ruleset = null;
+  }
+
+  async close(): Promise<void> {
+    // no-op
+  }
+}
 
 const reference = {
   killmailId: 9001n,
@@ -20,11 +45,13 @@ const reference = {
 
 describe('IngestionService', () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
-  let repository: KillmailRepository;
+  let killmailRepository: KillmailRepository;
+  let rulesetRepository: RulesetRepository;
 
   beforeAll(async () => {
     db = await createTestDb();
-    repository = new KillmailRepository(db.db);
+    killmailRepository = new KillmailRepository(db.db);
+    rulesetRepository = new RulesetRepository(db.db);
   });
 
   afterAll(async () => {
@@ -32,9 +59,11 @@ describe('IngestionService', () => {
   });
 
   it('stores killmail references and deduplicates', async () => {
+    const cache = new InMemoryRulesetCache(rulesetRepository);
     const enqueue = vi.fn().mockResolvedValue(undefined);
     const service = new IngestionService(
-      repository,
+      killmailRepository,
+      cache,
       new MockKillmailSource([reference, reference]),
       { enqueue },
     );
@@ -49,8 +78,145 @@ describe('IngestionService', () => {
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(enqueue).toHaveBeenCalledWith(reference.killmailId);
 
-    const remaining = await repository.fetchUnprocessed(500, 0);
+    const remaining = await killmailRepository.fetchUnprocessed(500, 0);
     expect(remaining).toHaveLength(1);
     expect(remaining[0].killmailId).toBe(reference.killmailId);
+  });
+
+  it('filters killmails below minimum pilot threshold', async () => {
+    // Set minimum pilots to 5 (our reference has 2 pilots)
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 5,
+      trackedAllianceIds: [],
+      trackedCorpIds: [],
+      ignoreUnlisted: false,
+      updatedBy: 'test',
+    });
+
+    const cache = new InMemoryRulesetCache(rulesetRepository);
+    const filteredKillmail = { ...reference, killmailId: 9010n };
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+    const service = new IngestionService(
+      killmailRepository,
+      cache,
+      new MockKillmailSource([filteredKillmail]),
+      { enqueue },
+    );
+
+    const result = await service.processNext();
+
+    expect(result).toBe('filtered');
+    expect(enqueue).not.toHaveBeenCalled();
+
+    // Verify the filtered killmail was not stored
+    const all = await killmailRepository.fetchUnprocessed(500, 0);
+    const hasFilteredKillmail = all.some((k) => k.killmailId === 9010n);
+    expect(hasFilteredKillmail).toBe(false);
+  });
+
+  it('filters killmails not in tracked alliances when ignoreUnlisted is true', async () => {
+    // Track only alliance 88888888n (not in our reference)
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [88888888n],
+      trackedCorpIds: [],
+      ignoreUnlisted: true,
+      updatedBy: 'test',
+    });
+
+    const cache = new InMemoryRulesetCache(rulesetRepository);
+    const filteredKillmail = { ...reference, killmailId: 9011n };
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+    const service = new IngestionService(
+      killmailRepository,
+      cache,
+      new MockKillmailSource([filteredKillmail]),
+      { enqueue },
+    );
+
+    const result = await service.processNext();
+
+    expect(result).toBe('filtered');
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it('accepts killmails in tracked alliances', async () => {
+    // Track alliance that is in our reference
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [99001234n], // victimAllianceId
+      trackedCorpIds: [],
+      ignoreUnlisted: true,
+      updatedBy: 'test',
+    });
+
+    const cache = new InMemoryRulesetCache(rulesetRepository);
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+    const service = new IngestionService(
+      killmailRepository,
+      cache,
+      new MockKillmailSource([
+        { ...reference, killmailId: 9002n }, // Use different ID to avoid duplicate
+      ]),
+      { enqueue },
+    );
+
+    const result = await service.processNext();
+
+    expect(result).toBe('stored');
+    expect(enqueue).toHaveBeenCalledWith(9002n);
+  });
+
+  it('accepts killmails in tracked corporations', async () => {
+    // Track corporation that is in our reference
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [],
+      trackedCorpIds: [45678n], // attackerCorpIds[0]
+      ignoreUnlisted: true,
+      updatedBy: 'test',
+    });
+
+    const cache = new InMemoryRulesetCache(rulesetRepository);
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+    const service = new IngestionService(
+      killmailRepository,
+      cache,
+      new MockKillmailSource([
+        { ...reference, killmailId: 9003n }, // Use different ID to avoid duplicate
+      ]),
+      { enqueue },
+    );
+
+    const result = await service.processNext();
+
+    expect(result).toBe('stored');
+    expect(enqueue).toHaveBeenCalledWith(9003n);
+  });
+
+  it('accepts all killmails when no tracking lists and ignoreUnlisted is false', async () => {
+    await rulesetRepository.updateActiveRuleset({
+      minPilots: 1,
+      trackedAllianceIds: [],
+      trackedCorpIds: [],
+      ignoreUnlisted: false,
+      updatedBy: 'test',
+    });
+
+    const cache = new InMemoryRulesetCache(rulesetRepository);
+    const enqueue = vi.fn().mockResolvedValue(undefined);
+    const service = new IngestionService(
+      killmailRepository,
+      cache,
+      new MockKillmailSource([
+        { ...reference, killmailId: 9004n }, // Use different ID to avoid duplicate
+      ]),
+      { enqueue },
+    );
+
+    const result = await service.processNext();
+
+    expect(result).toBe('stored');
+    expect(enqueue).toHaveBeenCalledWith(9004n);
   });
 });

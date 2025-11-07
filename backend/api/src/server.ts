@@ -16,6 +16,7 @@ import type {
   DashboardRepository,
   DatabaseClient,
 } from '@battlescope/database';
+import type { Redis } from 'ioredis';
 import { registerBattleRoutes } from './routes/battles.js';
 import { registerRulesRoutes } from './routes/rules.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
@@ -32,6 +33,7 @@ interface BuildServerOptions {
   db: DatabaseClient;
   config: ApiConfig;
   nameEnricher: NameEnricher;
+  redis?: Redis;
 }
 
 export const buildServer = ({
@@ -42,6 +44,7 @@ export const buildServer = ({
   db,
   config,
   nameEnricher,
+  redis,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
@@ -161,7 +164,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
   });
 
   registerBattleRoutes(app, battleRepository, nameEnricher);
-  registerRulesRoutes(app, rulesetRepository, nameEnricher);
+  registerRulesRoutes(app, rulesetRepository, nameEnricher, redis);
   registerKillmailRoutes(
     app,
     killmailRepository,

@@ -1,13 +1,7 @@
 import { deriveSpaceType } from '@battlescope/shared';
 import type { DatabaseClient } from '../client.js';
-import type {
-  KillmailEventInsert,
-  KillmailEventRecord,
-  KillmailFeedItem,
-  RulesetRecord,
-  SpaceType,
-} from '../types.js';
-import { KillmailEventSchema, SpaceTypeSchema } from '../types.js';
+import type { KillmailEventInsert, KillmailEventRecord, KillmailFeedItem } from '../types.js';
+import { KillmailEventSchema } from '../types.js';
 import {
   serializeBigInt,
   serializeBigIntArray,
@@ -32,9 +26,6 @@ const isUniqueViolation = (error: unknown): boolean => {
 
 interface FeedQueryOptions {
   limit: number;
-  spaceTypes?: readonly SpaceType[];
-  ruleset?: RulesetRecord;
-  enforceTracked?: boolean;
 }
 
 interface FeedSinceOptions extends FeedQueryOptions {
@@ -50,40 +41,6 @@ const toParticipantCount = (event: {
   const attackers = event.attackerCharacterIds.length;
   const total = victimCount + attackers;
   return total > 0 ? total : 1;
-};
-
-const matchesRuleset = (
-  item: KillmailFeedItem,
-  ruleset: RulesetRecord | undefined,
-  enforceTracked: boolean,
-): boolean => {
-  if (!ruleset) {
-    return true;
-  }
-
-  if (ruleset.minPilots > item.participantCount) {
-    return false;
-  }
-
-  const allianceSet = new Set(ruleset.trackedAllianceIds.map((id) => id.toString()));
-  const corpSet = new Set(ruleset.trackedCorpIds.map((id) => id.toString()));
-
-  const requireTracked =
-    enforceTracked || (ruleset.ignoreUnlisted && (allianceSet.size > 0 || corpSet.size > 0));
-
-  if (!requireTracked) {
-    return true;
-  }
-
-  const allianceMatch =
-    (item.victimAllianceId && allianceSet.has(item.victimAllianceId.toString())) ||
-    item.attackerAllianceIds.some((id) => allianceSet.has(id.toString()));
-
-  const corpMatch =
-    (item.victimCorpId && corpSet.has(item.victimCorpId.toString())) ||
-    item.attackerCorpIds.some((id) => corpSet.has(id.toString()));
-
-  return allianceMatch || corpMatch;
 };
 
 export class KillmailRepository {
@@ -217,28 +174,6 @@ export class KillmailRepository {
     };
   }
 
-  private filterFeedItems(
-    items: KillmailFeedItem[],
-    { spaceTypes, ruleset, enforceTracked }: FeedQueryOptions,
-  ): KillmailFeedItem[] {
-    const spaceTypeSet =
-      spaceTypes && spaceTypes.length > 0
-        ? new Set(spaceTypes.map((value) => SpaceTypeSchema.parse(value)))
-        : null;
-
-    return items.filter((item) => {
-      if (spaceTypeSet && !spaceTypeSet.has(item.spaceType)) {
-        return false;
-      }
-
-      if (!matchesRuleset(item, ruleset, enforceTracked ?? false)) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
   async fetchRecentFeed(options: FeedQueryOptions): Promise<KillmailFeedItem[]> {
     const limit = options.limit;
     const rows = await this.db
@@ -259,12 +194,10 @@ export class KillmailRepository {
       ])
       .orderBy('occurredAt', 'desc')
       .orderBy('killmailId', 'desc')
-      .limit(limit * 3)
+      .limit(limit)
       .execute();
 
-    const items = rows.map((row) => this.toFeedItem(row));
-    const filtered = this.filterFeedItems(items, options);
-    return filtered.slice(0, limit);
+    return rows.map((row) => this.toFeedItem(row));
   }
 
   async fetchFeedSince(options: FeedSinceOptions): Promise<KillmailFeedItem[]> {
@@ -304,11 +237,9 @@ export class KillmailRepository {
     const rows = await query
       .orderBy('occurredAt', 'asc')
       .orderBy('killmailId', 'asc')
-      .limit(limit * 3)
+      .limit(limit)
       .execute();
 
-    const items = rows.map((row) => this.toFeedItem(row));
-    const filtered = this.filterFeedItems(items, options);
-    return filtered.slice(0, limit);
+    return rows.map((row) => this.toFeedItem(row));
   }
 }

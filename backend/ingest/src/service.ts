@@ -1,10 +1,11 @@
-import type { KillmailRepository, KillmailEventInsert } from '@battlescope/database';
+import type { KillmailRepository, KillmailEventInsert, RulesetRecord } from '@battlescope/database';
 import type { KillmailReference } from '@battlescope/shared';
 import { trace } from '@opentelemetry/api';
 import { pino } from 'pino';
 import type { KillmailSource } from './source.js';
+import type { RulesetCache } from './ruleset-cache.js';
 
-export type IngestionResult = 'stored' | 'duplicate' | 'empty';
+export type IngestionResult = 'stored' | 'duplicate' | 'empty' | 'filtered';
 
 const tracer = trace.getTracer('battlescope.ingest.service');
 
@@ -20,9 +21,60 @@ export class IngestionService {
 
   constructor(
     private readonly repository: KillmailRepository,
+    private readonly rulesetCache: RulesetCache,
     private readonly source: KillmailSource,
     private readonly enrichmentProducer?: KillmailEnrichmentProducer,
   ) {}
+
+  private async getActiveRuleset(): Promise<RulesetRecord> {
+    return await this.rulesetCache.get();
+  }
+
+  private calculateParticipantCount(reference: KillmailReference): number {
+    const victimCount = reference.victimCharacterId ? 1 : 0;
+    const attackerCount = reference.attackerCharacterIds.length;
+    const total = victimCount + attackerCount;
+    return total > 0 ? total : 1;
+  }
+
+  private shouldIngest(reference: KillmailReference, ruleset: RulesetRecord): boolean {
+    const participantCount = this.calculateParticipantCount(reference);
+
+    // Check minimum pilots threshold
+    if (participantCount < ruleset.minPilots) {
+      return false;
+    }
+
+    // Build sets of tracked IDs for efficient lookup
+    const trackedAllianceIds = new Set(ruleset.trackedAllianceIds.map((id) => id.toString()));
+    const trackedCorpIds = new Set(ruleset.trackedCorpIds.map((id) => id.toString()));
+
+    // If no tracking lists are configured and ignoreUnlisted is false, accept all
+    const hasTrackingLists = trackedAllianceIds.size > 0 || trackedCorpIds.size > 0;
+    if (!hasTrackingLists && !ruleset.ignoreUnlisted) {
+      return true;
+    }
+
+    // If ignoreUnlisted is true and we have tracking lists, only accept tracked entities
+    if (ruleset.ignoreUnlisted && hasTrackingLists) {
+      const victimAllianceMatch =
+        reference.victimAllianceId && trackedAllianceIds.has(reference.victimAllianceId.toString());
+      const victimCorpMatch =
+        reference.victimCorpId && trackedCorpIds.has(reference.victimCorpId.toString());
+
+      const attackerAllianceMatch = reference.attackerAllianceIds.some((id) =>
+        trackedAllianceIds.has(id.toString()),
+      );
+      const attackerCorpMatch = reference.attackerCorpIds.some((id) =>
+        trackedCorpIds.has(id.toString()),
+      );
+
+      return victimAllianceMatch || victimCorpMatch || attackerAllianceMatch || attackerCorpMatch;
+    }
+
+    // Default: accept
+    return true;
+  }
 
   private toEvent(reference: KillmailReference): KillmailEventInsert {
     return {
@@ -52,6 +104,14 @@ export class IngestionService {
 
         span.setAttribute('killmail.id', Number(reference.killmailId));
         span.setAttribute('killmail.system', Number(reference.systemId));
+
+        // Load active ruleset and check if we should ingest this killmail
+        const ruleset = await this.getActiveRuleset();
+        if (!this.shouldIngest(reference, ruleset)) {
+          this.logger.debug({ killmailId: reference.killmailId }, 'Killmail filtered by ruleset');
+          span.addEvent('filtered');
+          return 'filtered';
+        }
 
         const stored = await this.repository.insert(this.toEvent(reference));
         if (stored) {

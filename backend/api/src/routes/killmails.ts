@@ -3,6 +3,7 @@ import { trace } from '@opentelemetry/api';
 import type { KillmailRepository, RulesetRepository, SpaceType } from '@battlescope/database';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from '../cors.js';
 import type { NameEnricher } from '../services/name-enricher.js';
+import { RulesetFilter } from '../services/ruleset-filter.js';
 import {
   KillmailRecentQuerySchema,
   KillmailStreamQuerySchema,
@@ -59,20 +60,30 @@ export const registerKillmailRoutes = (
     handler: async (request, reply) => {
       const query = RecentQuerySchema.parse(request.query);
       const limit = query.limit ?? DEFAULT_LIMIT;
+      const trackedOnly = query.trackedOnly ?? false;
+      const spaceTypes = normalizeSpaceTypes(query.spaceType);
 
-      const ruleset = await rulesetRepository.getActiveRuleset();
-      const items = await tracer.startActiveSpan('fetchRecentKillmails', async (span) => {
-        try {
-          return await repository.fetchRecentFeed({
-            limit,
-            spaceTypes: normalizeSpaceTypes(query.spaceType),
-            ruleset,
-            enforceTracked: query.trackedOnly ?? false,
-          });
-        } finally {
-          span.end();
-        }
+      const [ruleset, rawItems] = await Promise.all([
+        rulesetRepository.getActiveRuleset(),
+        tracer.startActiveSpan('fetchRecentKillmails', async (span) => {
+          try {
+            // Fetch more items than needed to account for filtering
+            return await repository.fetchRecentFeed({
+              limit: limit * 3,
+            });
+          } finally {
+            span.end();
+          }
+        }),
+      ]);
+
+      // Apply all filtering in the service layer
+      const filtered = RulesetFilter.filterAll(rawItems, {
+        ruleset,
+        enforceTracked: trackedOnly,
+        spaceTypes,
       });
+      const items = filtered.slice(0, limit);
 
       const enriched = await nameEnricher.enrichKillmailFeed(items);
 
@@ -87,20 +98,27 @@ export const registerKillmailRoutes = (
     const query = StreamQuerySchema.parse(request.query);
     const limit = query.limit ?? DEFAULT_LIMIT;
     const pollIntervalMs = query.pollIntervalMs ?? DEFAULT_STREAM_INTERVAL;
-    const ruleset = await rulesetRepository.getActiveRuleset();
+    const spaceTypes = normalizeSpaceTypes(query.spaceType);
+    const trackedOnly = query.trackedOnly ?? false;
+
+    const [ruleset, rawInitialItems] = await Promise.all([
+      rulesetRepository.getActiveRuleset(),
+      repository.fetchRecentFeed({
+        limit: limit * 3,
+      }),
+    ]);
 
     ensureCorsHeaders(request, reply, resolveCorsOrigin);
     setSseHeaders(reply);
 
-    const spaceTypes = normalizeSpaceTypes(query.spaceType);
-    const trackedOnly = query.trackedOnly ?? false;
-
-    const initialItems = await repository.fetchRecentFeed({
-      limit,
-      spaceTypes,
+    // Apply all filtering in the service layer
+    const filteredInitialItems = RulesetFilter.filterAll(rawInitialItems, {
       ruleset,
       enforceTracked: trackedOnly,
+      spaceTypes,
     });
+    const initialItems = filteredInitialItems.slice(0, limit);
+
     const snapshot = await nameEnricher.enrichKillmailFeed(initialItems);
     sendEvent(reply, 'snapshot', snapshot);
 
@@ -124,14 +142,19 @@ export const registerKillmailRoutes = (
 
     const pollUpdates = async () => {
       try {
-        const updates = await repository.fetchFeedSince({
-          limit,
-          spaceTypes,
-          ruleset,
-          enforceTracked: trackedOnly,
+        const rawUpdates = await repository.fetchFeedSince({
+          limit: limit * 3,
           after: cursor,
           since: cursor ? undefined : fallbackSince,
         });
+
+        // Apply all filtering in the service layer
+        const filtered = RulesetFilter.filterAll(rawUpdates, {
+          ruleset,
+          enforceTracked: trackedOnly,
+          spaceTypes,
+        });
+        const updates = filtered.slice(0, limit);
 
         if (updates.length > 0) {
           const responses = await nameEnricher.enrichKillmailFeed(updates);

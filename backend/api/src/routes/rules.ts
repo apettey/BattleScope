@@ -3,6 +3,7 @@ import type { RulesetRepository } from '@battlescope/database';
 import type { NameEnricher } from '../services/name-enricher.js';
 import { RulesetSchema, RulesetUpdateSchema, ErrorResponseSchema } from '../schemas.js';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import type { Redis } from 'ioredis';
 
 const coerceIds = (values: readonly (bigint | string | number)[] | undefined): bigint[] => {
   if (!values) {
@@ -21,11 +22,14 @@ const coerceIds = (values: readonly (bigint | string | number)[] | undefined): b
   return Array.from(set);
 };
 
+const RULESET_INVALIDATION_CHANNEL = 'battlescope:ruleset:invalidate';
+
 export const registerRulesRoutes = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   app: FastifyInstance<any, any, any, any, ZodTypeProvider>,
   repository: RulesetRepository,
   nameEnricher: NameEnricher,
+  redis?: Redis,
 ): void => {
   app.get('/rulesets/current', {
     schema: {
@@ -66,6 +70,19 @@ export const registerRulesRoutes = (
         ignoreUnlisted: body.ignoreUnlisted ?? false,
         updatedBy: body.updatedBy ?? null,
       });
+
+      // Publish cache invalidation to all ingestion service instances
+      if (redis) {
+        try {
+          const count = await redis.publish(RULESET_INVALIDATION_CHANNEL, new Date().toISOString());
+          app.log.info(
+            { subscriberCount: count },
+            'Published ruleset invalidation to ingestion services',
+          );
+        } catch (error) {
+          app.log.warn({ err: error }, 'Failed to publish ruleset invalidation');
+        }
+      }
 
       const enriched = await nameEnricher.enrichRuleset(ruleset);
       return reply.send(enriched);
