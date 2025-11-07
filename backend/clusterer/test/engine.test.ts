@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { KillmailEventRecord } from '@battlescope/database';
-import { ClusteringEngine } from '../src/engine.js';
+import { ClusteringEngine } from '@battlescope/battle-reports';
 
 const createKillmail = (overrides: Partial<KillmailEventRecord>): KillmailEventRecord => ({
   killmailId: 1n,

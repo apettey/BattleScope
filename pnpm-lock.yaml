@@ -108,6 +108,9 @@ importers:
 
   backend/clusterer:
     dependencies:
+      '@battlescope/battle-reports':
+        specifier: workspace:*
+        version: link:../../packages/battle-reports
       '@battlescope/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -269,6 +272,45 @@ importers:
       vitest:
         specifier: ^1.5.0
         version: 1.6.1(@types/node@20.19.24)(jsdom@24.1.3)
+
+  packages/battle-intel:
+    dependencies:
+      '@battlescope/database':
+        specifier: workspace:*
+        version: link:../database
+      '@battlescope/shared':
+        specifier: workspace:*
+        version: link:../shared
+      kysely:
+        specifier: ^0.27.2
+        version: 0.27.6
+      pino:
+        specifier: ^8.17.0
+        version: 8.21.0
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+
+  packages/battle-reports:
+    dependencies:
+      '@battlescope/database':
+        specifier: workspace:*
+        version: link:../database
+      '@battlescope/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.0
+      kysely:
+        specifier: ^0.27.2
+        version: 0.27.6
+      pino:
+        specifier: ^8.17.0
+        version: 8.21.0
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
 
   packages/database:
     dependencies:

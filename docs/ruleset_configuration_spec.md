@@ -6,6 +6,16 @@ This document extends the BattleScope ruleset configuration to support filtering
 - **Specific systems** - Track only killmails from designated solar systems
 - **Security types** - Track only killmails from specific security classifications
 
+### Architecture Note
+
+**Filtering Responsibility**: The ruleset configuration is stored in the database and **applied exclusively by the ingestion service** before killmails are stored. The enrichment worker processes all killmails that pass ingestion filtering without any additional filtering logic. This ensures a clear separation of concerns:
+
+- **Ingestion Service**: Applies all ruleset filters (minimum pilots, alliances, corporations, systems, security types) and decides which killmails to store
+- **Enrichment Worker**: Processes all queued killmails (no filtering - enriches everything that was stored)
+- **API Service**: Provides read-only access to stored data with view-time filters (space type, tracked entities for UI preferences)
+
+Ruleset configuration is managed directly in the database and does not have API endpoints.
+
 ## Security Type Classifications
 
 EVE Online systems are classified by security status:

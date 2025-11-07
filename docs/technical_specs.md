@@ -1,4 +1,8 @@
-# BattleScope Technical Specification (v1)
+# BattleScope Technical Specification (v3)
+
+**Last Updated**: 2025-11-07
+
+---
 
 ## 1. Technology Stack
 
@@ -8,41 +12,85 @@
   - **Workers:** Bare Node.js or BullMQ (for background queues)
   - **Frontend:** React 18 + Vite SPA consuming typed clients from `@battlescope/shared`
 - **Database:** PostgreSQL 15
-- **Cache/Queue (optional):** Redis 7 (BullMQ, cache)
+- **Cache/Queue:** Redis 7 (BullMQ, cache, sessions)
 - **Containerization:** Docker (multi-stage build)
 - **Orchestration:** Kubernetes 1.27+
 - **Ingress:** NGINX Ingress Controller
-- **TLS:** cert-manager with Let’s Encrypt
+- **TLS:** cert-manager with Let's Encrypt
 - **Observability:** Prometheus, Grafana, Loki, OpenTelemetry
 - **Secrets Management:** Kubernetes Secrets (optionally backed by KMS)
 - **CI/CD:** GitHub Actions for build, test, and deploy
-- **Repository:** GitHub Monorepo (PNPM workspaces for shared types)
+- **Repository:** GitHub Monorepo (PNPM workspaces for shared types and feature packages)
+- **Authentication:** EVE Online SSO (OAuth2/OIDC)
+- **Authorization:** Feature-scoped RBAC (roles: user, fc, director, admin, superadmin)
 
 ---
 
-## 2. Service Architecture (Kubernetes-native)
+## 2. Architecture Overview
 
-| Service | Type | Responsibility |
-|----------|------|----------------|
-| **api** | Deployment | Expose REST API, filters, battle listings |
-| **ingest** | Deployment | Pull killmail data from zKillboard RedisQ |
-| **clusterer** | Deployment | Group kills into battles and compute summaries |
-| **scheduler** | CronJob | Maintenance, re-clustering, indexing |
-| **db** | Stateful | PostgreSQL (persistent) |
-| **redis** | Stateful | Optional cache/queue |
-| **frontend** | Deployment | React/Vite UI for statistics, real-time kill feed, and rules configuration |
+### 2.1 Feature-Based Package Structure
+
+BattleScope uses a modular architecture where each feature is a separate package with its own business logic:
+
+```
+backend/
+├── api/                    # Fastify API service (routes, middleware)
+├── ingest/                 # Killmail ingestion from zKillboard
+├── enrichment/             # Killmail enrichment worker
+├── database/               # Shared database client and schema
+├── shared/                 # Shared types and utilities
+├── battle-reports/         # Battle Reports feature package
+│   ├── src/
+│   │   ├── clustering/     # Clustering algorithm
+│   │   ├── repositories/   # Data access
+│   │   └── services/       # Business logic
+│   └── package.json
+└── battle-intel/           # Battle Intel feature package
+    ├── src/
+    │   ├── aggregators/    # Statistics computation
+    │   ├── analyzers/      # Intelligence analysis
+    │   ├── repositories/   # Data access
+    │   └── services/       # Business logic
+    └── package.json
+```
+
+**Key Principles**:
+- **Separation of Concerns**: Each feature has its own package boundary
+- **Dependency Direction**: Features depend on `@battlescope/database` and `@battlescope/shared`, not on each other
+- **API Integration**: API service imports and registers routes from feature packages
+- **Shared Infrastructure**: Common services (ingestion, enrichment, database) are shared across features
+
+---
+
+### 2.2 Service Architecture (Kubernetes-native)
+
+| Service | Type | Responsibility | Features |
+|----------|------|----------------|----------|
+| **api** | Deployment | Expose REST API with feature-scoped authorization | Battle Reports, Battle Intel, Auth |
+| **ingest** | Deployment | Pull killmail data from zKillboard RedisQ | Shared |
+| **enrichment** | Deployment | Enrich killmails with full payload from zKillboard | Shared |
+| **clusterer** | Deployment | Group kills into battles (Battle Reports feature logic) | Battle Reports |
+| **intel-worker** | CronJob | Compute intelligence statistics (Battle Intel feature logic) | Battle Intel |
+| **db** | Stateful | PostgreSQL (persistent) | Shared |
+| **redis** | Stateful | Cache, queue, sessions | Shared |
+| **frontend** | Deployment | React/Vite UI with feature-based rendering | All |
 
 Each service runs as its own Deployment with a ConfigMap for parameters and Secrets for credentials.
 
-### Frontend Client
+---
 
-- **Home:** Displays total battle reports, recent battle delta, and top alliances/corps derived from the aggregated stats endpoint.
-- **Recent Kills:** Streams killmail summaries partitioned by space type (kspace, jspace, pochven) over Server-Sent Events with automatic reconnection and a timed polling fallback.
-- **Rules:** Presents form controls for minimum pilot thresholds, tracked alliance/corp allowlists, and ignore-unlisted toggles; persists through ruleset APIs with optimistic UI feedback.
-- **Battles:** Two-column layout showing battle list and detailed view with participants and killmails.
-- **Entity Pages (Alliance/Corporation/Character):** Detail views showing entity statistics, battle history with opponent analysis, ship composition breakdowns, and performance metrics; each battle links to the full battle report.
-- **Shared Types:** Consumes generated clients from `@battlescope/shared` to stay aligned with backend schemas.
-- **Authentication:** Deliberately deferred—UI must signal that access is currently open and that login will arrive in the next iteration.
+### 2.3 Frontend Architecture
+
+The frontend adapts based on user's feature access:
+
+- **Home:** Displays battle reports preview (if has `battle-reports` access) or intel summary (if has `battle-intel` access)
+- **Battles:** Battle list and detail views (requires `battle-reports` access)
+- **Recent Kills:** Live killmail feed (requires `battle-reports` access)
+- **Intel Pages:** Alliance/Corp/Character intelligence (requires `battle-intel` access)
+- **Entity Pages:** Composite view showing available sections based on feature access
+- **Profile:** User account management, character linking, role viewing
+- **Shared Types:** Consumes generated clients from `@battlescope/shared`
+- **Authentication:** EVE Online SSO with HTTP-only secure cookies
 
 ---
 
@@ -118,40 +166,113 @@ for (const system of systems) {
 
 ---
 
-## 5. API Endpoints
+## 5. API Endpoints & Authorization
 
-| Endpoint | Description |
-|-----------|--------------|
-| `GET /battles` | Filter by space, time, corp, alliance, character |
-| `GET /battles/{id}` | Get detailed battle info |
-| `GET /alliances/{id}` | Get alliance details and statistics |
-| `GET /alliances/{id}/battles` | Battles involving an alliance with opponent analysis |
-| `GET /corporations/{id}` | Get corporation details and statistics |
-| `GET /corporations/{id}/battles` | Battles involving a corporation with opponent analysis |
-| `GET /characters/{id}` | Get character details and statistics |
-| `GET /characters/{id}/battles` | Battles involving a character with performance metrics |
-| `GET /stats/summary` | Aggregated totals for battles, alliances, and corporations powering the homepage |
-| `GET /killmails/recent` | Pollable recent killmail list filtered by space type |
-| `GET /killmails/stream` | Server-Sent Events stream pushing killmail summaries by space type |
-| `GET /rulesets/current` | Fetch the active ruleset controlling ingestion focus and UI defaults |
-| `PUT /rulesets/current` | Update the ruleset (validated via Zod, audited for future auth) |
-| `GET /healthz` | Health probe |
+### 5.1 Feature-Based Route Registration
 
-All responses are JSON with cursor-based pagination.  
-Schemas validated via Zod and auto-exported to OpenAPI.
+Routes are registered in the API service from feature packages:
 
-### Streaming Endpoint
+```typescript
+// backend/api/src/server.ts
+import { registerBattleReportsRoutes } from './routes/battle-reports.js';
+import { registerBattleIntelRoutes } from './routes/battle-intel.js';
+import { registerAuthRoutes } from './routes/auth.js';
 
-- Protocol: Server-Sent Events under `text/event-stream` with retry hints.
-- Message payload: compact killmail summary (`killmail_id`, `space_type`, `timestamp`, tracked alliance/corp hits).
-- Filters: query params `space_type` (multi-value) and optional `tracked_only=true` to respect active ruleset.
-- Fallback: UI should downgrade to `GET /killmails/recent` if the stream disconnects repeatedly.
+export const buildServer = (options) => {
+  const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
-### Ruleset API Notes
+  // Core routes
+  registerAuthRoutes(app, ...);
+  app.get('/healthz', async () => ({ status: 'ok' }));
 
-- Requests must pass schema validation (min pilots ≥ 1, allowlists capped to 250 entries each).
-- Until authentication is shipped, write operations remain unauthenticated but must surface clear UI warnings and produce structured audit logs for every change.
-- Persist audit metadata (timestamp, client tag, diff) so future RBAC can reference historical changes.
+  // Feature routes (with authorization middleware)
+  registerBattleReportsRoutes(app, ...);
+  registerBattleIntelRoutes(app, ...);
+
+  return app;
+};
+```
+
+---
+
+### 5.2 Authorization Middleware
+
+All feature routes use authorization middleware:
+
+```typescript
+app.get('/battles', {
+  preHandler: [
+    authMiddleware,  // Validates session, attaches request.account
+    requireFeatureRole('battle-reports', 'user'),  // Checks feature access
+  ],
+  handler: async (request, reply) => { /* ... */ },
+});
+```
+
+**Authorization Levels**:
+- `user` (rank 10): View content
+- `fc` (rank 20): Create content
+- `director` (rank 30): Edit any content, manage settings
+- `admin` (rank 40): Manage roles, block users
+- `superadmin` (global): Bypass all checks
+
+---
+
+### 5.3 API Route Summary
+
+**Authentication Routes** (No authorization required):
+- `GET /auth/login` - Initiate EVE SSO login
+- `GET /auth/callback` - OAuth callback handler
+- `GET /me` - Get current user (requires auth)
+- `POST /auth/logout` - Logout (requires auth)
+- `GET /healthz` - Health probe
+
+**Battle Reports Routes** (Requires `battle-reports` access):
+- `GET /battles` - List battles with filters
+- `GET /battles/{id}` - Get battle details
+- `GET /killmails/recent` - Recent killmails feed
+- `GET /killmails/stream` - SSE stream of killmails
+
+**Battle Intel Routes** (Requires `battle-intel` access):
+- `GET /intel/summary` - Global intelligence summary
+- `GET /intel/alliances/{id}` - Alliance intelligence
+- `GET /intel/corporations/{id}` - Corporation intelligence
+- `GET /intel/characters/{id}` - Character intelligence
+- `GET /intel/alliances/{id}/opponents` - Opponent analysis
+- `GET /intel/alliances/{id}/ships` - Ship usage analysis
+
+**Admin Routes** (Requires `admin` role):
+- `GET /admin/accounts` - List accounts
+- `POST /admin/accounts/{id}/block` - Block account
+- `PUT /admin/accounts/{id}/feature-roles` - Assign roles
+
+**Complete API documentation**: See feature specs:
+- [Battle Reports API](../features/battle-reports-spec.md#5-api-endpoints)
+- [Battle Intel API](../features/battle-intel-spec.md#5-api-endpoints)
+- [Authentication API](../authenication-authorization-spec/README.md#7-api-surface-fastify-routes)
+
+---
+
+### 5.4 Response Format
+
+All responses are JSON with:
+- **Cursor-based pagination** for lists
+- **Zod validation** on requests and responses
+- **OpenAPI generation** from Zod schemas
+- **Entity names** included (not just IDs)
+- **IDs as strings** (bigint support)
+
+---
+
+### 5.5 SSE Streaming
+
+Battle Reports provides a Server-Sent Events stream for real-time killmails:
+
+- **Protocol**: `text/event-stream`
+- **Endpoint**: `GET /killmails/stream?space_type={type}`
+- **Authorization**: Requires `battle-reports` feature access
+- **Event types**: `killmail`, `heartbeat`
+- **Fallback**: UI polls `GET /killmails/recent` if stream fails
 
 ---
 
@@ -191,15 +312,60 @@ metadata:
 
 ### GitHub Repository Layout
 ```
-/battlescope/
-  packages/
-    api/
-    ingest/
-    clusterer/
-    shared/
+/battle-monitor/
+  backend/
+    api/                  # Fastify API service
+    ingest/               # Killmail ingestion
+    enrichment/           # Killmail enrichment worker
+    database/             # Shared database client
+    shared/               # Shared types and utilities
+    battle-reports/       # Battle Reports feature package
+    battle-intel/         # Battle Intel feature package
+  frontend/               # React/Vite UI
+  docs/                   # Documentation
+    features/
+      battle-reports-spec.md
+      battle-intel-spec.md
+    authenication-authorization-spec/
+    product_specs.md
+    technical_specs.md
   infra/
-    helm/
-    k8s/
+    k8s/                  # Kubernetes manifests
+  .github/
+    workflows/            # GitHub Actions
+  pnpm-workspace.yaml     # PNPM workspace config
+  package.json            # Root package
+```
+
+**PNPM Workspace Configuration** (`pnpm-workspace.yaml`):
+```yaml
+packages:
+  - 'backend/*'
+  - 'frontend'
+```
+
+**Package Dependencies**:
+```
+@battlescope/api
+  ├─→ @battlescope/database
+  ├─→ @battlescope/shared
+  ├─→ @battlescope/battle-reports
+  └─→ @battlescope/battle-intel
+
+@battlescope/battle-reports
+  ├─→ @battlescope/database
+  └─→ @battlescope/shared
+
+@battlescope/battle-intel
+  ├─→ @battlescope/database
+  └─→ @battlescope/shared
+  └─→ @battlescope/battle-reports (read-only for data access)
+
+@battlescope/ingest
+  └─→ @battlescope/database
+
+@battlescope/enrichment
+  └─→ @battlescope/database
 ```
 
 ### GitHub Actions Workflow
@@ -273,9 +439,45 @@ jobs:
 
 ## 10. MVP Acceptance Criteria
 
-- [ ] Ingest zKillboard data (references only)
-- [ ] Cluster kills into battles
-- [ ] Compute totals and metadata
-- [ ] Expose REST API with filters
+### Core Platform
+- [ ] EVE Online SSO authentication with multi-character support
+- [ ] Feature-scoped RBAC (roles: user, fc, director, admin, superadmin)
+- [ ] Authorization middleware protecting all feature routes
+- [ ] User profile page with character management
+- [ ] Graceful UI degradation based on feature access
+
+### Battle Reports Feature
+- [ ] Ingest zKillboard data (killmail references only)
+- [ ] Enrich killmails with full payload from zKillboard
+- [ ] Cluster kills into battles via sliding window algorithm
+- [ ] Compute battle metadata (start/end time, ISK destroyed, participants)
+- [ ] Battle list API with filtering (space type, time, entities)
+- [ ] Battle detail API with killmails and participants
+- [ ] Real-time killmail feed via Server-Sent Events
+- [ ] Recent killmails polling endpoint as fallback
+
+### Battle Intel Feature
+- [ ] Compute alliance/corporation/character statistics
+- [ ] Opponent analysis (who fights whom)
+- [ ] Ship composition analysis
+- [ ] Geographic activity heatmaps
+- [ ] Intelligence summary API for homepage
+- [ ] Entity intelligence pages (alliance, corp, character)
+- [ ] Caching strategy for computed statistics
+
+### Infrastructure
 - [ ] Deploy via GitHub Actions to Kubernetes
 - [ ] Instrument metrics and health checks
+- [ ] OpenTelemetry tracing across all services
+- [ ] Pino structured logging
+- [ ] Redis caching for sessions and statistics
+- [ ] PostgreSQL with proper indexes and constraints
+
+### Frontend
+- [ ] Home page with feature-based content
+- [ ] Battles page (Battle Reports feature)
+- [ ] Recent Kills page with SSE stream (Battle Reports feature)
+- [ ] Intel pages for entities (Battle Intel feature)
+- [ ] Entity pages with composite views based on access
+- [ ] User profile with character management
+- [ ] Header navigation adapts to feature access

@@ -1,164 +1,507 @@
-# BattleScope Product Specification (v2)
+# BattleScope Platform Specification (v3)
+
+**Last Updated**: 2025-11-07
+
+---
 
 ## 1. Product Overview
 
-**BattleScope** is a data intelligence platform that reconstructs and classifies **battles** in *EVE Online* by clustering related killmails from **zKillboard**.  
+**BattleScope** is a modular data intelligence platform for *EVE Online* that provides two core features:
 
-Unlike traditional killboard scrapers, BattleScope focuses on **efficient storage and contextual analysis**:  
-- It does **not** store raw killmail payloads (which can be re-fetched from zKillboard/ESI).  
-- It stores **battle clusters**, **metadata**, and **references** (killmail IDs and URLs).  
-- It provides an API and UI for **exploring fights** by alliance, corp, pilot, space type, or system.
+1. **Battle Reports**: Reconstructs and classifies battles by clustering related killmails from zKillboard
+2. **Battle Intel**: Provides statistical analysis and intelligence about combat activities, participants, and trends
 
-This enables performant historical and tactical insights while maintaining low storage footprint and high data reliability.
+The platform is designed with:
+- **Feature-based architecture**: Business logic separated at package level
+- **Permission-based access**: Users can have access to one or both features independently
+- **Reference-first storage**: Minimal data footprint by storing only essential metadata
+- **EVE Online SSO authentication**: Secure multi-character support with feature-scoped RBAC
 
 ---
 
-## 2. Objectives
+## 2. Platform Objectives
 
 | Goal | Description |
 |------|--------------|
-| **1. Battle Reconstruction** | Automatically identify related killmails and group them into a single “battle” entity. |
-| **2. Reference-First Storage** | Store only essential metadata and external killmail references. |
-| **3. Queryable Metadata** | Enable flexible filtering (space type, corporation, alliance, character, time). |
-| **4. Efficient Enrichment** | Allow on-demand retrieval of detailed killmail data when needed. |
-| **5. Publicly Verifiable** | Each record references canonical zKillboard and ESI links for transparency. |
-| **6. Frontend Situational Awareness** | Deliver real-time battle intelligence via the web UI (home stats, kill feed, rules controls) while authentication remains out of scope for this iteration. |
+| **1. Modular Features** | Separate business logic for Battle Reports and Battle Intel at the package level |
+| **2. Feature-Scoped Permissions** | Users can access Battle Reports, Battle Intel, or both based on assigned roles |
+| **3. Graceful UI Degradation** | UI adapts based on feature access without breaking when permissions are restricted |
+| **4. Efficient Storage** | Store only essential metadata and references (not full killmail payloads) |
+| **5. Extensible Architecture** | Easy to add new features (e.g., Fleet Tracking, Market Intel) without affecting existing features |
+| **6. Authentication & Authorization** | EVE Online SSO with multi-character support and feature-scoped RBAC |
 
 ---
 
-## 3. Core Concepts
+## 3. Feature Architecture
+
+BattleScope is organized into distinct features, each with its own:
+- Business logic package (`backend/{feature-name}/`)
+- API routes (`backend/api/src/routes/{feature-name}.ts`)
+- Permission requirements (feature roles: `user`, `fc`, `director`, `admin`)
+- UI components (conditionally rendered based on access)
+
+### 3.1 Available Features
+
+| Feature Key | Feature Name | Description | Package |
+|-------------|--------------|-------------|---------|
+| `battle-reports` | Battle Reports | Killmail collection, clustering, and battle reconstruction | `@battlescope/battle-reports` |
+| `battle-intel` | Battle Intel | Statistical analysis, opponent tracking, and combat intelligence | `@battlescope/battle-intel` |
+
+**See Feature Specifications**:
+- [Battle Reports Feature Spec](./features/battle-reports-spec.md)
+- [Battle Intel Feature Spec](./features/battle-intel-spec.md)
+
+---
+
+## 4. Core Platform Concepts
 
 | Concept | Description |
 |----------|--------------|
-| **Killmail Reference** | Minimal object containing killmail ID, timestamp, solarSystemID, and zKillboard link. |
-| **Battle** | Logical grouping of killmail references determined by clustering algorithm (time, system, participants). |
-| **Participant** | Any character, corp, or alliance appearing in one or more killmails within the battle. |
-| **Side** | A distinct group within a battle (based on attacker/victim overlap and alliance correlation). |
-| **Space Type** | K-space (known), J-space (wormhole), or Poch-space (Triglavian). |
-| **Source Link** | Permanent zKillboard “related kills” URL or similar canonical link. |
-| **Ruleset** | Configurable filters (alliances, corporations, minimum pilots) that drive ingestion focus and UI behaviour; killmails outside the allowlist are ignored when active. |
+| **Feature** | A distinct product capability with its own business logic, permissions, and UI |
+| **Account** | User account authenticated via EVE Online SSO |
+| **Character** | EVE character linked to an account (primary + alts) |
+| **Feature Role** | Permission level for a feature: `user`, `fc`, `director`, `admin` |
+| **Space Type** | K-space (known), J-space (wormhole), or Poch-space (Triglavian) |
+| **Entity** | Alliance, corporation, or character in EVE Online |
+| **Ruleset** | Database-stored configuration controlling which killmails the ingestion service accepts |
 
 ---
 
-## 4. Data Flow Overview
+## 5. Feature-Based UI Navigation
 
-### 4.1 Ingestion Pipeline
-1. **Killmail Feed**
-   - Subscribe to zKillboard’s RedisQ feed or bulk API dumps.
-   - Store minimal killmail metadata:
-     ```json
-     {
-       "killmail_id": 12345678,
-       "system_id": 31000090,
-       "timestamp": "2025-11-03T18:04:00Z",
-       "victim_alliance_id": 99001234,
-       "attackers_alliances": [99004567, 99002345],
-       "zkb_url": "https://zkillboard.com/kill/12345678/"
-     }
-     ```
-   - Deduplicate entries based on `killmail_id`.
+### 5.1 Navigation Access Matrix
 
-2. **Clustering Engine**
-   - Runs on sliding time windows (e.g., 30 min) per system.
-   - Uses overlap in attacker/victim alliances or corporations to link kills into “battles”.
-   - Groups kills into clusters meeting thresholds (≥2 kills, ≤30 min apart, same system).
+| Nav Item | Battle Reports Access | Battle Intel Access | No Access |
+|----------|----------------------|---------------------|-----------|
+| **Home** | Shows battle list preview | Shows intel summary | Shows welcome message |
+| **Battles** | ✅ Visible | Hidden | Hidden |
+| **Recent Kills** | ✅ Visible | Hidden | Hidden |
+| **Intel** (future) | Hidden | ✅ Visible | Hidden |
+| **Rules** | Admin only | Admin only | Hidden |
 
-3. **Battle Construction**
-   - Assign unique `battle_id`.
-   - Derive:
-     - Start/end time from earliest/latest kill
-     - Total kill count
-     - Distinct alliances/corps/characters per side
-     - ISK destroyed (sum of zKB `zkb.totalValue`)
-     - Space type (based on system ID prefix)
-   - Generate related zKillboard URL:
-     ```
-     https://zkillboard.com/related/{system_id}/{timestamp}/
-     ```
+### 5.2 Entity Page Composition
 
-4. **Storage**
-   - Minimal schema focused on relationships, not raw data.
+Entity pages (Alliance, Corporation, Character) adapt based on feature access:
+
+**With Both Features**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Pandemic Legion [PL]                                            │
+├─────────────────────────────────────────────────────────────────┤
+│ [Battle History]       ← Battle Reports feature                 │
+│ [Intelligence Stats]   ← Battle Intel feature                   │
+│ [Opponent Analysis]    ← Battle Intel feature                   │
+│ [Ship Composition]     ← Battle Intel feature                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Battle Reports Only**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Pandemic Legion [PL]                                            │
+├─────────────────────────────────────────────────────────────────┤
+│ [Battle History]       ← Battle Reports feature                 │
+│                                                                 │
+│ ℹ️  Want to see intelligence statistics? Contact an admin       │
+│    for Battle Intel feature access.                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Battle Intel Only**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Pandemic Legion [PL]                                            │
+├─────────────────────────────────────────────────────────────────┤
+│ [Intelligence Stats]   ← Battle Intel feature                   │
+│ [Opponent Analysis]    ← Battle Intel feature                   │
+│ [Ship Composition]     ← Battle Intel feature                   │
+│                                                                 │
+│ ℹ️  Want to see detailed battle reports? Contact an admin       │
+│    for Battle Reports feature access.                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**No Access**:
+- Redirect to home page with message: "This page requires feature access. Please contact an administrator."
+
+### UI Layout & Navigation
+
+**Global Header Bar**:
+
+The application features a persistent header bar across all pages containing:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ [BattleScope Logo] Home  Battles  Recent Kills  Rules   [User Menu] │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Header Components**:
+
+1. **Product Branding** (Left)
+   - Application name: "Battle Scope" (clickable, navigates to Home)
+   - Optional logo/icon
+
+2. **Primary Navigation** (Center-Left)
+   - Home - Dashboard with statistics
+   - Battles - Battle list and detail views
+   - Recent Kills - Live killmail feed
+   - Rules - Ruleset configuration (admin only when auth is enabled)
+
+3. **User Menu** (Right)
+   - **Unauthenticated State**: "Login with EVE Online" button
+   - **Authenticated State**: User dropdown showing:
+     - Primary character portrait (32x32px)
+     - Primary character name
+     - Current alliance/corporation ticker (if applicable)
+     - Dropdown arrow indicator
+
+**User Dropdown Menu** (when authenticated):
+
+```
+┌─────────────────────────────────────┐
+│ [Portrait] John Doe                 │
+│           Pandemic Legion [PL]      │
+├─────────────────────────────────────┤
+│ 👤 My Profile                       │
+│ 👥 Manage Characters                │
+│ 🔐 Permissions & Roles              │
+├─────────────────────────────────────┤
+│ 🚪 Logout                           │
+└─────────────────────────────────────┘
+```
+
+Clicking "My Profile" or "Manage Characters" navigates to `/profile`.
 
 ---
 
-## 5. Data Model
+### User Profile Page Specification
 
-### 5.1 Core Tables
+**Route**: `/profile`
 
-#### battles
-| Column | Type | Description |
-|---------|------|-------------|
-| `id` | UUID | Internal battle ID |
-| `system_id` | BIGINT | Solar system ID (supports large EVE system IDs) |
-| `space_type` | ENUM(`kspace`, `jspace`, `pochven`) | Derived from system ID |
-| `start_time` | DATETIME | Earliest killmail |
-| `end_time` | DATETIME | Latest killmail |
-| `total_kills` | INT | Number of kills in cluster |
-| `total_isk_destroyed` | BIGINT | Sum of kill values |
-| `zkill_related_url` | TEXT | Canonical battle link |
-| `created_at` | DATETIME | Record creation timestamp |
+**Access**: Authenticated users only (redirects to login if not authenticated)
 
-#### battle_killmails
-| Column | Type | Description |
-|---------|------|-------------|
-| `battle_id` | UUID | FK to battles |
-| `killmail_id` | BIGINT | zKillboard kill ID (large IDs require bigint) |
-| `zkb_url` | TEXT | Killmail link |
-| `timestamp` | DATETIME | Killmail time |
-| `victim_alliance_id` | BIGINT | From metadata (nullable) |
-| `attacker_alliance_ids` | ARRAY[BIGINT] | List of alliances involved |
-| `isk_value` | BIGINT | Total value destroyed |
-| `side_id` | SMALLINT | 0 or 1 to group sides |
+**Layout**: Full-page view with tabbed interface
 
-#### battle_participants
-| Column | Type | Description |
-|---------|------|-------------|
-| `battle_id` | UUID | FK to battles |
-| `character_id` | BIGINT | Participant ID |
-| `alliance_id` | BIGINT | Alliance ID (nullable) |
-| `corp_id` | BIGINT | Corporation ID (nullable) |
-| `ship_type_id` | BIGINT | Hull type (nullable) |
-| `side_id` | SMALLINT | Alliance group side |
-| `is_victim` | BOOL | True if ship lost |
-
-### 5.2 ID Type Requirements
-
-**All EVE Online entity identifiers must use BIGINT (64-bit integers):**
-
-- **Rationale**: EVE Online IDs can exceed JavaScript's `Number.MAX_SAFE_INTEGER` (2^53-1 = 9,007,199,254,740,991)
-- **Affected entities**: killmail IDs, character IDs, corporation IDs, alliance IDs, system IDs, ship type IDs
-- **API representation**: All IDs transmitted as strings in JSON to prevent precision loss
-- **Database storage**: Native BIGINT columns for efficient indexing and filtering
+**Tabs**:
+1. **Overview** - Account summary and primary character
+2. **Characters** - Manage linked characters and alts
+3. **Roles & Permissions** - View assigned roles (admin can manage)
+4. **Account Settings** - Email, preferences, account deletion
 
 ---
 
-## 6. Functional Requirements
+#### Tab 1: Overview
 
-| ID | Requirement | Priority |
-|----|--------------|-----------|
-| F1 | Subscribe to zKillboard RedisQ feed and store minimal metadata | High |
-| F2 | Cluster kills by system + timestamp proximity | High |
-| F3 | Compute derived battle properties (ISK destroyed, ship counts, etc.) | High |
-| F4 | Store only references (killmail IDs, URLs) | High |
-| F5 | Identify and assign space type (via system prefix) | High |
-| F6 | Provide REST/GraphQL API to query battles | High |
-| F7 | Generate canonical zKillboard related URLs | Medium |
-| F8 | Fetch extended data on-demand (lazy fetch via zKB API) | Medium |
-| F9 | Filter by alliance, corporation, or character | Medium |
-| F10 | Detect and merge overlapping battle clusters | Low |
-| F11 | Provide aggregated statistics for total battles and top alliances/corps to power the homepage dashboard | Medium |
-| F12 | Expose a streaming-friendly recent killmail feed segmented by space type for the Recent Kills page | Medium |
-| F13 | Offer read/write APIs for rulesets (min pilots, tracked alliances/corps, ignore-unlisted toggle) surfaced in the Rules UI | High |
-| F14 | Resolve and include entity names (alliances, corps, characters, systems, ships) in all API responses via ESI integration | High |
-| F15 | Provide entity detail pages (Alliance, Corporation, Character) showing battle history, statistics, and opponent analysis | High |
+**Purpose**: Display account summary and primary character information
 
-### Frontend MVP Experience
+**Content**:
 
-- **Home:** Present total battle reports and tracked alliance/corp counts with contextual metadata from F11; refresh periodically without requiring login.
-- **Recent Kills:** Auto-update a list of recent killmails by space type (kspace, jspace, pochven) using the streaming feed from F12 with graceful fallback polling.
-- **Rules:** Allow operators to configure minimum pilot thresholds and tracked alliances/corps, persisting changes through F13 while signalling that authentication will arrive in a future iteration.
-- **Battles:** Display list of recent battles with detail view showing participants and killmails.
-- **Entity Pages (Alliance/Corporation/Character):** Show entity-specific battle history with opponent breakdown, participant counts, ship type composition, and direct links to battle reports.
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Account Overview                                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ Primary Character                                                   │
+│ ┌───────────────────────────────────────────────────────────┐      │
+│ │ [Portrait 128x128]  John Doe                              │      │
+│ │                     Sniggerdly [SNGGR]                    │      │
+│ │                     Pandemic Legion [PL]                  │      │
+│ │                                                           │      │
+│ │                     [View on zKillboard]                  │      │
+│ └───────────────────────────────────────────────────────────┘      │
+│                                                                     │
+│ Account Details                                                     │
+│ • Account ID: a1b2c3d4-...                                         │
+│ • Email: user@example.com (optional)                                │
+│ • Member Since: November 7, 2025                                    │
+│ • Last Login: November 7, 2025 at 14:32 UTC                        │
+│ • Linked Characters: 3                                              │
+│                                                                     │
+│ Assigned Roles                                                      │
+│ • Battle Reports: Fleet Commander                                   │
+│ • Battle Intel: User                                                │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Features**:
+- Large primary character portrait (128x128px)
+- Character name links to zKillboard character page
+- Corporation and alliance names link to zKillboard pages
+- Account metadata display
+- Quick summary of assigned roles
+
+---
+
+#### Tab 2: Characters
+
+**Purpose**: Manage linked characters (alts) and set primary character
+
+**Content**:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Linked Characters                          [+ Link New Character]   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ [Portrait]  John Doe ⭐ PRIMARY                             │    │
+│ │             Sniggerdly [SNGGR]                              │    │
+│ │             Pandemic Legion [PL]                            │    │
+│ │                                                             │    │
+│ │             ESI Token: ✅ Valid (expires in 15 days)        │    │
+│ │             Last Verified: November 7, 2025 at 14:30 UTC   │    │
+│ │                                                             │    │
+│ │             [View on zKillboard]  [Refresh Token]           │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ [Portrait]  Jane Smith                                      │    │
+│ │             KarmaFleet [GEWNS]                              │    │
+│ │             Goonswarm Federation [CONDI]                    │    │
+│ │                                                             │    │
+│ │             ESI Token: ⚠️  Expired                          │    │
+│ │             Last Verified: October 15, 2025 at 10:22 UTC   │    │
+│ │                                                             │    │
+│ │             [Set as Primary]  [Refresh Token]  [Unlink]     │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ [Portrait]  Alt Character                                   │    │
+│ │             NPC Corp [NPC]                                  │    │
+│ │             No Alliance                                      │    │
+│ │                                                             │    │
+│ │             ESI Token: ✅ Valid (expires in 45 days)        │    │
+│ │             Last Verified: November 6, 2025 at 18:45 UTC   │    │
+│ │                                                             │    │
+│ │             [Set as Primary]  [Refresh Token]  [Unlink]     │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Features**:
+
+1. **Link New Character** (Button)
+   - Initiates EVE SSO OAuth flow
+   - Links additional character to existing account
+   - Flow: Click → EVE SSO login → Callback → Character linked
+
+2. **Character Cards** (One per linked character)
+   - Portrait (64x64px)
+   - Character name with PRIMARY indicator (⭐) for primary character
+   - Corporation name and ticker
+   - Alliance name and ticker (if applicable)
+   - ESI token status indicator:
+     - ✅ Valid - token active with expiry countdown
+     - ⚠️ Expired - needs refresh
+     - ❌ Invalid - requires re-authentication
+   - Last verified timestamp
+
+3. **Character Actions**:
+   - **Set as Primary**: Makes this character the account's primary (disabled for current primary)
+   - **Refresh Token**: Re-authenticate with EVE SSO to refresh ESI token
+   - **Unlink**: Remove character from account (requires confirmation)
+   - **View on zKillboard**: External link to character's zKillboard page
+
+**Validation Rules**:
+- Cannot unlink the primary character unless another character is set as primary first
+- Cannot unlink if it's the only character (must have at least one)
+- Setting a new primary character requires confirmation modal
+
+**Confirmation Modal for Unlink**:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Unlink Character?                                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ Are you sure you want to unlink John Doe from your     │
+│ account?                                                │
+│                                                         │
+│ This action cannot be undone. You will need to         │
+│ re-authenticate with EVE SSO to link this character    │
+│ again.                                                  │
+│                                                         │
+│              [Cancel]  [Unlink Character]               │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Tab 3: Roles & Permissions
+
+**Purpose**: View assigned feature roles and request role changes
+
+**Content**:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Roles & Permissions                                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ Your Assigned Roles                                                 │
+│                                                                     │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ Battle Reports                                              │    │
+│ │ Role: Fleet Commander                                       │    │
+│ │ Granted: November 1, 2025 by Admin User                     │    │
+│ │                                                             │    │
+│ │ Permissions:                                                │    │
+│ │ • ✅ View battle reports                                    │    │
+│ │ • ✅ Create battle reports                                  │    │
+│ │ • ❌ Edit any battle report                                │    │
+│ │ • ❌ Manage feature settings                               │    │
+│ │ • ❌ Manage user roles                                     │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ Battle Intel                                                │    │
+│ │ Role: User                                                  │    │
+│ │ Granted: November 1, 2025 by Admin User                     │    │
+│ │                                                             │    │
+│ │ Permissions:                                                │    │
+│ │ • ✅ View battle intelligence                               │    │
+│ │ • ❌ Create intelligence reports                           │    │
+│ │ • ❌ Edit any intelligence report                          │    │
+│ │ • ❌ Manage feature settings                               │    │
+│ │ • ❌ Manage user roles                                     │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│ ℹ️  Need different permissions? Contact an administrator.          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Role Hierarchy Display**:
+
+Each feature shows the role hierarchy with the user's current level highlighted:
+
+```
+User → FC → Director → Admin
+   ✓
+```
+
+**Permissions Matrix**:
+
+| Action | User | FC | Director | Admin |
+|--------|------|----|----|-----|
+| View content | ✅ | ✅ | ✅ | ✅ |
+| Create content | ❌ | ✅ | ✅ | ✅ |
+| Edit any content | ❌ | ❌ | ✅ | ✅ |
+| Manage settings | ❌ | ❌ | ✅ | ✅ |
+| Manage roles | ❌ | ❌ | ❌ | ✅ |
+
+**Features**:
+- Display all features user has access to
+- Show current role for each feature
+- Display who granted the role and when
+- List specific permissions granted by the role
+- Show role hierarchy visually
+- Contact info for requesting role changes (until in-app requests are implemented)
+
+---
+
+#### Tab 4: Account Settings
+
+**Purpose**: Manage account settings and delete account
+
+**Content**:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Account Settings                                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│ Email Address                                                       │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ user@example.com                              [Change Email] │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│ • Used for notifications and account recovery                       │
+│ • Optional - you can remove your email if desired                   │
+│                                                                     │
+│ Display Name                                                        │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ John Doe                                      [Change Name]  │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│ • How your name appears to administrators                          │
+│                                                                     │
+│ Privacy & Data                                                      │
+│ • [Download My Data] - Export all your account data                │
+│ • [View Audit Log] - See your account activity history             │
+│                                                                     │
+│ ─────────────────────────────────────────────────────────────      │
+│                                                                     │
+│ Danger Zone                                                         │
+│ ┌─────────────────────────────────────────────────────────────┐    │
+│ │ Delete Account                                              │    │
+│ │                                                             │    │
+│ │ Permanently delete your account and all associated data.    │    │
+│ │ This action cannot be undone.                               │    │
+│ │                                                             │    │
+│ │                           [Delete My Account]               │    │
+│ └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Account Deletion Flow**:
+
+**Step 1: Confirmation Modal**
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│ Delete Account?                                                   │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│ Are you sure you want to delete your account?                    │
+│                                                                   │
+│ This will permanently delete:                                     │
+│ • Your account profile                                            │
+│ • All linked characters                                           │
+│ • All assigned roles and permissions                              │
+│ • Your activity history                                           │
+│                                                                   │
+│ ⚠️  This action cannot be undone.                                 │
+│                                                                   │
+│ To confirm, type your primary character name: John Doe           │
+│ ┌─────────────────────────────────────────────────────────┐      │
+│ │                                                         │      │
+│ └─────────────────────────────────────────────────────────┘      │
+│                                                                   │
+│                      [Cancel]  [Delete Account]                   │
+│                                        ^^^^ disabled until typed   │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**Step 2: Success Confirmation**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Account Deleted                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Your account has been permanently deleted.                  │
+│                                                             │
+│ You will be logged out and redirected to the home page.     │
+│                                                             │
+│                           [OK]                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+After clicking OK, user is logged out and redirected to `/` (home page).
+
+**Features**:
+- Email management (add, change, remove)
+- Display name editing
+- Data export (GDPR compliance)
+- Audit log viewing (shows authentication events, role changes)
+- Account deletion with strong confirmation (type character name)
+- Clear warning about data loss
+- Immediate logout after deletion
+
+---
 
 ### UI Display Requirements (F14)
 
@@ -235,360 +578,82 @@ This enables performant historical and tactical insights while maintaining low s
 
 ---
 
-## 8. API Examples
+## 8. Platform-Level Requirements
 
-### GET /stats/summary
-```json
-{
-  "totalBattles": 1543,
-  "totalKillmails": 8721,
-  "uniqueAlliances": 42,
-  "uniqueCorporations": 156,
-  "topAlliances": [
-    {
-      "allianceId": "99001234",
-      "allianceName": "Pandemic Legion",
-      "battleCount": 87
-    },
-    {
-      "allianceId": "99005678",
-      "allianceName": "Goonswarm Federation",
-      "battleCount": 73
-    }
-  ],
-  "topCorporations": [
-    {
-      "corpId": "98001234",
-      "corpName": "Sniggerdly",
-      "battleCount": 45
-    }
-  ],
-  "generatedAt": "2025-11-03T19:15:00Z"
-}
-```
+### 8.1 ID Type Requirements
 
-### GET /battles?space_type=jspace
-```json
-[
-  {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "systemId": "31000123",
-    "systemName": "J115422",
-    "spaceType": "jspace",
-    "startTime": "2025-11-03T18:42:00Z",
-    "endTime": "2025-11-03T19:05:00Z",
-    "totalKills": "14",
-    "totalIskDestroyed": "3600000000",
-    "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
-  }
-]
-```
+**All EVE Online entity identifiers must use BIGINT (64-bit integers):**
 
-### GET /battles/:id
-```json
-{
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "systemId": "31000123",
-  "systemName": "J115422",
-  "spaceType": "jspace",
-  "startTime": "2025-11-03T18:42:00Z",
-  "endTime": "2025-11-03T19:05:00Z",
-  "totalKills": "14",
-  "totalIskDestroyed": "3600000000",
-  "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/",
-  "createdAt": "2025-11-03T19:05:30Z",
-  "killmails": [
-    {
-      "killmailId": "12457890",
-      "zkbUrl": "https://zkillboard.com/kill/12457890/",
-      "occurredAt": "2025-11-03T18:43:00Z",
-      "victimAllianceId": "99001234",
-      "victimAllianceName": "Pandemic Legion",
-      "victimCorpId": "98001234",
-      "victimCorpName": "Sniggerdly",
-      "victimCharacterId": "90012345",
-      "victimCharacterName": "John Doe",
-      "attackerAllianceIds": ["99005678"],
-      "attackerAllianceNames": ["Goonswarm Federation"],
-      "attackerCorpIds": ["98005678"],
-      "attackerCorpNames": ["KarmaFleet"],
-      "attackerCharacterIds": ["90098765"],
-      "attackerCharacterNames": ["Jane Smith"],
-      "iskValue": "380000000",
-      "enrichment": {
-        "status": "succeeded",
-        "payload": { "source": "zkill" },
-        "error": null,
-        "fetchedAt": "2025-11-03T18:45:00Z",
-        "updatedAt": "2025-11-03T18:45:05Z",
-        "createdAt": "2025-11-03T18:44:30Z"
-      }
-    }
-  ],
-  "participants": [
-    {
-      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "characterId": "90012345",
-      "characterName": "John Doe",
-      "allianceId": "99001234",
-      "allianceName": "Pandemic Legion",
-      "corpId": "98001234",
-      "corpName": "Sniggerdly",
-      "shipTypeId": "11567",
-      "shipTypeName": "Loki",
-      "sideId": "1",
-      "isVictim": true
-    }
-  ]
-}
-```
+- **Rationale**: EVE Online IDs can exceed JavaScript's `Number.MAX_SAFE_INTEGER` (2^53-1 = 9,007,199,254,740,991)
+- **Affected entities**: killmail IDs, character IDs, corporation IDs, alliance IDs, system IDs, ship type IDs
+- **API representation**: All IDs transmitted as strings in JSON to prevent precision loss
+- **Database storage**: Native BIGINT columns for efficient indexing and filtering
 
-### GET /killmails/recent?limit=50
-```json
-{
-  "items": [
-    {
-      "killmailId": "12457890",
-      "systemId": "31000123",
-      "systemName": "J115422",
-      "occurredAt": "2025-11-03T18:43:00Z",
-      "spaceType": "jspace",
-      "victimAllianceId": "99001234",
-      "victimAllianceName": "Pandemic Legion",
-      "victimCorpId": "98001234",
-      "victimCorpName": "Sniggerdly",
-      "victimCharacterId": "90012345",
-      "victimCharacterName": "John Doe",
-      "attackerAllianceIds": ["99005678"],
-      "attackerAllianceNames": ["Goonswarm Federation"],
-      "attackerCorpIds": ["98005678"],
-      "attackerCorpNames": ["KarmaFleet"],
-      "attackerCharacterIds": ["90098765"],
-      "attackerCharacterNames": ["Jane Smith"],
-      "iskValue": "380000000",
-      "zkbUrl": "https://zkillboard.com/kill/12457890/",
-      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "participantCount": 15
-    }
-  ],
-  "count": 50
-}
-```
+### 8.2 Entity Name Resolution
 
-### GET /alliances/:id
-```json
-{
-  "allianceId": "99001234",
-  "allianceName": "Pandemic Legion",
-  "ticker": "PL",
-  "statistics": {
-    "totalBattles": 87,
-    "totalKillmails": 1245,
-    "totalIskDestroyed": "450000000000",
-    "totalIskLost": "320000000000",
-    "iskEfficiency": 58.44,
-    "averageParticipants": 12.5,
-    "mostUsedShips": [
-      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 145 },
-      { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 98 }
-    ],
-    "topOpponents": [
-      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 23 },
-      { "allianceId": "99002345", "allianceName": "Test Alliance Please Ignore", "battleCount": 18 }
-    ],
-    "topSystems": [
-      { "systemId": "31000123", "systemName": "J115422", "battleCount": 15 },
-      { "systemId": "30002187", "systemName": "M-OEE8", "battleCount": 12 }
-    ],
-    "topSystemsByKills": [
-      { "systemId": "30002187", "systemName": "M-OEE8", "killCount": 234 },
-      { "systemId": "31000123", "systemName": "J115422", "killCount": 189 }
-    ]
-  }
-}
-```
+**Display Requirement**: The UI must display human-readable names for all EVE Online entities instead of raw IDs.
 
-### GET /alliances/:id/battles?limit=20&cursor=xyz
-```json
-{
-  "items": [
-    {
-      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "systemId": "31000123",
-      "systemName": "J115422",
-      "spaceType": "jspace",
-      "startTime": "2025-11-03T18:42:00Z",
-      "endTime": "2025-11-03T19:05:00Z",
-      "duration": 1380,
-      "totalKills": 14,
-      "totalParticipants": 28,
-      "totalIskDestroyed": "3600000000",
-      "allianceIskDestroyed": "2100000000",
-      "allianceIskLost": "1500000000",
-      "allianceParticipants": 15,
-      "opponents": [
-        { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "participants": 13 }
-      ],
-      "shipComposition": [
-        { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 5 },
-        { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 3 }
-      ],
-      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
-    }
-  ],
-  "nextCursor": "abc123",
-  "hasMore": true
-}
-```
+| Entity Type | Display Format | zKillboard Link |
+|-------------|----------------|-----------------|
+| **Alliance** | Alliance name as clickable link | `https://zkillboard.com/alliance/{allianceId}/` |
+| **Corporation** | Corporation name as clickable link | `https://zkillboard.com/corporation/{corpId}/` |
+| **Character** | Character name as clickable link | `https://zkillboard.com/character/{characterId}/` |
+| **System** | System name with optional ID | N/A |
+| **Ship Type** | Ship name | N/A |
 
-### GET /corporations/:id
-```json
-{
-  "corpId": "98001234",
-  "corpName": "Sniggerdly",
-  "ticker": "SNGGR",
-  "allianceId": "99001234",
-  "allianceName": "Pandemic Legion",
-  "statistics": {
-    "totalBattles": 45,
-    "totalKillmails": 678,
-    "totalIskDestroyed": "230000000000",
-    "totalIskLost": "180000000000",
-    "iskEfficiency": 56.10,
-    "averageParticipants": 8.2,
-    "mostUsedShips": [
-      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 89 },
-      { "shipTypeId": "11969", "shipTypeName": "Sabre", "count": 54 }
-    ],
-    "topOpponents": [
-      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 15 }
-    ],
-    "topPilots": [
-      { "characterId": "90012345", "characterName": "John Doe", "battleCount": 32 }
-    ],
-    "topSystemsByKills": [
-      { "systemId": "30002187", "systemName": "M-OEE8", "killCount": 156 },
-      { "systemId": "31000123", "systemName": "J115422", "killCount": 98 }
-    ]
-  }
-}
-```
+**UI Implementation Rules**:
+1. **Never display raw IDs**: All entity references must show names, not numeric IDs
+2. **External links**: All alliances, corporations, and characters must link to their respective zKillboard pages
+3. **Link styling**: Use visual indicators (color, underline, or icon) to distinguish external links
+4. **Fallback handling**: If a name is unavailable, display "Unknown {EntityType} #{ID}" with tooltip
+5. **Loading states**: Show skeleton loaders or placeholders while names are being fetched
 
-### GET /corporations/:id/battles?limit=20&cursor=xyz
-```json
-{
-  "items": [
-    {
-      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "systemId": "31000123",
-      "systemName": "J115422",
-      "spaceType": "jspace",
-      "startTime": "2025-11-03T18:42:00Z",
-      "endTime": "2025-11-03T19:05:00Z",
-      "duration": 1380,
-      "totalKills": 14,
-      "totalParticipants": 28,
-      "corpParticipants": 8,
-      "corpIskDestroyed": "1200000000",
-      "corpIskLost": "900000000",
-      "opponents": [
-        { "corpId": "98005678", "corpName": "KarmaFleet", "allianceId": "99005678", "allianceName": "Goonswarm Federation", "participants": 10 }
-      ],
-      "shipComposition": [
-        { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 3 }
-      ],
-      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
-    }
-  ],
-  "nextCursor": "def456",
-  "hasMore": true
-}
-```
-
-### GET /characters/:id
-```json
-{
-  "characterId": "90012345",
-  "characterName": "John Doe",
-  "corpId": "98001234",
-  "corpName": "Sniggerdly",
-  "allianceId": "99001234",
-  "allianceName": "Pandemic Legion",
-  "statistics": {
-    "totalBattles": 32,
-    "totalKills": 45,
-    "totalLosses": 12,
-    "totalIskDestroyed": "15000000000",
-    "totalIskLost": "8000000000",
-    "iskEfficiency": 65.22,
-    "mostUsedShips": [
-      { "shipTypeId": "11567", "shipTypeName": "Loki", "count": 18 },
-      { "shipTypeId": "11987", "shipTypeName": "Proteus", "count": 8 }
-    ],
-    "topOpponents": [
-      { "allianceId": "99005678", "allianceName": "Goonswarm Federation", "battleCount": 12 }
-    ],
-    "favoriteSystems": [
-      { "systemId": "31000123", "systemName": "J115422", "battleCount": 8 }
-    ]
-  }
-}
-```
-
-### GET /characters/:id/battles?limit=20&cursor=xyz
-```json
-{
-  "items": [
-    {
-      "battleId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "systemId": "31000123",
-      "systemName": "J115422",
-      "spaceType": "jspace",
-      "startTime": "2025-11-03T18:42:00Z",
-      "endTime": "2025-11-03T19:05:00Z",
-      "duration": 1380,
-      "totalKills": 14,
-      "characterKills": 2,
-      "characterLosses": 0,
-      "characterIskDestroyed": "450000000",
-      "characterIskLost": "0",
-      "shipsFlown": [
-        { "shipTypeId": "11567", "shipTypeName": "Loki" }
-      ],
-      "opponents": [
-        { "allianceId": "99005678", "allianceName": "Goonswarm Federation" }
-      ],
-      "zkillRelatedUrl": "https://zkillboard.com/related/31000123/202511031842/"
-    }
-  ],
-  "nextCursor": "ghi789",
-  "hasMore": true
-}
-```
-
-> **Entity Name Resolution**: All API responses include both IDs (as strings for bigint support) and human-readable names for alliances, corporations, characters, systems, and ship types. Names are resolved via the ESI API during enrichment and cached for performance.
-
-> **Enrichment Lifecycle**: `enrichment.status` tracks the worker lifecycle (`pending`, `processing`, `succeeded`, `failed`) while keeping detailed payloads optional. Producers should requeue killmails when failures persist to guarantee eventual consistency.
+**Backend Resolution**:
+- All API responses include both IDs (as strings) and human-readable names
+- Names are resolved via ESI API during enrichment and cached for performance
+- Cache invalidation on ESI version changes
 
 ---
 
-## 9. MVP Scope
+## 9. Feature API Endpoints
 
-✅ zKillboard ingestion + clustering  
-✅ Minimal relational schema  
-✅ REST API (battle listing/filtering)  
-✅ zKillboard related URL generation  
-✅ Space type derivation  
-✅ Battle storage without full killmail payloads  
-⏳ Frontend surfaces: Home statistics, streaming Recent Kills feed, and Rules configuration (authentication deferred)
+Feature-specific API endpoints are documented in their respective feature specifications:
+
+- **Battle Reports API**: See [Battle Reports Feature Spec](./features/battle-reports-spec.md#5-api-endpoints)
+- **Battle Intel API**: See [Battle Intel Feature Spec](./features/battle-intel-spec.md#5-api-endpoints)
+
+**Common Authentication Endpoints**:
+- `GET /auth/login` - Initiate EVE SSO login
+- `GET /auth/callback` - OAuth callback handler
+- `GET /me` - Get current user profile
+- `POST /auth/logout` - Logout
+- See [Authentication Spec](./authenication-authorization-spec/README.md#7-api-surface-fastify-routes) for complete auth API
 
 ---
 
-## 10. Future Enhancements
+## 10. Platform MVP Scope
 
-- User authentication and role-based access for Rules management
-- Doctrine/fleet composition inference (via ship role mapping)
-- Player or alliance performance stats
-- ESI integration for character lookup
-- Discord/Slack bot for battle notifications
-- Map/timeline visualization layer
+✅ **Core Platform**:
+- EVE Online SSO authentication with multi-character support
+- Feature-scoped RBAC (roles: user, fc, director, admin)
+- Graceful UI degradation based on feature access
+- Entity name resolution via ESI integration
+- zKillboard data ingestion with ruleset filtering
+
+✅ **Battle Reports Feature**:
+- Killmail clustering and battle reconstruction
+- Battle detail views with participants and killmails
+- Real-time killmail feed (SSE)
+- Battle filtering and search
+
+✅ **Battle Intel Feature**:
+- Alliance/Corporation/Character intelligence pages
+- Opponent analysis and tracking
+- Ship composition statistics
+- Geographic activity heatmaps
+
+⏳ **Future Enhancements**:
+- Additional features (Fleet Tracking, Market Intel, etc.)
+- Discord/Slack integrations
+- Advanced analytics and predictions
+- Map/timeline visualizations

@@ -18,9 +18,9 @@ import type {
 } from '@battlescope/database';
 import type { Redis } from 'ioredis';
 import { registerBattleRoutes } from './routes/battles.js';
-import { registerRulesRoutes } from './routes/rules.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
+import { registerRulesRoutes } from './routes/rules.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
@@ -64,7 +64,7 @@ export const buildServer = ({
 - Battle reconstruction from killmail clustering
 - Real-time killmail feed with Server-Sent Events
 - Entity name resolution via ESI API
-- Configurable ruleset filtering
+- Pre-filtered killmail ingestion based on database-configured rulesets
 
 ## Data Types
 All EVE Online entity IDs (killmail, character, corporation, alliance, system, ship type) are transmitted as strings to support bigint values that exceed JavaScript's Number.MAX_SAFE_INTEGER.`,
@@ -85,7 +85,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         { name: 'Battles', description: 'Battle reconstruction and querying' },
         { name: 'Killmails', description: 'Killmail feed and streaming' },
         { name: 'Dashboard', description: 'Statistical summaries' },
-        { name: 'Rules', description: 'Ruleset configuration' },
+        { name: 'Rules', description: 'Ingestion ruleset configuration' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -164,7 +164,6 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
   });
 
   registerBattleRoutes(app, battleRepository, nameEnricher);
-  registerRulesRoutes(app, rulesetRepository, nameEnricher, redis);
   registerKillmailRoutes(
     app,
     killmailRepository,
@@ -173,6 +172,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     nameEnricher,
   );
   registerDashboardRoutes(app, dashboardRepository, nameEnricher);
+  registerRulesRoutes(app, rulesetRepository, nameEnricher, redis);
 
   return app;
 };

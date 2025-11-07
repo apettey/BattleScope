@@ -1,8 +1,7 @@
 import { BattleRepository, KillmailRepository, createDb } from '@battlescope/database';
 import { startTelemetry, stopTelemetry } from '@battlescope/shared';
+import { ClusteringEngine, ClustererService } from '@battlescope/battle-reports';
 import { loadConfig } from './config.js';
-import { ClusteringEngine } from './engine.js';
-import { ClustererService } from './service.js';
 import { createHealthServer } from './health.js';
 import { pino } from 'pino';
 
@@ -59,5 +58,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   });
 }
-
-export { ClustererService, ClusteringEngine };

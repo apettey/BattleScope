@@ -264,6 +264,7 @@ describe('API routes', () => {
     });
   });
 
+  // Ruleset API endpoints re-enabled
   it('returns ruleset defaults', async () => {
     const response = await app.inject({ method: 'GET', url: '/rulesets/current' });
     expect(response.statusCode).toBe(200);

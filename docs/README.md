@@ -6,8 +6,18 @@ This directory contains all documentation for the BattleScope project.
 
 ### Product & Technical Specifications
 
-- **[product_specs.md](./product_specs.md)** - Complete product specification including features, data model, API examples, and UI requirements
-- **[technical_specs.md](./technical_specs.md)** - Technical architecture and implementation details
+- **[product_specs.md](./product_specs.md)** - Platform-level product specification and feature overview
+- **[technical_specs.md](./technical_specs.md)** - Technical architecture and implementation details including feature-based package structure
+- **[ruleset_configuration_spec.md](./ruleset_configuration_spec.md)** - Ingestion ruleset configuration (systems, security types, alliances, corps)
+
+#### Feature Specifications
+
+- **[features/battle-reports-spec.md](./features/battle-reports-spec.md)** - Battle Reports feature: killmail clustering and battle reconstruction
+- **[features/battle-intel-spec.md](./features/battle-intel-spec.md)** - Battle Intel feature: statistical analysis and combat intelligence
+
+#### Authentication & Authorization
+
+- **[authenication-authorization-spec/](./authenication-authorization-spec/)** - EVE Online SSO authentication and feature-scoped RBAC specification
 
 ### API Documentation
 
@@ -27,6 +37,54 @@ This directory contains all documentation for the BattleScope project.
 ### Project Management
 
 - **[linear_projects_issues.md](./linear_projects_issues.md)** - Linear project tracking and issue management
+
+## Architecture Overview
+
+### Feature-Based Design
+
+**Status**: ✅ **Implemented**
+
+BattleScope is organized into two main features, each with its own package and business logic:
+
+1. **Battle Reports** (`@battlescope/battle-reports`) - Killmail collection, clustering, and battle reconstruction
+2. **Battle Intel** (`@battlescope/battle-intel`) - Statistical analysis, opponent tracking, and combat intelligence
+
+Features are:
+- **Separated at package level**: Each feature has its own directory in `packages/`
+- **Permission-scoped**: Users can have access to one or both features independently (planned)
+- **UI-adaptive**: Frontend gracefully degrades based on feature access (planned)
+
+**Current Implementation**:
+- ✅ `packages/battle-reports` - Contains clustering engine and clusterer service
+- ✅ `packages/battle-intel` - Package structure created for future intelligence services
+- ✅ `backend/clusterer` - Now uses `@battlescope/battle-reports` package
+- ⏳ Permission-based access control - Planned (see Authentication & Authorization)
+
+**See**:
+- [features/battle-reports-spec.md](./features/battle-reports-spec.md) for Battle Reports details
+- [features/battle-intel-spec.md](./features/battle-intel-spec.md) for Battle Intel details
+
+### Ingestion Configuration
+
+**Status**: ✅ **Implemented**
+
+Ingestion ruleset configuration is now available via the Rules API:
+
+- **GET /rulesets/current** - Get current ingestion configuration
+- **PUT /rulesets/current** - Update ingestion filters
+
+**Supported Filters**:
+- Minimum pilots (e.g., only track battles with 5+ participants)
+- Tracked alliances (allowlist of alliance IDs)
+- Tracked corporations (allowlist of corporation IDs)
+- Tracked systems (specific solar system IDs)
+- Security types (highsec, lowsec, nullsec, wormhole, pochven)
+
+Changes are immediately published to all ingestion service instances via Redis pub/sub.
+
+**See**: [ruleset_configuration_spec.md](./ruleset_configuration_spec.md) for complete details.
+
+---
 
 ## Quick Start
 
@@ -130,14 +188,20 @@ All API responses follow these conventions:
 - **ISO Timestamps**: `"2025-11-03T18:43:00Z"`
 - **Consistent Errors**: `{ "message": "Error description" }`
 
-### Authentication
+### Authentication & Authorization
 
-Authentication is **not yet implemented** in v2. All endpoints are currently public.
+**Status**: ⏳ **Planned**
 
-Future versions will include:
-- JWT-based authentication
-- Role-based access control for Rules management
-- API key support for external integrations
+Authentication and authorization are fully specified but not yet implemented:
+
+- **EVE Online SSO** - OAuth2/OIDC authentication
+- **Multi-character support** - Link multiple EVE characters to one account
+- **Feature-scoped RBAC** - Roles per feature: `user`, `fc`, `director`, `admin`, `superadmin`
+- **Graceful UI degradation** - UI adapts based on feature access
+
+**Current State**: All endpoints are currently public (no authentication required)
+
+**See**: [authenication-authorization-spec/](./authenication-authorization-spec/) for complete specification
 
 ## Tools & Integrations
 

@@ -1,0 +1,409 @@
+openapi: 3.1.0
+info:
+  title: EVE Auth & PDP API
+  version: 0.1.0
+  description: OpenAPI for Authentication Service and Authorization (PDP)
+servers:
+  - url: https://api.example.com
+tags:
+  - name: Auth
+  - name: Me
+  - name: Admin
+  - name: Features
+  - name: PDP
+paths:
+  /auth/login:
+    get:
+      tags: [Auth]
+      summary: Begin EVE SSO login (redirects)
+      parameters:
+        - in: query
+          name: redirect_uri
+          schema: { type: string, format: uri }
+          required: false
+      responses:
+        '302':
+          description: Redirect to EVE SSO
+  /auth/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth2 callback from EVE SSO
+      parameters:
+        - in: query
+          name: code
+          schema: { type: string }
+        - in: query
+          name: state
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to app after session creation
+        '403':
+          description: Org not allowed
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh app token using refresh token
+      responses:
+        '200':
+          description: New tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Invalid/expired refresh token
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      responses:
+        '204':
+          description: Logged out
+  /me:
+    get:
+      tags: [Me]
+      summary: Get current account profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Account summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          description: Not authenticated
+  /me/characters/link/start:
+    post:
+      tags: [Me]
+      summary: Start link flow for an additional character
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Link flow started (returns redirect URL)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  redirect_url:
+                    type: string
+                    format: uri
+        '401':
+          description: Not authenticated
+  /me/characters/{characterId}/set-primary:
+    post:
+      tags: [Me]
+      summary: Set primary character
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: characterId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Primary set
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not allowed
+        '409':
+          description: Conflict
+  /me/characters/{characterId}:
+    delete:
+      tags: [Me]
+      summary: Unlink a character
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: characterId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Unlinked
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not allowed
+  /admin/accounts:
+    get:
+      tags: [Admin]
+      summary: List/search accounts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Accounts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AccountSummary' }
+        '403':
+          description: Forbidden
+  /admin/accounts/{id}:
+    get:
+      tags: [Admin]
+      summary: Get account details
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        '403':
+          description: Forbidden
+  /admin/accounts/{id}/block:
+    post:
+      tags: [Admin]
+      summary: Block an account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Blocked
+        '403':
+          description: Forbidden
+  /admin/accounts/{id}/unblock:
+    post:
+      tags: [Admin]
+      summary: Unblock an account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Unblocked
+        '403':
+          description: Forbidden
+  /admin/accounts/{id}/feature-roles:
+    put:
+      tags: [Admin]
+      summary: Replace a user's roles per feature
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/FeatureRoleAssignment'
+      responses:
+        '204':
+          description: Updated
+        '403':
+          description: Forbidden
+  /features/{featureKey}/settings:
+    get:
+      tags: [Features]
+      summary: Get settings for a feature
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: featureKey
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FeatureSetting' }
+        '403':
+          description: Forbidden
+    put:
+      tags: [Features]
+      summary: Update settings for a feature
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: featureKey
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keys:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FeatureSettingWrite'
+      responses:
+        '204':
+          description: Updated
+        '403':
+          description: Forbidden
+  /v1/authorize:
+    post:
+      tags: [PDP]
+      summary: Policy decision for an action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthZRequest'
+      responses:
+        '200':
+          description: Decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthZResponse'
+  /healthz:
+    get:
+      tags: [PDP]
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthTokens:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        expires_in: { type: integer }
+    Me:
+      type: object
+      properties:
+        account_id: { type: string, format: uuid }
+        display_name: { type: string }
+        is_super_admin: { type: boolean }
+        primary_character:
+          $ref: '#/components/schemas/Character'
+        characters:
+          type: array
+          items: { $ref: '#/components/schemas/Character' }
+        feature_roles:
+          type: array
+          items: { $ref: '#/components/schemas/FeatureRole' }
+    Character:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        eve_character_id: { type: integer }
+        eve_character_name: { type: string }
+        corp_id: { type: integer }
+        corp_name: { type: string }
+        alliance_id: { type: integer, nullable: true }
+        alliance_name: { type: string, nullable: true }
+        portrait_url: { type: string, format: uri }
+        scopes:
+          type: array
+          items: { type: string }
+        token_status:
+          type: string
+          enum: [valid, expiring, invalid]
+    AccountSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        is_blocked: { type: boolean }
+        last_login_at: { type: string, format: date-time }
+        primary_character:
+          $ref: '#/components/schemas/Character'
+    Account:
+      allOf:
+        - $ref: '#/components/schemas/AccountSummary'
+        - type: object
+          properties:
+            email: { type: string, nullable: true }
+            characters:
+              type: array
+              items: { $ref: '#/components/schemas/Character' }
+            feature_roles:
+              type: array
+              items: { $ref: '#/components/schemas/FeatureRole' }
+    FeatureRole:
+      type: object
+      properties:
+        feature_key: { type: string }
+        role_key: { type: string, enum: [user, fc, director, admin] }
+        role_rank: { type: integer }
+    FeatureRoleAssignment:
+      type: object
+      required: [feature_key, role_key]
+      properties:
+        feature_key: { type: string }
+        role_key: { type: string, enum: [user, fc, director, admin] }
+    FeatureSetting:
+      type: object
+      properties:
+        key: { type: string }
+        value: { type: object, additionalProperties: true }
+        updated_at: { type: string, format: date-time }
+        updated_by: { type: string, format: uuid }
+    FeatureSettingWrite:
+      type: object
+      required: [key, value]
+      properties:
+        key: { type: string }
+        value: { type: object, additionalProperties: true }
+    AuthZRequest:
+      type: object
+      required: [subject, action, resource]
+      properties:
+        subject:
+          type: object
+          properties:
+            account_id: { type: string, format: uuid }
+            super_admin: { type: boolean }
+        action: { type: string }
+        resource:
+          type: object
+          properties:
+            feature_key: { type: string }
+            resource_id: { type: string }
+        context:
+          type: object
+          properties:
+            request_ip: { type: string }
+            org:
+              type: object
+              properties:
+                corp_id: { type: integer }
+                alliance_id: { type: integer }
+    AuthZResponse:
+      type: object
+      properties:
+        allow: { type: boolean }
+        reason: { type: string }
+        cache_ttl_seconds: { type: integer }
