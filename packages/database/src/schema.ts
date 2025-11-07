@@ -130,6 +130,12 @@ export interface RulesetsTable {
     (string | number | bigint)[]
   >;
   trackedCorpIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
+  trackedSystemIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
+  trackedSecurityTypes: ColumnType<string[], string[] | undefined, string[]>;
   ignoreUnlisted: ColumnType<boolean, boolean | undefined, boolean>;
   updatedBy: string | null;
   createdAt: ColumnType<Date, Date | undefined, never>;

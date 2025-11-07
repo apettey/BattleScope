@@ -67,6 +67,8 @@ export const registerRulesRoutes = (
         minPilots: body.minPilots ?? 1,
         trackedAllianceIds: coerceIds(body.trackedAllianceIds),
         trackedCorpIds: coerceIds(body.trackedCorpIds),
+        trackedSystemIds: coerceIds(body.trackedSystemIds),
+        trackedSecurityTypes: body.trackedSecurityTypes ?? [],
         ignoreUnlisted: body.ignoreUnlisted ?? false,
         updatedBy: body.updatedBy ?? null,
       });

@@ -6,8 +6,10 @@ import {
   assertEnv,
   startTelemetry,
   stopTelemetry,
+  SystemSecurityResolver,
   type EnrichmentJobPayload,
 } from '@battlescope/shared';
+import { createEsiClient, type CacheAdapter } from '@battlescope/esi-client';
 import { loadConfig } from './config.js';
 import { IngestionService, type KillmailEnrichmentProducer } from './service.js';
 import { MockKillmailSource, ZKillboardRedisQSource } from './source.js';
@@ -16,6 +18,25 @@ import { RedisRulesetCache } from './ruleset-cache.js';
 import { pino } from 'pino';
 
 const logger = pino({ name: 'ingest-bootstrap', level: process.env.LOG_LEVEL ?? 'info' });
+
+const createRedisCacheAdapter = (client: IORedis): CacheAdapter<unknown> => ({
+  async get(key: string) {
+    const payload = await client.get(key);
+    if (!payload) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(payload) as unknown;
+    } catch {
+      return undefined;
+    }
+  },
+  async set(key: string, value: unknown, ttlMs: number) {
+    const serialized = JSON.stringify(value);
+    await client.set(key, serialized, 'PX', ttlMs);
+  },
+});
 
 export const start = async (): Promise<void> => {
   await startTelemetry();
@@ -41,6 +62,16 @@ export const start = async (): Promise<void> => {
   await rulesetCache.startInvalidationListener();
   logger.info('Ruleset cache initialized with Redis backend');
 
+  // Create ESI client with Redis cache
+  const esiClient = createEsiClient({
+    cache: createRedisCacheAdapter(redis),
+    cacheTtlMs: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
+  // Create system security resolver with ESI and Redis
+  const systemSecurityResolver = new SystemSecurityResolver(esiClient, redis);
+  logger.info('System security resolver initialized');
+
   const enrichmentProducer: KillmailEnrichmentProducer = {
     enqueue: async (killmailId: bigint) => {
       await enrichmentQueue.add('enrich-killmail', { killmailId: killmailId.toString() });
@@ -51,6 +82,7 @@ export const start = async (): Promise<void> => {
     killmailRepository,
     rulesetCache,
     source,
+    systemSecurityResolver,
     enrichmentProducer,
   );
   const healthServer = createHealthServer(db);

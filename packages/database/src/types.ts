@@ -116,6 +116,9 @@ export interface KillmailEventRecord {
 
 export type { SpaceType };
 
+export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
+export type SecurityType = z.infer<typeof SecurityTypeSchema>;
+
 export const KillmailEnrichmentStatusSchema = z.enum([
   'pending',
   'processing',
@@ -140,10 +143,19 @@ const trackedIdArray = z
   .max(250, { message: 'Tracked lists cannot exceed 250 entries' })
   .default([]);
 
+const trackedSystemArray = z
+  .array(nonNegativeBigint)
+  .max(1000, { message: 'Tracked systems cannot exceed 1000 entries' })
+  .default([]);
+
+const securityTypeArray = z.array(SecurityTypeSchema).default([]);
+
 export const RulesetUpdateSchema = z.object({
   minPilots: z.coerce.number().int().min(1).max(500).default(1),
   trackedAllianceIds: trackedIdArray,
   trackedCorpIds: trackedIdArray,
+  trackedSystemIds: trackedSystemArray,
+  trackedSecurityTypes: securityTypeArray,
   ignoreUnlisted: z.boolean().default(false),
   updatedBy: z.string().trim().min(1).max(128).nullable().optional(),
 });

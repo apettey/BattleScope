@@ -8,7 +8,7 @@ import type {
   DashboardSummary,
   KillmailEnrichmentStatusSchema,
 } from '@battlescope/database';
-import type { SpaceType } from '@battlescope/shared';
+import type { SpaceType, SecurityType } from '@battlescope/shared';
 import type { z } from 'zod';
 
 type EnrichmentStatus = z.infer<typeof KillmailEnrichmentStatusSchema>;
@@ -191,6 +191,9 @@ export interface RulesetResponse {
   trackedAllianceNames: Array<string | null>;
   trackedCorpIds: string[];
   trackedCorpNames: Array<string | null>;
+  trackedSystemIds: string[];
+  trackedSystemNames: Array<string | null>;
+  trackedSecurityTypes: SecurityType[];
   ignoreUnlisted: boolean;
   updatedBy: string | null;
   createdAt: string;
@@ -204,6 +207,9 @@ export const toRulesetResponse = (ruleset: RulesetRecord, lookup: NameLookup): R
   trackedAllianceNames: resolveNameArray(lookup, ruleset.trackedAllianceIds),
   trackedCorpIds: formatBigIntArray(ruleset.trackedCorpIds),
   trackedCorpNames: resolveNameArray(lookup, ruleset.trackedCorpIds),
+  trackedSystemIds: formatBigIntArray(ruleset.trackedSystemIds),
+  trackedSystemNames: resolveNameArray(lookup, ruleset.trackedSystemIds),
+  trackedSecurityTypes: ruleset.trackedSecurityTypes,
   ignoreUnlisted: ruleset.ignoreUnlisted,
   updatedBy: ruleset.updatedBy ?? null,
   createdAt: formatDate(ruleset.createdAt),

@@ -39,6 +39,19 @@ const UniverseNameSchema = z.object({
 
 const UniverseNamesResponseSchema = z.array(UniverseNameSchema);
 
+const UniverseSystemInfoSchema = z.object({
+  system_id: z.number().int(),
+  name: z.string(),
+  security_status: z.number(),
+  constellation_id: z.number().int(),
+  star_id: z.number().int().optional(),
+  planets: z.array(z.any()).optional(),
+  stargates: z.array(z.number().int()).optional(),
+  stations: z.array(z.number().int()).optional(),
+});
+
+export interface UniverseSystemInfo extends z.infer<typeof UniverseSystemInfoSchema> {}
+
 const tracer = trace.getTracer('battlescope.esi-client');
 
 const toStatusClass = (statusCode: number | undefined): string => {
@@ -151,6 +164,27 @@ export class EsiClient {
     }
 
     return resolved;
+  }
+
+  async getSystemInfo(systemId: number): Promise<UniverseSystemInfo> {
+    const operationId = 'get_universe_systems_system_id';
+    const cacheKey = buildCacheKey('universe:system', systemId);
+
+    const cached = await this.readCache<UniverseSystemInfo>(cacheKey, operationId);
+    if (cached) {
+      return cached;
+    }
+
+    const payload = await this.request<unknown>({
+      operationId,
+      method: 'GET',
+      path: `/universe/systems/${systemId}`,
+    });
+
+    const systemInfo = UniverseSystemInfoSchema.parse(payload);
+    await this.writeCache(cacheKey, systemInfo, operationId);
+
+    return systemInfo;
   }
 
   private async request<T>(options: RequestOptions): Promise<T> {

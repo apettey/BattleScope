@@ -1,5 +1,5 @@
 import type { KillmailRepository, KillmailEventInsert, RulesetRecord } from '@battlescope/database';
-import type { KillmailReference } from '@battlescope/shared';
+import type { KillmailReference, SystemSecurityResolver } from '@battlescope/shared';
 import { trace } from '@opentelemetry/api';
 import { pino } from 'pino';
 import type { KillmailSource } from './source.js';
@@ -23,6 +23,7 @@ export class IngestionService {
     private readonly repository: KillmailRepository,
     private readonly rulesetCache: RulesetCache,
     private readonly source: KillmailSource,
+    private readonly systemSecurityResolver: SystemSecurityResolver,
     private readonly enrichmentProducer?: KillmailEnrichmentProducer,
   ) {}
 
@@ -37,12 +38,39 @@ export class IngestionService {
     return total > 0 ? total : 1;
   }
 
-  private shouldIngest(reference: KillmailReference, ruleset: RulesetRecord): boolean {
+  private async shouldIngest(
+    reference: KillmailReference,
+    ruleset: RulesetRecord,
+  ): Promise<boolean> {
     const participantCount = this.calculateParticipantCount(reference);
 
     // Check minimum pilots threshold
     if (participantCount < ruleset.minPilots) {
       return false;
+    }
+
+    // Check system ID filtering
+    if (ruleset.trackedSystemIds.length > 0) {
+      const trackedSystemIds = new Set(ruleset.trackedSystemIds.map((id) => id.toString()));
+      if (!trackedSystemIds.has(reference.systemId.toString())) {
+        return false;
+      }
+    }
+
+    // Check security type filtering
+    if (ruleset.trackedSecurityTypes.length > 0) {
+      try {
+        const securityType = await this.systemSecurityResolver.getSecurityType(reference.systemId);
+        if (!ruleset.trackedSecurityTypes.includes(securityType)) {
+          return false;
+        }
+      } catch (error) {
+        this.logger.warn(
+          { err: error, systemId: reference.systemId.toString() },
+          'Failed to resolve system security type, skipping security type filter',
+        );
+        // Continue with other filters if security lookup fails
+      }
     }
 
     // Build sets of tracked IDs for efficient lookup
@@ -107,7 +135,7 @@ export class IngestionService {
 
         // Load active ruleset and check if we should ingest this killmail
         const ruleset = await this.getActiveRuleset();
-        if (!this.shouldIngest(reference, ruleset)) {
+        if (!(await this.shouldIngest(reference, ruleset))) {
           this.logger.debug({ killmailId: reference.killmailId }, 'Killmail filtered by ruleset');
           span.addEvent('filtered');
           return 'filtered';

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Common schemas
 export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
+export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
 
 export const ErrorResponseSchema = z.object({
   message: z.string(),
@@ -173,6 +174,9 @@ export const RulesetSchema = z.object({
   trackedAllianceNames: z.array(z.string().nullable()),
   trackedCorpIds: z.array(z.string()),
   trackedCorpNames: z.array(z.string().nullable()),
+  trackedSystemIds: z.array(z.string()),
+  trackedSystemNames: z.array(z.string().nullable()),
+  trackedSecurityTypes: z.array(SecurityTypeSchema),
   ignoreUnlisted: z.boolean(),
   updatedBy: z.string().nullable(),
   createdAt: z.string().datetime(),
@@ -189,6 +193,11 @@ export const RulesetUpdateSchema = z.object({
     .array(z.union([z.coerce.bigint(), z.string(), z.number()]))
     .max(250)
     .optional(),
+  trackedSystemIds: z
+    .array(z.union([z.coerce.bigint(), z.string(), z.number()]))
+    .max(1000)
+    .optional(),
+  trackedSecurityTypes: z.array(SecurityTypeSchema).optional(),
   ignoreUnlisted: z.boolean().optional(),
   updatedBy: z.string().trim().min(1).max(128).optional(),
 });

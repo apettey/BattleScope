@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { KillmailRepository, RulesetRepository, type RulesetRecord } from '@battlescope/database';
+import type { SystemSecurityResolver, SecurityType } from '@battlescope/shared';
 import { IngestionService } from '../src/service.js';
 import { MockKillmailSource } from '../src/source.js';
 import { createTestDb } from './helpers.js';
@@ -28,6 +29,18 @@ class InMemoryRulesetCache implements RulesetCache {
     // no-op
   }
 }
+
+/**
+ * Mock system security resolver for testing
+ */
+const createMockSystemSecurityResolver = (): SystemSecurityResolver => {
+  const mock: SystemSecurityResolver = {
+    getSecurityType: vi.fn().mockResolvedValue('highsec' as SecurityType),
+    getSecurityTypes: vi.fn().mockResolvedValue(new Map<bigint, SecurityType>()),
+    invalidateCache: vi.fn().mockResolvedValue(undefined),
+  };
+  return mock;
+};
 
 const reference = {
   killmailId: 9001n,
@@ -65,6 +78,7 @@ describe('IngestionService', () => {
       killmailRepository,
       cache,
       new MockKillmailSource([reference, reference]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 
@@ -89,6 +103,8 @@ describe('IngestionService', () => {
       minPilots: 5,
       trackedAllianceIds: [],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: false,
       updatedBy: 'test',
     });
@@ -100,6 +116,7 @@ describe('IngestionService', () => {
       killmailRepository,
       cache,
       new MockKillmailSource([filteredKillmail]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 
@@ -120,6 +137,8 @@ describe('IngestionService', () => {
       minPilots: 1,
       trackedAllianceIds: [88888888n],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: true,
       updatedBy: 'test',
     });
@@ -131,6 +150,7 @@ describe('IngestionService', () => {
       killmailRepository,
       cache,
       new MockKillmailSource([filteredKillmail]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 
@@ -146,6 +166,8 @@ describe('IngestionService', () => {
       minPilots: 1,
       trackedAllianceIds: [99001234n], // victimAllianceId
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: true,
       updatedBy: 'test',
     });
@@ -158,6 +180,7 @@ describe('IngestionService', () => {
       new MockKillmailSource([
         { ...reference, killmailId: 9002n }, // Use different ID to avoid duplicate
       ]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 
@@ -173,6 +196,8 @@ describe('IngestionService', () => {
       minPilots: 1,
       trackedAllianceIds: [],
       trackedCorpIds: [45678n], // attackerCorpIds[0]
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: true,
       updatedBy: 'test',
     });
@@ -185,6 +210,7 @@ describe('IngestionService', () => {
       new MockKillmailSource([
         { ...reference, killmailId: 9003n }, // Use different ID to avoid duplicate
       ]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 
@@ -199,6 +225,8 @@ describe('IngestionService', () => {
       minPilots: 1,
       trackedAllianceIds: [],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: false,
       updatedBy: 'test',
     });
@@ -211,6 +239,7 @@ describe('IngestionService', () => {
       new MockKillmailSource([
         { ...reference, killmailId: 9004n }, // Use different ID to avoid duplicate
       ]),
+      createMockSystemSecurityResolver(),
       { enqueue },
     );
 

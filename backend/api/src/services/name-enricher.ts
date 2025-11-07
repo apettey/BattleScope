@@ -126,6 +126,7 @@ const collectRulesetIds = (ruleset: RulesetRecord): Set<number> => {
   const ids = new Set<number>();
   addMany(ids, ruleset.trackedAllianceIds);
   addMany(ids, ruleset.trackedCorpIds);
+  addMany(ids, ruleset.trackedSystemIds);
   return ids;
 };
 

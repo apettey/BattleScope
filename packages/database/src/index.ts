@@ -16,6 +16,7 @@ export {
   RulesetSchema,
   RulesetUpdateSchema,
   KillmailFeedItemSchema,
+  SecurityTypeSchema,
   type BattleInsert,
   type BattleKillmailInsert,
   type BattleParticipantInsert,
@@ -31,6 +32,7 @@ export {
   type RulesetUpdate,
   type KillmailFeedItem,
   type DashboardSummary,
+  type SecurityType,
   KillmailEnrichmentStatusSchema,
 } from './types.js';
 export { createInMemoryDatabase, type InMemoryDatabase } from './testing.js';

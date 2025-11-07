@@ -1,3 +1,5 @@
+import type { SpaceType as SpaceTypeInternal } from './space-type.js';
+
 export const projectName = 'BattleScope';
 export const ENRICHMENT_QUEUE_NAME = 'killmail-enrichment';
 export interface EnrichmentJobPayload {
@@ -12,21 +14,9 @@ export const assertEnv = (key: string, defaultValue?: string): string => {
   return value;
 };
 
-export type SpaceType = 'kspace' | 'jspace' | 'pochven';
+export { deriveSpaceType, type SpaceType } from './space-type.js';
 
-export const deriveSpaceType = (systemId: bigint | number): SpaceType => {
-  const value = typeof systemId === 'bigint' ? Number(systemId) : systemId;
-
-  if (value >= 32_000_000 && value < 33_000_000) {
-    return 'pochven';
-  }
-
-  if (value >= 31_000_000 && value < 32_000_000) {
-    return 'jspace';
-  }
-
-  return 'kspace';
-};
+type SpaceType = SpaceTypeInternal;
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
@@ -101,3 +91,5 @@ export interface DashboardSummaryDto {
 }
 
 export { startTelemetry, stopTelemetry } from './otel/index.js';
+export { SystemSecurityResolver, deriveSecurityType, type SystemInfo } from './system-security.js';
+export type { SecurityType } from '@battlescope/database';

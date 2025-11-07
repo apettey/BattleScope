@@ -14,6 +14,8 @@ const mapRow = (row: {
   minPilots: number;
   trackedAllianceIds: readonly (bigint | number | string | null | undefined)[];
   trackedCorpIds: readonly (bigint | number | string | null | undefined)[];
+  trackedSystemIds: readonly (bigint | number | string | null | undefined)[];
+  trackedSecurityTypes: readonly string[];
   ignoreUnlisted: boolean;
   updatedBy: string | null;
   createdAt: Date;
@@ -24,6 +26,8 @@ const mapRow = (row: {
     minPilots: row.minPilots,
     trackedAllianceIds: toBigIntArray(row.trackedAllianceIds ?? []),
     trackedCorpIds: toBigIntArray(row.trackedCorpIds ?? []),
+    trackedSystemIds: toBigIntArray(row.trackedSystemIds ?? []),
+    trackedSecurityTypes: row.trackedSecurityTypes ?? [],
     ignoreUnlisted: row.ignoreUnlisted,
     updatedBy: row.updatedBy,
     createdAt: row.createdAt,
@@ -35,6 +39,8 @@ const defaultRuleset = (): RulesetRecord => ({
   minPilots: 1,
   trackedAllianceIds: [],
   trackedCorpIds: [],
+  trackedSystemIds: [],
+  trackedSecurityTypes: [],
   ignoreUnlisted: false,
   updatedBy: null,
   createdAt: new Date(0),
@@ -68,6 +74,8 @@ export class RulesetRepository {
         minPilots: payload.minPilots,
         trackedAllianceIds: serializeBigIntArray(payload.trackedAllianceIds),
         trackedCorpIds: serializeBigIntArray(payload.trackedCorpIds),
+        trackedSystemIds: serializeBigIntArray(payload.trackedSystemIds),
+        trackedSecurityTypes: payload.trackedSecurityTypes,
         ignoreUnlisted: payload.ignoreUnlisted,
         updatedBy: payload.updatedBy ?? null,
         updatedAt: now,
@@ -87,6 +95,8 @@ export class RulesetRepository {
         minPilots: payload.minPilots,
         trackedAllianceIds: serializeBigIntArray(payload.trackedAllianceIds),
         trackedCorpIds: serializeBigIntArray(payload.trackedCorpIds),
+        trackedSystemIds: serializeBigIntArray(payload.trackedSystemIds),
+        trackedSecurityTypes: payload.trackedSecurityTypes,
         ignoreUnlisted: payload.ignoreUnlisted,
         updatedBy: payload.updatedBy ?? null,
         createdAt: now,

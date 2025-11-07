@@ -314,6 +314,8 @@ describe('API routes', () => {
       minPilots: 1,
       trackedAllianceIds: [],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: false,
       updatedBy: null,
     });
@@ -342,6 +344,8 @@ describe('API routes', () => {
       minPilots: 1,
       trackedAllianceIds: [99001234n],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: true,
       updatedBy: 'test-tracked',
     });
@@ -359,6 +363,8 @@ describe('API routes', () => {
       minPilots: 1,
       trackedAllianceIds: [],
       trackedCorpIds: [],
+      trackedSystemIds: [],
+      trackedSecurityTypes: [],
       ignoreUnlisted: false,
       updatedBy: null,
     });
