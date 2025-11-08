@@ -52,7 +52,7 @@ generate-openapi:
 	cd backend/api && pnpm run generate-openapi
 	@echo "✅ OpenAPI spec generated at docs/openapi.json and docs/openapi-generated.yaml"
 
-ci: install-ci format-check lint typecheck test build
+ci: install-ci build format-check lint typecheck test
 
 compose-up:
 	docker compose up --build
