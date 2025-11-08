@@ -22,21 +22,28 @@ COPY packages ./packages
 
 RUN pnpm install --frozen-lockfile
 
-ARG SERVICE_SCOPE
-RUN pnpm --filter ${SERVICE_SCOPE}... build
-
-RUN pnpm prune --prod
+# Build all packages to ensure dist folders exist
+RUN pnpm -r run build
 
 FROM ${NODE_RUNTIME_IMAGE} AS runner
 
 WORKDIR /workspace
 ENV NODE_ENV=production
 
-COPY --from=builder /workspace/node_modules ./node_modules
-COPY --from=builder /workspace/backend ./backend
-COPY --from=builder /workspace/packages ./packages
+# Install pnpm in runtime image for workspace support
+RUN corepack enable pnpm
+
+# Copy workspace files
 COPY --from=builder /workspace/package.json ./package.json
+COPY --from=builder /workspace/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /workspace/pnpm-workspace.yaml ./pnpm-workspace.yaml
+
+# Copy all built packages with their dist folders
+COPY --from=builder /workspace/packages ./packages
+COPY --from=builder /workspace/backend ./backend
+
+# Install only production dependencies
+RUN pnpm install --prod --frozen-lockfile
 
 ARG BUILD_TARGET
 ARG EXPOSE_PORT
