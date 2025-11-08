@@ -59,6 +59,8 @@ services:
     command: >
       bash -lc "corepack enable pnpm &&
       pnpm --filter @battlescope/api dev --host 0.0.0.0"
+    env_file:
+      - .env
     environment:
       NODE_ENV: development
       DATABASE_URL: postgres://battlescope:battlescope@postgres:5432/battlescope
@@ -69,6 +71,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_SERVICE_NAME: battlescope-api
+      # Auth configuration loaded from .env file
+      # SESSION_REDIS_URL uses a different Redis database than the main one
+      SESSION_REDIS_URL: redis://redis:6379/1
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules

@@ -15,7 +15,7 @@ info:
 
     - Entity name resolution via ESI API
 
-    - Configurable ruleset filtering
+    - Pre-filtered killmail ingestion based on database-configured rulesets
 
 
     ## Data Types
@@ -34,6 +34,12 @@ servers:
   - url: http://localhost:3000
     description: Local development server
 tags:
+  - name: Auth
+    description: EVE Online SSO authentication
+  - name: Me
+    description: Current user profile and character management
+  - name: Admin
+    description: User and role management (Admin only)
   - name: Battles
     description: Battle reconstruction and querying
   - name: Killmails
@@ -41,4 +47,4 @@ tags:
   - name: Dashboard
     description: Statistical summaries
   - name: Rules
-    description: Ruleset configuration
+    description: Ingestion ruleset configuration

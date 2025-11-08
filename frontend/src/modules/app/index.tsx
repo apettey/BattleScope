@@ -7,8 +7,11 @@ import { RulesView } from '../rules/RulesView.js';
 import { AllianceView } from '../entities/AllianceView.js';
 import { CorporationView } from '../entities/CorporationView.js';
 import { CharacterView } from '../entities/CharacterView.js';
+import { ProfileView } from '../auth/components/ProfileView.js';
+import { AdminView } from '../auth/components/AdminView.js';
+import { UserMenu } from '../auth/components/UserMenu.js';
 
-type TabId = 'home' | 'recent' | 'rules' | 'battles';
+type TabId = 'home' | 'recent' | 'rules' | 'battles' | 'profile' | 'admin';
 type EntityType = 'alliance' | 'corporation' | 'character';
 
 type RouteState =
@@ -99,6 +102,15 @@ export const App: FC = () => {
           return <CharacterView characterId={route.entityId} />;
       }
     }
+
+    // Handle special auth routes
+    if (route.tabId === 'profile') {
+      return <ProfileView />;
+    }
+    if (route.tabId === 'admin') {
+      return <AdminView />;
+    }
+
     const tab = tabs.find((t) => t.id === route.tabId) ?? tabs[0];
     return tab.render();
   };
@@ -113,12 +125,15 @@ export const App: FC = () => {
       }}
     >
       <header style={{ marginBottom: '1.5rem', display: 'grid', gap: '1rem' }}>
-        <div>
-          <h1 style={{ marginBottom: '0.5rem' }}>BattleScope Operations Console</h1>
-          <p style={{ maxWidth: '48rem', color: '#475569' }}>
-            Monitor battle statistics, stream killmail activity, and curate ingestion rules across
-            the cluster.
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ marginBottom: '0.5rem' }}>BattleScope Operations Console</h1>
+            <p style={{ maxWidth: '48rem', color: '#475569' }}>
+              Monitor battle statistics, stream killmail activity, and curate ingestion rules across
+              the cluster.
+            </p>
+          </div>
+          <UserMenu />
         </div>
 
         <nav aria-label="Primary" style={{ borderBottom: '1px solid #cbd5f5' }}>

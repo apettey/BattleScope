@@ -12,6 +12,8 @@ import {
   createMockRepositories,
   createMockDatabase,
   createMockNameEnricher,
+  createMockEsiClient,
+  createMockAuthServices,
 } from './test-utils.js';
 import { buildServer } from './server.js';
 
@@ -23,10 +25,14 @@ async function generateOpenApiSpec() {
   const mockDb = createMockDatabase();
   const mockRepos = createMockRepositories();
   const mockEnricher = createMockNameEnricher();
+  const mockEsiClient = createMockEsiClient();
+  const mockAuthServices = createMockAuthServices();
 
   const app = buildServer({
     ...mockRepos,
+    ...mockAuthServices,
     db: mockDb,
+    esiClient: mockEsiClient,
     config: {
       port: 3000,
       host: '0.0.0.0',
@@ -37,6 +43,15 @@ async function generateOpenApiSpec() {
       esiCompatibilityDate: '2025-09-30',
       esiTimeoutMs: 10000,
       esiCacheTtlSeconds: 300,
+      eveClientId: 'mock-client-id',
+      eveClientSecret: 'mock-client-secret',
+      eveCallbackUrl: 'http://localhost:3000/auth/callback',
+      eveScopes: ['publicData'],
+      encryptionKey: 'mock-encryption-key-32-characters-long',
+      sessionTtlSeconds: 2592000,
+      sessionCookieName: 'battlescope_session',
+      authzCacheTtlSeconds: 60,
+      frontendUrl: 'http://localhost:5173',
     },
     nameEnricher: mockEnricher,
   });

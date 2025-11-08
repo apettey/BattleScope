@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type * as BattlesApi from '../battles/api.js';
 import { App } from './index.js';
+import { AuthProvider } from '../auth/AuthContext.js';
 
 type BattlesApiModule = typeof BattlesApi;
 vi.mock('../battles/api', async () => {
@@ -44,6 +45,12 @@ vi.mock('../rules/api', () => ({
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }),
+}));
+
+vi.mock('../auth/api', () => ({
+  fetchMe: vi.fn().mockRejectedValue(new Error('401 Unauthorized')),
+  logout: vi.fn(),
+  getLoginUrl: vi.fn().mockReturnValue('http://localhost:3000/auth/login'),
 }));
 
 import { fetchBattles, fetchBattleDetail } from '../battles/api.js';
@@ -122,7 +129,11 @@ describe('App', () => {
     mockedFetchBattles.mockResolvedValue({ items: [sampleSummary], nextCursor: null });
     mockedFetchBattleDetail.mockResolvedValue(sampleDetail);
 
-    render(<App />);
+    render(
+      <AuthProvider>
+        <App />
+      </AuthProvider>,
+    );
 
     expect(await screen.findByText(/Operational Overview/)).toBeInTheDocument();
     expect(await screen.findByText(/Total Battles/)).toBeInTheDocument();
