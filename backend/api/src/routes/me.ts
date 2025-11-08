@@ -2,7 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { createAuthMiddleware, MeResponseSchema } from '@battlescope/auth';
-import type { AccountRepository, CharacterRepository, FeatureRepository } from '@battlescope/database';
+import type {
+  AccountRepository,
+  CharacterRepository,
+  FeatureRepository,
+} from '@battlescope/database';
 import type { SessionService } from '@battlescope/auth';
 
 /**
@@ -50,7 +54,7 @@ export function registerMeRoutes(
       const featureRoles = await featureRepository.getAccountFeatureRoles(account.id);
 
       const primaryCharacter = account.primaryCharacterId
-        ? characters.find((c) => c.id === account.primaryCharacterId) ?? null
+        ? (characters.find((c) => c.id === account.primaryCharacterId) ?? null)
         : null;
 
       // Determine token status for each character
@@ -86,7 +90,7 @@ export function registerMeRoutes(
       });
 
       const primaryWithStatus = primaryCharacter
-        ? charactersWithStatus.find((c) => c.id === primaryCharacter.id) ?? null
+        ? (charactersWithStatus.find((c) => c.id === primaryCharacter.id) ?? null)
         : null;
 
       return reply.send({

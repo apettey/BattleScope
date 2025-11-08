@@ -120,8 +120,7 @@ export function createRequireFeatureRoleMiddleware(minRole: string, featureKey?:
     }
 
     // Get feature key from parameter or route params
-    const targetFeatureKey =
-      featureKey ?? (request.params as { featureKey?: string }).featureKey;
+    const targetFeatureKey = featureKey ?? (request.params as { featureKey?: string }).featureKey;
 
     if (!targetFeatureKey) {
       return reply.status(400).send({
@@ -168,8 +167,7 @@ export function createRequireActionMiddleware(
     }
 
     // Get feature key from parameter or route params
-    const targetFeatureKey =
-      featureKey ?? (request.params as { featureKey?: string }).featureKey;
+    const targetFeatureKey = featureKey ?? (request.params as { featureKey?: string }).featureKey;
 
     const result = await authorizationService.authorize(
       {

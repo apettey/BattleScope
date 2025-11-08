@@ -3,7 +3,12 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { EVESSOService } from '@battlescope/auth';
 import type { SessionService } from '@battlescope/auth';
-import type { AccountRepository, CharacterRepository, AuthConfigRepository, AuditLogRepository } from '@battlescope/database';
+import type {
+  AccountRepository,
+  CharacterRepository,
+  AuthConfigRepository,
+  AuditLogRepository,
+} from '@battlescope/database';
 import type { EsiClient } from '@battlescope/esi-client';
 import type { EncryptionService } from '@battlescope/auth';
 

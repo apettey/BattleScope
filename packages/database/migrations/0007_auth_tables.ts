@@ -214,11 +214,7 @@ export async function up(db: Kysely<Database>): Promise<void> {
     .column('actor_account_id')
     .execute();
 
-  await db.schema
-    .createIndex('idx_audit_logs_action')
-    .on('audit_logs')
-    .column('action')
-    .execute();
+  await db.schema.createIndex('idx_audit_logs_action').on('audit_logs').column('action').execute();
 
   await db.schema
     .createIndex('idx_audit_logs_created_at')

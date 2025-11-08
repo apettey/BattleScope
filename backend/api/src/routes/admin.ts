@@ -6,7 +6,11 @@ import {
   createRequireRoleMiddleware,
   AccountListQuerySchema,
 } from '@battlescope/auth';
-import type { AccountRepository, FeatureRepository, AuditLogRepository } from '@battlescope/database';
+import type {
+  AccountRepository,
+  FeatureRepository,
+  AuditLogRepository,
+} from '@battlescope/database';
 import type { SessionService, AuthorizationService } from '@battlescope/auth';
 
 const AccountIdParamSchema = z.object({

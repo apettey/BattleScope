@@ -70,7 +70,11 @@ export class FeatureRepository {
    * Get feature by key
    */
   async getFeatureByKey(key: string): Promise<FeatureRecord | null> {
-    const result = await this.db.selectFrom('features').selectAll().where('key', '=', key).executeTakeFirst();
+    const result = await this.db
+      .selectFrom('features')
+      .selectAll()
+      .where('key', '=', key)
+      .executeTakeFirst();
     return result ?? null;
   }
 
@@ -85,7 +89,11 @@ export class FeatureRepository {
    * Get role by key
    */
   async getRoleByKey(key: string): Promise<RoleRecord | null> {
-    const result = await this.db.selectFrom('roles').selectAll().where('key', '=', key).executeTakeFirst();
+    const result = await this.db
+      .selectFrom('roles')
+      .selectAll()
+      .where('key', '=', key)
+      .executeTakeFirst();
     return result ?? null;
   }
 
