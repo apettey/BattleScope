@@ -52,6 +52,49 @@ const UniverseSystemInfoSchema = z.object({
 
 export interface UniverseSystemInfo extends z.infer<typeof UniverseSystemInfoSchema> {}
 
+const CharacterInfoSchema = z.object({
+  character_id: z.number().int(),
+  name: z.string(),
+  corporation_id: z.number().int(),
+  alliance_id: z.number().int().optional(),
+  birthday: z.string(),
+  gender: z.enum(['male', 'female']),
+  race_id: z.number().int(),
+  bloodline_id: z.number().int(),
+  description: z.string().optional(),
+  security_status: z.number().optional(),
+});
+
+export interface CharacterInfo extends z.infer<typeof CharacterInfoSchema> {}
+
+const CorporationInfoSchema = z.object({
+  corporation_id: z.number().int(),
+  name: z.string(),
+  ticker: z.string(),
+  member_count: z.number().int(),
+  alliance_id: z.number().int().optional(),
+  ceo_id: z.number().int(),
+  creator_id: z.number().int(),
+  date_founded: z.string().optional(),
+  description: z.string().optional(),
+  tax_rate: z.number(),
+  url: z.string().optional(),
+});
+
+export interface CorporationInfo extends z.infer<typeof CorporationInfoSchema> {}
+
+const AllianceInfoSchema = z.object({
+  alliance_id: z.number().int(),
+  name: z.string(),
+  ticker: z.string(),
+  creator_id: z.number().int(),
+  creator_corporation_id: z.number().int(),
+  executor_corporation_id: z.number().int().optional(),
+  date_founded: z.string(),
+});
+
+export interface AllianceInfo extends z.infer<typeof AllianceInfoSchema> {}
+
 const tracer = trace.getTracer('battlescope.esi-client');
 
 const toStatusClass = (statusCode: number | undefined): string => {
@@ -185,6 +228,102 @@ export class EsiClient {
     await this.writeCache(cacheKey, systemInfo, operationId);
 
     return systemInfo;
+  }
+
+  async getCharacterInfo(characterId: number): Promise<CharacterInfo> {
+    const operationId = 'get_characters_character_id';
+    const cacheKey = buildCacheKey('characters:info', characterId);
+
+    const cached = await this.readCache<CharacterInfo>(cacheKey, operationId);
+    if (cached) {
+      return cached;
+    }
+
+    const payload = await this.request<unknown>({
+      operationId,
+      method: 'GET',
+      path: `/characters/${characterId}`,
+    });
+
+    const characterInfo = CharacterInfoSchema.parse(payload);
+    await this.writeCache(cacheKey, characterInfo, operationId);
+
+    return characterInfo;
+  }
+
+  async getCorporationInfo(corporationId: number): Promise<CorporationInfo> {
+    const operationId = 'get_corporations_corporation_id';
+    const cacheKey = buildCacheKey('corporations:info', corporationId);
+
+    const cached = await this.readCache<CorporationInfo>(cacheKey, operationId);
+    if (cached) {
+      return cached;
+    }
+
+    const payload = await this.request<unknown>({
+      operationId,
+      method: 'GET',
+      path: `/corporations/${corporationId}`,
+    });
+
+    const corporationInfo = CorporationInfoSchema.parse(payload);
+    await this.writeCache(cacheKey, corporationInfo, operationId);
+
+    return corporationInfo;
+  }
+
+  async getAllianceInfo(allianceId: number): Promise<AllianceInfo> {
+    const operationId = 'get_alliances_alliance_id';
+    const cacheKey = buildCacheKey('alliances:info', allianceId);
+
+    const cached = await this.readCache<AllianceInfo>(cacheKey, operationId);
+    if (cached) {
+      return cached;
+    }
+
+    const payload = await this.request<unknown>({
+      operationId,
+      method: 'GET',
+      path: `/alliances/${allianceId}`,
+    });
+
+    const allianceInfo = AllianceInfoSchema.parse(payload);
+    await this.writeCache(cacheKey, allianceInfo, operationId);
+
+    return allianceInfo;
+  }
+
+  /**
+   * Get character portrait URL
+   *
+   * @param characterId - EVE character ID
+   * @param size - Portrait size (32, 64, 128, 256, 512)
+   * @returns URL to character portrait
+   */
+  getCharacterPortraitUrl(characterId: number, size: 32 | 64 | 128 | 256 | 512 = 128): string {
+    return `https://images.evetech.net/characters/${characterId}/portrait?size=${size}`;
+  }
+
+  /**
+   * Get corporation logo URL
+   *
+   * @param corporationId - EVE corporation ID
+   * @param size - Logo size (32, 64, 128, 256)
+   * @returns URL to corporation logo
+   */
+  getCorporationLogoUrl(corporationId: number, size: 32 | 64 | 128 | 256 = 128): string {
+    return `https://images.evetech.net/corporations/${corporationId}/logo?size=${size}`;
+  }
+
+  /**
+   * Get alliance logo URL
+   *
+   * @param allianceId - EVE alliance ID
+   * @param size - Logo size (32, 64, 128, 256)
+   * @returns URL to alliance logo
+   */
+  getAllianceLogoUrl(allianceId: number, size: 32 | 64 | 128 | 256 = 128): string {
+    return `https://images.evetech.net/alliances/${allianceId}/logo?size=${size}`;
   }
 
   private async request<T>(options: RequestOptions): Promise<T> {

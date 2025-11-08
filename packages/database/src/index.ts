@@ -36,3 +36,4 @@ export {
   KillmailEnrichmentStatusSchema,
 } from './types.js';
 export { createInMemoryDatabase, type InMemoryDatabase } from './testing.js';
+export * from './repositories/auth/index.js';
