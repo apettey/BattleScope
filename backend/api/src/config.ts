@@ -11,6 +11,17 @@ const ConfigSchema = z.object({
   esiTimeoutMs: z.number().int().min(100).max(120000).default(10_000),
   esiCacheTtlSeconds: z.number().int().min(1).max(86_400).default(300),
   esiRedisCacheUrl: z.string().url().optional(),
+  // Auth configuration
+  eveClientId: z.string(),
+  eveClientSecret: z.string(),
+  eveCallbackUrl: z.string().url(),
+  eveScopes: z.array(z.string()).default(['publicData']),
+  encryptionKey: z.string().min(32),
+  sessionRedisUrl: z.string().url().optional(),
+  sessionTtlSeconds: z.number().int().min(60).max(2_592_000).default(2_592_000), // 30 days default
+  sessionCookieName: z.string().default('battlescope_session'),
+  authzCacheTtlSeconds: z.number().int().min(10).max(3600).default(60),
+  frontendUrl: z.string().url().default('http://localhost:5173'),
 });
 
 export type ApiConfig = z.infer<typeof ConfigSchema>;
@@ -60,6 +71,16 @@ const parseUrl = (value: string | undefined): string | undefined => {
   return value;
 };
 
+const parseArray = (value: string | undefined, delimiter: string = ','): string[] | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  return value
+    .split(delimiter)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+};
+
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ApiConfig =>
   ConfigSchema.parse({
     port: env.PORT ? Number(env.PORT) : undefined,
@@ -72,4 +93,15 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ApiConfig =>
     esiTimeoutMs: parseInteger(env.ESI_TIMEOUT_MS),
     esiCacheTtlSeconds: parseInteger(env.ESI_CACHE_TTL_SECONDS),
     esiRedisCacheUrl: parseUrl(env.ESI_REDIS_CACHE_URL),
+    // Auth config
+    eveClientId: env.EVE_CLIENT_ID,
+    eveClientSecret: env.EVE_CLIENT_SECRET,
+    eveCallbackUrl: env.EVE_CALLBACK_URL,
+    eveScopes: parseArray(env.EVE_SCOPES, ' '),
+    encryptionKey: env.ENCRYPTION_KEY,
+    sessionRedisUrl: parseUrl(env.SESSION_REDIS_URL),
+    sessionTtlSeconds: parseInteger(env.SESSION_TTL_SECONDS),
+    sessionCookieName: env.SESSION_COOKIE_NAME,
+    authzCacheTtlSeconds: parseInteger(env.AUTHZ_CACHE_TTL_SECONDS),
+    frontendUrl: env.FRONTEND_URL,
   });

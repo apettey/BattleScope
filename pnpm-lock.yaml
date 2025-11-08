@@ -56,6 +56,9 @@ importers:
 
   backend/api:
     dependencies:
+      '@battlescope/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@battlescope/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -65,6 +68,9 @@ importers:
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@fastify/cookie':
+        specifier: ^9.0.0
+        version: 9.4.0
       '@fastify/cors':
         specifier: ^9.0.0
         version: 9.0.1
