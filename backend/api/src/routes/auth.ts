@@ -1,8 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import type { EVESSOService } from '@battlescope/auth';
-import type { SessionService } from '@battlescope/auth';
+import type { EVESSOService, SessionService, EncryptionService } from '@battlescope/auth';
 import type {
   AccountRepository,
   CharacterRepository,
@@ -10,7 +9,6 @@ import type {
   AuditLogRepository,
 } from '@battlescope/database';
 import type { EsiClient } from '@battlescope/esi-client';
-import type { EncryptionService } from '@battlescope/auth';
 
 const AuthLoginQuerySchema = z.object({
   redirectUri: z.string().url().optional(),
@@ -184,7 +182,7 @@ export function registerAuthRoutes(
         });
 
         // Set cookie
-        reply.setCookie(sessionService.getCookieName(), sessionToken, {
+        void reply.setCookie(sessionService.getCookieName(), sessionToken, {
           httpOnly: true,
           secure: !request.server.config.developerMode,
           sameSite: 'lax',
@@ -233,7 +231,7 @@ export function registerAuthRoutes(
         await sessionService.destroySession(token);
       }
 
-      reply.clearCookie(sessionService.getCookieName());
+      void reply.clearCookie(sessionService.getCookieName());
       return reply.status(204).send();
     },
   );

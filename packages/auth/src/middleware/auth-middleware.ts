@@ -38,7 +38,7 @@ export function createAuthMiddleware(sessionService: SessionService) {
     const session = await sessionService.validateSession(token);
 
     if (!session) {
-      reply.clearCookie(sessionService.getCookieName());
+      void reply.clearCookie(sessionService.getCookieName());
       return reply.status(401).send({
         statusCode: 401,
         error: 'Unauthorized',
