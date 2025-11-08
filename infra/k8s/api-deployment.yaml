@@ -28,8 +28,6 @@ spec:
               value: '3000'
             - name: HOST
               value: '0.0.0.0'
-            - name: OTEL_SERVICE_NAME
-              value: 'battlescope-api'
           envFrom:
             - secretRef:
                 name: battlescope-secrets
@@ -38,13 +36,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 3000
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 3000
+              port: http
             initialDelaySeconds: 10
             periodSeconds: 20
           resources:
@@ -68,3 +66,4 @@ spec:
     - name: http
       port: 3000
       targetPort: http
+      nodePort: 30000

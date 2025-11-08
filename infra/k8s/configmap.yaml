@@ -17,7 +17,7 @@ data:
   POSTGRES_PORT: '5432'
   HOST: 0.0.0.0
   # Frontend configuration - API endpoint for the browser
-  VITE_API_BASE_URL: http://10.0.1.5:32298
+  VITE_API_BASE_URL: http://10.0.1.5:30000
   # OpenTelemetry configuration
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
   OTEL_METRIC_EXPORT_INTERVAL: '15000'
