@@ -70,10 +70,10 @@ interface BuildServerOptions {
   config: ApiConfig;
   nameEnricher: NameEnricher;
   esiClient: EsiClient;
-  eveSSOService: EVESSOService;
-  sessionService: SessionService;
-  authorizationService: AuthorizationService;
-  encryptionService: EncryptionService;
+  eveSSOService?: EVESSOService;
+  sessionService?: SessionService;
+  authorizationService?: AuthorizationService;
+  encryptionService?: EncryptionService;
   redis?: Redis;
 }
 
@@ -231,28 +231,38 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     return { status: 'ok' };
   });
 
-  // Register auth routes
-  registerAuthRoutes(
-    app,
-    eveSSOService,
-    sessionService,
-    accountRepository,
-    characterRepository,
-    authConfigRepository,
-    auditLogRepository,
-    esiClient,
-    encryptionService,
-    config.frontendUrl,
-  );
-  registerMeRoutes(app, sessionService, accountRepository, characterRepository, featureRepository);
-  registerAdminRoutes(
-    app,
-    sessionService,
-    authorizationService,
-    accountRepository,
-    featureRepository,
-    auditLogRepository,
-  );
+  // Register auth routes (only if auth services are configured)
+  if (eveSSOService && sessionService && authorizationService && encryptionService) {
+    registerAuthRoutes(
+      app,
+      eveSSOService,
+      sessionService,
+      accountRepository,
+      characterRepository,
+      authConfigRepository,
+      auditLogRepository,
+      esiClient,
+      encryptionService,
+      config.frontendUrl,
+    );
+    registerMeRoutes(
+      app,
+      sessionService,
+      accountRepository,
+      characterRepository,
+      featureRepository,
+    );
+    registerAdminRoutes(
+      app,
+      sessionService,
+      authorizationService,
+      accountRepository,
+      featureRepository,
+      auditLogRepository,
+    );
+  } else {
+    app.log.warn('Auth routes not registered - authentication services not configured');
+  }
 
   // Register feature routes
   registerBattleRoutes(app, battleRepository, nameEnricher);

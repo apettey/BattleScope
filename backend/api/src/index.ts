@@ -84,24 +84,39 @@ export const start = async (): Promise<void> => {
     }
   }
 
-  // Instantiate auth services
-  const encryptionService = createEncryptionService(config.encryptionKey);
-  const eveSSOService = createEVESSOService(
-    {
-      clientId: config.eveClientId,
-      clientSecret: config.eveClientSecret,
-      callbackUrl: config.eveCallbackUrl,
-      scopes: config.eveScopes,
-    },
-    esiClient,
-  );
-  const sessionService = createSessionService(sessionRedis, {
-    sessionTtl: config.sessionTtlSeconds,
-    cookieName: config.sessionCookieName,
-  });
-  const authorizationService = createAuthorizationService(sessionRedis, {
-    cacheTtl: config.authzCacheTtlSeconds,
-  });
+  // Instantiate auth services (only if auth is configured)
+  const isAuthConfigured =
+    config.eveClientId && config.eveClientSecret && config.eveCallbackUrl && config.encryptionKey;
+
+  let encryptionService: ReturnType<typeof createEncryptionService> | undefined = undefined;
+  let eveSSOService: ReturnType<typeof createEVESSOService> | undefined = undefined;
+  let sessionService: ReturnType<typeof createSessionService> | undefined = undefined;
+  let authorizationService: ReturnType<typeof createAuthorizationService> | undefined = undefined;
+
+  if (isAuthConfigured) {
+    logger.info('Auth configuration found, enabling authentication features');
+    encryptionService = createEncryptionService(config.encryptionKey!);
+    eveSSOService = createEVESSOService(
+      {
+        clientId: config.eveClientId!,
+        clientSecret: config.eveClientSecret!,
+        callbackUrl: config.eveCallbackUrl!,
+        scopes: config.eveScopes,
+      },
+      esiClient,
+    );
+    sessionService = createSessionService(sessionRedis, {
+      sessionTtl: config.sessionTtlSeconds,
+      cookieName: config.sessionCookieName,
+    });
+    authorizationService = createAuthorizationService(sessionRedis, {
+      cacheTtl: config.authzCacheTtlSeconds,
+    });
+  } else {
+    logger.warn(
+      'Auth configuration incomplete - authentication features disabled. Set EVE_CLIENT_ID, EVE_CLIENT_SECRET, EVE_CALLBACK_URL, and ENCRYPTION_KEY to enable.',
+    );
+  }
 
   const nameEnricher = new NameEnricher(esiClient);
   const app = buildServer({

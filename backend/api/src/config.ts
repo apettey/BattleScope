@@ -11,12 +11,12 @@ const ConfigSchema = z.object({
   esiTimeoutMs: z.number().int().min(100).max(120000).default(10_000),
   esiCacheTtlSeconds: z.number().int().min(1).max(86_400).default(300),
   esiRedisCacheUrl: z.string().url().optional(),
-  // Auth configuration
-  eveClientId: z.string(),
-  eveClientSecret: z.string(),
-  eveCallbackUrl: z.string().url(),
+  // Auth configuration (optional - if not provided, auth features will be disabled)
+  eveClientId: z.string().optional(),
+  eveClientSecret: z.string().optional(),
+  eveCallbackUrl: z.string().url().optional(),
   eveScopes: z.array(z.string()).default(['publicData']),
-  encryptionKey: z.string().min(32),
+  encryptionKey: z.string().min(32).optional(),
   sessionRedisUrl: z.string().url().optional(),
   sessionTtlSeconds: z.number().int().min(60).max(2_592_000).default(2_592_000), // 30 days default
   sessionCookieName: z.string().default('battlescope_session'),
