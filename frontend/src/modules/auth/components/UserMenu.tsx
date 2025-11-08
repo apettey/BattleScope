@@ -39,9 +39,7 @@ export const UserMenu: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '8px 16px', color: '#64748b', fontSize: '14px' }}>
-        Loading...
-      </div>
+      <div style={{ padding: '8px 16px', color: '#64748b', fontSize: '14px' }}>Loading...</div>
     );
   }
 
@@ -112,9 +110,7 @@ export const UserMenu: React.FC = () => {
             {user.displayName}
           </div>
           {primaryChar && (
-            <div style={{ fontSize: '12px', color: '#64748b' }}>
-              {primaryChar.eveCharacterName}
-            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>{primaryChar.eveCharacterName}</div>
           )}
         </div>
         <svg
@@ -192,7 +188,7 @@ export const UserMenu: React.FC = () => {
           </div>
           <div style={{ borderTop: '1px solid #e2e8f0', padding: '8px' }}>
             <button
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
               style={{
                 width: '100%',
                 padding: '8px 12px',

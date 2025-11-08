@@ -9,7 +9,6 @@ import {
   fetchAccountDetail,
   blockAccount,
   unblockAccount,
-  assignRoles,
   type Account,
   type AccountDetail,
 } from '../api.js';
@@ -74,7 +73,8 @@ const AccountListItem: React.FC<{
     </div>
     <div style={{ fontSize: '12px', color: '#64748b' }}>
       {account.email ?? 'No email'}
-      {account.lastLoginAt && ` • Last login: ${new Date(account.lastLoginAt).toLocaleDateString()}`}
+      {account.lastLoginAt &&
+        ` • Last login: ${new Date(account.lastLoginAt).toLocaleDateString()}`}
     </div>
   </button>
 );
@@ -140,11 +140,7 @@ const AccountDetail: React.FC<{
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-        Loading...
-      </div>
-    );
+    return <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>Loading...</div>;
   }
 
   if (error || !detail) {
@@ -195,7 +191,7 @@ const AccountDetail: React.FC<{
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           {detail.isBlocked ? (
             <button
-              onClick={handleUnblock}
+              onClick={() => void handleUnblock()}
               disabled={actionLoading}
               style={{
                 padding: '8px 16px',
@@ -211,7 +207,7 @@ const AccountDetail: React.FC<{
             </button>
           ) : (
             <button
-              onClick={handleBlock}
+              onClick={() => void handleBlock()}
               disabled={actionLoading}
               style={{
                 padding: '8px 16px',
@@ -228,14 +224,27 @@ const AccountDetail: React.FC<{
           )}
         </div>
 
-        <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
           <div style={{ marginBottom: '8px' }}>
             <span style={{ fontSize: '14px', color: '#64748b' }}>Email: </span>
             <span style={{ fontSize: '14px', color: '#0f172a' }}>{detail.email ?? 'None'}</span>
           </div>
           <div style={{ marginBottom: '8px' }}>
             <span style={{ fontSize: '14px', color: '#64748b' }}>Status: </span>
-            <span style={{ fontSize: '14px', color: detail.isBlocked ? '#dc2626' : '#10b981', fontWeight: '500' }}>
+            <span
+              style={{
+                fontSize: '14px',
+                color: detail.isBlocked ? '#dc2626' : '#10b981',
+                fontWeight: '500',
+              }}
+            >
               {detail.isBlocked ? 'Blocked' : 'Active'}
             </span>
           </div>
@@ -256,7 +265,15 @@ const AccountDetail: React.FC<{
         </h3>
 
         {detail.featureRoles.length === 0 ? (
-          <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+          <div
+            style={{
+              padding: '16px',
+              textAlign: 'center',
+              color: '#64748b',
+              backgroundColor: '#f8fafc',
+              borderRadius: '6px',
+            }}
+          >
             No roles assigned
           </div>
         ) : (
@@ -391,7 +408,14 @@ export const AdminView: React.FC = () => {
       )}
 
       {error && (
-        <div style={{ padding: '16px', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '6px' }}>
+        <div
+          style={{
+            padding: '16px',
+            backgroundColor: '#fef2f2',
+            color: '#dc2626',
+            borderRadius: '6px',
+          }}
+        >
           Error: {error}
         </div>
       )}

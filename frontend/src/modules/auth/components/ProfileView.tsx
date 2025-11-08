@@ -235,7 +235,9 @@ export const ProfileView: React.FC = () => {
             marginBottom: '24px',
           }}
         >
-          <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>
+          <h2
+            style={{ fontSize: '20px', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}
+          >
             Roles
           </h2>
 

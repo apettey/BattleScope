@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { fetchJson, buildUrl, resolveBaseUrl } from '../api/http.js';
+import { buildUrl, resolveBaseUrl } from '../api/http.js';
 
 // ============================================================================
 // Schemas
@@ -199,7 +199,10 @@ export const blockAccount = async (accountId: string, options: ApiOptions = {}):
 /**
  * Unblock an account (Admin only)
  */
-export const unblockAccount = async (accountId: string, options: ApiOptions = {}): Promise<void> => {
+export const unblockAccount = async (
+  accountId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
   const baseUrl = options.baseUrl ?? resolveBaseUrl();
   const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}/unblock`, {}, baseUrl);
 
