@@ -162,7 +162,11 @@ export interface CharactersTable {
   eveCharacterName: string;
   corpId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
   corpName: string;
-  allianceId: ColumnType<bigint | null, string | number | bigint | null, string | number | bigint | null>;
+  allianceId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
   allianceName: string | null;
   portraitUrl: string | null;
   esiAccessToken: Buffer | null;
@@ -215,9 +219,17 @@ export interface AuthConfigTable {
   id: ColumnType<boolean, boolean | undefined, never>;
   requireMembership: ColumnType<boolean, boolean | undefined, boolean>;
   allowedCorpIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
-  allowedAllianceIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
+  allowedAllianceIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
   deniedCorpIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
-  deniedAllianceIds: ColumnType<bigint[], (string | number | bigint)[], (string | number | bigint)[]>;
+  deniedAllianceIds: ColumnType<
+    bigint[],
+    (string | number | bigint)[],
+    (string | number | bigint)[]
+  >;
   updatedAt: ColumnType<Date, Date | undefined, Date>;
 }
 
@@ -227,7 +239,11 @@ export interface AuditLogsTable {
   action: string;
   targetType: string;
   targetId: string;
-  metadata: ColumnType<Record<string, unknown>, Record<string, unknown> | undefined, Record<string, unknown>>;
+  metadata: ColumnType<
+    Record<string, unknown>,
+    Record<string, unknown> | undefined,
+    Record<string, unknown>
+  >;
   createdAt: ColumnType<Date, Date | undefined, never>;
 }
 

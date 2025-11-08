@@ -285,9 +285,6 @@ export class EVESSOService {
 /**
  * Create an EVE SSO service instance
  */
-export function createEVESSOService(
-  config: EVESSOConfig,
-  esiClient: EsiClient,
-): EVESSOService {
+export function createEVESSOService(config: EVESSOConfig, esiClient: EsiClient): EVESSOService {
   return new EVESSOService(config, esiClient);
 }

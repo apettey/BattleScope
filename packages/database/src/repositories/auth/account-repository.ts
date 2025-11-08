@@ -153,18 +153,23 @@ export class AccountRepository {
   /**
    * List accounts with optional filters
    */
-  async list(options: AccountListOptions = {}): Promise<{ accounts: AccountRecord[]; total: number }> {
-    const { query, limit = 20, offset = 0, includeBlocked = false, includeDeleted = false } = options;
+  async list(
+    options: AccountListOptions = {},
+  ): Promise<{ accounts: AccountRecord[]; total: number }> {
+    const {
+      query,
+      limit = 20,
+      offset = 0,
+      includeBlocked = false,
+      includeDeleted = false,
+    } = options;
 
     let queryBuilder = this.db.selectFrom('accounts').selectAll();
 
     // Filter by query (search in display name or email)
     if (query) {
       queryBuilder = queryBuilder.where((eb) =>
-        eb.or([
-          eb('displayName', 'ilike', `%${query}%`),
-          eb('email', 'ilike', `%${query}%`),
-        ]),
+        eb.or([eb('displayName', 'ilike', `%${query}%`), eb('email', 'ilike', `%${query}%`)]),
       );
     }
 
@@ -179,7 +184,9 @@ export class AccountRepository {
     }
 
     // Get total count
-    const countResult = await queryBuilder.select((eb) => eb.fn.count('id').as('count')).executeTakeFirst();
+    const countResult = await queryBuilder
+      .select((eb) => eb.fn.count('id').as('count'))
+      .executeTakeFirst();
     const total = Number(countResult?.count ?? 0);
 
     // Get paginated results

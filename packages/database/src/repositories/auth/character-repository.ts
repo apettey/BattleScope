@@ -96,7 +96,9 @@ export class CharacterRepository {
   /**
    * Get character by EVE character ID
    */
-  async getByEveCharacterId(eveCharacterId: bigint | number | string): Promise<CharacterRecord | null> {
+  async getByEveCharacterId(
+    eveCharacterId: bigint | number | string,
+  ): Promise<CharacterRecord | null> {
     const result = await this.db
       .selectFrom('characters')
       .selectAll()

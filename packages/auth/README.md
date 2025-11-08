@@ -168,10 +168,7 @@ Requires specific action authorization.
 ```typescript
 import { createRequireActionMiddleware, AUTH_ACTIONS } from '@battlescope/auth';
 
-const requireFeatureView = createRequireActionMiddleware(
-  AUTH_ACTIONS.featureView,
-  authzService,
-);
+const requireFeatureView = createRequireActionMiddleware(AUTH_ACTIONS.featureView, authzService);
 
 app.get(
   '/features/:featureKey/data',
@@ -186,13 +183,13 @@ app.get(
 
 ## Role Hierarchy
 
-| Role     | Rank | Permissions                                  |
-| -------- | ---- | -------------------------------------------- |
-| User     | 10   | View feature content                         |
-| FC       | 20   | Create feature content                       |
-| Director | 30   | Edit any content, view/update settings       |
-| Admin    | 40   | Manage roles, full feature control           |
-| SuperAdmin | ∞  | Global admin, bypasses all checks            |
+| Role       | Rank | Permissions                            |
+| ---------- | ---- | -------------------------------------- |
+| User       | 10   | View feature content                   |
+| FC         | 20   | Create feature content                 |
+| Director   | 30   | Edit any content, view/update settings |
+| Admin      | 40   | Manage roles, full feature control     |
+| SuperAdmin | ∞    | Global admin, bypasses all checks      |
 
 ## Actions
 

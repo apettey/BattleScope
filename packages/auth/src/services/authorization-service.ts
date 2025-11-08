@@ -1,6 +1,11 @@
 import type { Redis } from 'ioredis';
 import { trace } from '@opentelemetry/api';
-import { ROLE_RANKS, AUTH_ACTIONS, type AuthzRequest, type AuthzResponse } from '../schemas/index.js';
+import {
+  ROLE_RANKS,
+  AUTH_ACTIONS,
+  type AuthzRequest,
+  type AuthzResponse,
+} from '../schemas/index.js';
 
 const tracer = trace.getTracer('@battlescope/auth');
 
@@ -210,13 +215,7 @@ export class AuthorizationService {
         const keysToDelete: string[] = [];
 
         do {
-          const [newCursor, keys] = await this.redis.scan(
-            cursor,
-            'MATCH',
-            pattern,
-            'COUNT',
-            100,
-          );
+          const [newCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
           cursor = newCursor;
           keysToDelete.push(...keys);
         } while (cursor !== '0');

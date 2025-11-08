@@ -56,11 +56,7 @@ export class SessionService {
 
         // Store in Redis if available
         if (this.redis) {
-          await this.redis.setex(
-            this.getRedisKey(token),
-            this.sessionTtl,
-            JSON.stringify(session),
-          );
+          await this.redis.setex(this.getRedisKey(token), this.sessionTtl, JSON.stringify(session));
         }
 
         span.setAttribute('account.id', options.accountId);
@@ -156,13 +152,7 @@ export class SessionService {
         const keysToDelete: string[] = [];
 
         do {
-          const [newCursor, keys] = await this.redis.scan(
-            cursor,
-            'MATCH',
-            pattern,
-            'COUNT',
-            100,
-          );
+          const [newCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
           cursor = newCursor;
 
           // Check each session

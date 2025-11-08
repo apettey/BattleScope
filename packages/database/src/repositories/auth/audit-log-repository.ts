@@ -91,7 +91,15 @@ export class AuditLogRepository {
   async list(
     options: ListAuditLogsOptions = {},
   ): Promise<{ logs: AuditLogRecord[]; total: number }> {
-    const { actorAccountId, action, targetType, limit = 50, offset = 0, startDate, endDate } = options;
+    const {
+      actorAccountId,
+      action,
+      targetType,
+      limit = 50,
+      offset = 0,
+      startDate,
+      endDate,
+    } = options;
 
     let queryBuilder = this.db.selectFrom('audit_logs').selectAll();
 
@@ -117,7 +125,9 @@ export class AuditLogRepository {
     }
 
     // Get total count
-    const countResult = await queryBuilder.select((eb) => eb.fn.count('id').as('count')).executeTakeFirst();
+    const countResult = await queryBuilder
+      .select((eb) => eb.fn.count('id').as('count'))
+      .executeTakeFirst();
     const total = Number(countResult?.count ?? 0);
 
     // Get paginated results
