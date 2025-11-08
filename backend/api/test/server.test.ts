@@ -8,6 +8,11 @@ import {
   KillmailRepository,
   RulesetRepository,
   DashboardRepository,
+  AccountRepository,
+  CharacterRepository,
+  FeatureRepository,
+  AuthConfigRepository,
+  AuditLogRepository,
   createInMemoryDatabase,
 } from '@battlescope/database';
 import type { KillmailEventInsert } from '@battlescope/database';
@@ -15,6 +20,11 @@ import type { EsiClient, UniverseName } from '@battlescope/esi-client';
 import { buildServer } from '../src/server.js';
 import type { ApiConfig } from '../src/config.js';
 import { NameEnricher } from '../src/services/name-enricher.js';
+import {
+  createMockAuthServices,
+  createMockEsiClient,
+  createMockBuildServerOptions,
+} from '../src/test-utils.js';
 
 const createNameEnricher = (): NameEnricher => {
   const cache = new Map<number, UniverseName>();
@@ -97,6 +107,15 @@ describe('API routes', () => {
     esiTimeoutMs: 10_000,
     esiCacheTtlSeconds: 300,
     esiRedisCacheUrl: undefined,
+    eveClientId: 'test-client-id',
+    eveClientSecret: 'test-client-secret',
+    eveCallbackUrl: 'http://localhost:3000/auth/callback',
+    eveScopes: ['publicData'],
+    encryptionKey: 'test-encryption-key-32-characters-long',
+    sessionTtlSeconds: 2592000,
+    sessionCookieName: 'battlescope_session',
+    authzCacheTtlSeconds: 60,
+    frontendUrl: 'http://localhost:5173',
   };
   let nameEnricher: NameEnricher;
 
@@ -173,15 +192,33 @@ describe('API routes', () => {
     await killmailRepository.markAsProcessed([2001n], secondBattleId);
     await enrichmentRepository.markFailed(2001n, 'timeout');
 
+    // Create auth repositories
+    const accountRepository = new AccountRepository(db.db);
+    const characterRepository = new CharacterRepository(db.db);
+    const featureRepository = new FeatureRepository(db.db);
+    const authConfigRepository = new AuthConfigRepository(db.db);
+    const auditLogRepository = new AuditLogRepository(db.db);
+
+    // Create mock auth services and ESI client
+    const mockAuthServices = createMockAuthServices();
+    const mockEsiClient = createMockEsiClient();
+
     nameEnricher = createNameEnricher();
     app = buildServer({
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository,
+      accountRepository,
+      characterRepository,
+      featureRepository,
+      authConfigRepository,
+      auditLogRepository,
       db: db.db,
       config: baseConfig,
       nameEnricher,
+      esiClient: mockEsiClient,
+      ...mockAuthServices,
     });
     await app.ready();
   });
@@ -389,6 +426,7 @@ describe('API routes', () => {
 
   it('includes CORS headers on killmail stream responses for allowed origins', async () => {
     const corsApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
@@ -418,6 +456,7 @@ describe('API routes', () => {
 
   it('includes CORS headers on killmail stream responses in developer mode for localhost', async () => {
     const devApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
@@ -447,6 +486,7 @@ describe('API routes', () => {
 
   it('includes CORS headers on standard responses in developer mode for localhost', async () => {
     const devApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
@@ -511,6 +551,7 @@ describe('API routes', () => {
 
   it('sends CORS headers on simple requests for configured origins', async () => {
     const corsApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
@@ -538,6 +579,7 @@ describe('API routes', () => {
 
   it('allows localhost origins when developer mode is enabled', async () => {
     const devApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
@@ -563,6 +605,7 @@ describe('API routes', () => {
 
   it('blocks disallowed origins when allowlist is configured', async () => {
     const restrictedApp = buildServer({
+      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,

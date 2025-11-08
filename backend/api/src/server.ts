@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { ZodError } from 'zod';
@@ -14,25 +15,65 @@ import type {
   KillmailRepository,
   RulesetRepository,
   DashboardRepository,
+  AccountRepository,
+  CharacterRepository,
+  FeatureRepository,
+  AuthConfigRepository,
+  AuditLogRepository,
   DatabaseClient,
 } from '@battlescope/database';
 import type { Redis } from 'ioredis';
+import type { EsiClient } from '@battlescope/esi-client';
+import type {
+  EVESSOService,
+  SessionService,
+  AuthorizationService,
+  EncryptionService,
+} from '@battlescope/auth';
 import { registerBattleRoutes } from './routes/battles.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerRulesRoutes } from './routes/rules.js';
+import { registerAuthRoutes } from './routes/auth.js';
+import { registerMeRoutes } from './routes/me.js';
+import { registerAdminRoutes } from './routes/admin.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
+
+// Extend Fastify types with custom decorators
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: DatabaseClient;
+    config: ApiConfig;
+  }
+  interface FastifyRequest {
+    account: {
+      id: string;
+      isSuperAdmin: boolean;
+      roles: Map<string, number>;
+    };
+  }
+}
 
 interface BuildServerOptions {
   battleRepository: BattleRepository;
   killmailRepository: KillmailRepository;
   rulesetRepository: RulesetRepository;
   dashboardRepository: DashboardRepository;
+  accountRepository: AccountRepository;
+  characterRepository: CharacterRepository;
+  featureRepository: FeatureRepository;
+  authConfigRepository: AuthConfigRepository;
+  auditLogRepository: AuditLogRepository;
   db: DatabaseClient;
   config: ApiConfig;
   nameEnricher: NameEnricher;
+  esiClient: EsiClient;
+  eveSSOService: EVESSOService;
+  sessionService: SessionService;
+  authorizationService: AuthorizationService;
+  encryptionService: EncryptionService;
   redis?: Redis;
 }
 
@@ -41,16 +82,40 @@ export const buildServer = ({
   killmailRepository,
   rulesetRepository,
   dashboardRepository,
+  accountRepository,
+  characterRepository,
+  featureRepository,
+  authConfigRepository,
+  auditLogRepository,
   db,
   config,
   nameEnricher,
+  esiClient,
+  eveSSOService,
+  sessionService,
+  authorizationService,
+  encryptionService,
   redis,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
+  // Decorate app with DB and config for middleware access
+  app.decorate('db', db);
+  app.decorate('config', config);
+
   // Set up Zod validators
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Register cookie plugin for session management
+  void app.register(cookie, {
+    secret: config.encryptionKey,
+    parseOptions: {
+      httpOnly: true,
+      secure: !config.developerMode,
+      sameSite: 'lax',
+    },
+  });
 
   // Register Swagger for OpenAPI generation
   void app.register(swagger, {
@@ -82,6 +147,9 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         },
       ],
       tags: [
+        { name: 'Auth', description: 'EVE Online SSO authentication' },
+        { name: 'Me', description: 'Current user profile and character management' },
+        { name: 'Admin', description: 'User and role management (Admin only)' },
         { name: 'Battles', description: 'Battle reconstruction and querying' },
         { name: 'Killmails', description: 'Killmail feed and streaming' },
         { name: 'Dashboard', description: 'Statistical summaries' },
@@ -163,6 +231,30 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     return { status: 'ok' };
   });
 
+  // Register auth routes
+  registerAuthRoutes(
+    app,
+    eveSSOService,
+    sessionService,
+    accountRepository,
+    characterRepository,
+    authConfigRepository,
+    auditLogRepository,
+    esiClient,
+    encryptionService,
+    config.frontendUrl,
+  );
+  registerMeRoutes(app, sessionService, accountRepository, characterRepository, featureRepository);
+  registerAdminRoutes(
+    app,
+    sessionService,
+    authorizationService,
+    accountRepository,
+    featureRepository,
+    auditLogRepository,
+  );
+
+  // Register feature routes
   registerBattleRoutes(app, battleRepository, nameEnricher);
   registerKillmailRoutes(
     app,

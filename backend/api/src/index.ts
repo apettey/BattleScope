@@ -4,8 +4,19 @@ import {
   KillmailRepository,
   RulesetRepository,
   DashboardRepository,
+  AccountRepository,
+  CharacterRepository,
+  FeatureRepository,
+  AuthConfigRepository,
+  AuditLogRepository,
   createDb,
 } from '@battlescope/database';
+import {
+  createEncryptionService,
+  createEVESSOService,
+  createSessionService,
+  createAuthorizationService,
+} from '@battlescope/auth';
 import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { createEsiClient } from '@battlescope/esi-client';
 import { Redis as RedisConstructor } from 'ioredis';
@@ -25,6 +36,11 @@ export const start = async (): Promise<void> => {
   const killmailRepository = new KillmailRepository(db);
   const rulesetRepository = new RulesetRepository(db);
   const dashboardRepository = new DashboardRepository(db);
+  const accountRepository = new AccountRepository(db);
+  const characterRepository = new CharacterRepository(db);
+  const featureRepository = new FeatureRepository(db);
+  const authConfigRepository = new AuthConfigRepository(db);
+  const auditLogRepository = new AuditLogRepository(db);
 
   let redis: RedisClient | null = null;
   if (config.esiRedisCacheUrl) {
@@ -51,15 +67,61 @@ export const start = async (): Promise<void> => {
     cacheTtlMs: config.esiCacheTtlSeconds * 1000,
   });
 
+  // Create separate Redis client for session management
+  let sessionRedis: RedisClient | undefined = undefined;
+  if (config.sessionRedisUrl) {
+    const client = new RedisConstructor(config.sessionRedisUrl, { lazyConnect: true });
+    try {
+      await client.connect();
+      logger.info('Connected to Redis for session storage');
+      sessionRedis = client;
+    } catch (error) {
+      logger.warn(
+        { err: error },
+        'Failed to connect to session Redis; sessions will use in-memory storage',
+      );
+      await client.quit().catch(() => undefined);
+    }
+  }
+
+  // Instantiate auth services
+  const encryptionService = createEncryptionService(config.encryptionKey);
+  const eveSSOService = createEVESSOService(
+    {
+      clientId: config.eveClientId,
+      clientSecret: config.eveClientSecret,
+      callbackUrl: config.eveCallbackUrl,
+      scopes: config.eveScopes,
+    },
+    esiClient,
+  );
+  const sessionService = createSessionService(sessionRedis, {
+    sessionTtl: config.sessionTtlSeconds,
+    cookieName: config.sessionCookieName,
+  });
+  const authorizationService = createAuthorizationService(sessionRedis, {
+    cacheTtl: config.authzCacheTtlSeconds,
+  });
+
   const nameEnricher = new NameEnricher(esiClient);
   const app = buildServer({
     battleRepository,
     killmailRepository,
     rulesetRepository,
     dashboardRepository,
+    accountRepository,
+    characterRepository,
+    featureRepository,
+    authConfigRepository,
+    auditLogRepository,
     db,
     config,
     nameEnricher,
+    esiClient,
+    eveSSOService,
+    sessionService,
+    authorizationService,
+    encryptionService,
     redis: redis ?? undefined,
   });
 
@@ -69,6 +131,9 @@ export const start = async (): Promise<void> => {
     await db.destroy();
     if (redis) {
       await redis.quit();
+    }
+    if (sessionRedis) {
+      await sessionRedis.quit();
     }
     await stopTelemetry();
   };
