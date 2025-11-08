@@ -421,6 +421,12 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.9.0
         version: 1.37.0
+      ioredis:
+        specifier: ^5.3.2
+        version: 5.8.2
+      pino:
+        specifier: ^8.17.0
+        version: 8.21.0
 
 packages:
 
