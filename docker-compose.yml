@@ -69,6 +69,15 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_SERVICE_NAME: battlescope-api
+      # Auth configuration - required for authentication features
+      # Get these from https://developers.eveonline.com/applications
+      EVE_CLIENT_ID: ${EVE_CLIENT_ID:-}
+      EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET:-}
+      EVE_CALLBACK_URL: ${EVE_CALLBACK_URL:-http://localhost:3000/auth/callback}
+      # Generate with: openssl rand -base64 32
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      SESSION_REDIS_URL: redis://redis:6379/1
     volumes:
       - .:/workspace
       - node_modules:/workspace/node_modules
