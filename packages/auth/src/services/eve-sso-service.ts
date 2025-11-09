@@ -210,7 +210,6 @@ export class EVESSOService {
   }): Promise<EVESSOTokenResponse> {
     const body = new URLSearchParams({
       ...params,
-      client_id: this.config.clientId,
       ...(params.grant_type === 'authorization_code' && {
         redirect_uri: this.config.callbackUrl,
       }),

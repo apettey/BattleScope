@@ -18,10 +18,11 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: {
-      '@battlescope/shared': resolveFromRoot('packages/shared/src/index.ts'),
-      '@battlescope/database': resolveFromRoot('packages/database/src/index.ts'),
-      '@battlescope/database/testing': resolveFromRoot('packages/database/src/testing.ts'),
-    },
+    alias: [
+      { find: '@battlescope/database/testing', replacement: resolveFromRoot('packages/database/src/testing.ts') },
+      { find: '@battlescope/database', replacement: resolveFromRoot('packages/database/src/index.ts') },
+      { find: '@battlescope/shared', replacement: resolveFromRoot('packages/shared/src/index.ts') },
+      { find: '@battlescope/esi-client', replacement: resolveFromRoot('packages/esi-client/src/index.ts') },
+    ],
   },
 });

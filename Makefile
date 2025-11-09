@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy
 
 install:
 	pnpm install
@@ -123,3 +123,18 @@ k8s-build-push:
 		-t docker.io/petdog/battlescope-db-migrate:latest \
 		-f Dockerfile .
 	@echo "All images built and pushed successfully!"
+
+k8s-redeploy:
+	@echo "🔄 Redeploying all application pods in the battlescope namespace..."
+	@echo "Restarting frontend deployment..."
+	kubectl rollout restart deployment/frontend -n battlescope
+	@echo "Restarting api deployment..."
+	kubectl rollout restart deployment/api -n battlescope
+	@echo "Restarting ingest deployment..."
+	kubectl rollout restart deployment/ingest -n battlescope
+	@echo "Restarting enrichment deployment..."
+	kubectl rollout restart deployment/enrichment -n battlescope
+	@echo "Restarting clusterer deployment..."
+	kubectl rollout restart deployment/clusterer -n battlescope
+	@echo "Note: scheduler CronJob will pick up the latest image on its next scheduled run"
+	@echo "✅ All application deployments restarted successfully!"
