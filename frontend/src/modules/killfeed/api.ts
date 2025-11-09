@@ -96,7 +96,7 @@ export const createKillmailStream = (options: KillmailStreamOptions) => {
     typeof window !== 'undefined' && typeof window.EventSource !== 'undefined';
 
   if (supportsEventSource) {
-    const source = new EventSource(url);
+    const source = new EventSource(url, { withCredentials: true });
 
     source.addEventListener('snapshot', (event) => {
       try {
