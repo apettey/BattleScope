@@ -7,6 +7,7 @@ The BattleScope logger automatically adds file and package information to every 
 ## Features
 
 Every log entry automatically includes:
+
 - `file` - Source file path (e.g., `backend/api/src/routes/auth.ts`)
 - `package` - Package name (e.g., `api`, `auth`, `database`)
 - `caller` - Function/method name (when available)
@@ -84,38 +85,42 @@ This happens automatically via Pino's `mixin` feature - no manual logging requir
 
 The logger automatically detects these packages from file paths:
 
-| File Path Pattern | Package Name |
-|------------------|--------------|
-| `backend/api/**` | `api` |
-| `backend/ingest/**` | `ingest` |
-| `backend/enrichment/**` | `enrichment` |
-| `backend/clusterer/**` | `clusterer` |
-| `backend/scheduler/**` | `scheduler` |
-| `packages/auth/**` | `auth` |
-| `packages/database/**` | `database` |
-| `packages/esi-client/**` | `esi-client` |
+| File Path Pattern            | Package Name     |
+| ---------------------------- | ---------------- |
+| `backend/api/**`             | `api`            |
+| `backend/ingest/**`          | `ingest`         |
+| `backend/enrichment/**`      | `enrichment`     |
+| `backend/clusterer/**`       | `clusterer`      |
+| `backend/scheduler/**`       | `scheduler`      |
+| `packages/auth/**`           | `auth`           |
+| `packages/database/**`       | `database`       |
+| `packages/esi-client/**`     | `esi-client`     |
 | `packages/battle-reports/**` | `battle-reports` |
-| `packages/battle-intel/**` | `battle-intel` |
-| `packages/shared/**` | `shared` |
+| `packages/battle-intel/**`   | `battle-intel`   |
+| `packages/shared/**`         | `shared`         |
 
 ## Querying Logs in Grafana
 
 ### By File
+
 ```logql
 {file="backend/api/src/routes/auth.ts"}
 ```
 
 ### By Package
+
 ```logql
 {package="auth"}
 ```
 
 ### By Package + Error Level
+
 ```logql
 {package="database"} | json | level >= 50
 ```
 
 ### All Auth Route Files
+
 ```logql
 {file=~".*routes/auth.*"}
 ```
@@ -123,6 +128,7 @@ The logger automatically detects these packages from file paths:
 ## Performance
 
 The stack trace extraction has minimal performance impact:
+
 - Only runs once per log entry
 - Uses cached Error.prepareStackTrace
 - Skips pino internal frames
@@ -131,6 +137,7 @@ The stack trace extraction has minimal performance impact:
 ## Log Levels
 
 Standard Pino levels:
+
 - `10` - trace
 - `20` - debug
 - `30` - info (default)
@@ -139,6 +146,7 @@ Standard Pino levels:
 - `60` - fatal
 
 Set via environment variable:
+
 ```bash
 LOG_LEVEL=debug npm start
 ```
@@ -146,36 +154,43 @@ LOG_LEVEL=debug npm start
 ## Best Practices
 
 ### DO:
+
 ✅ Use structured logging with context objects
+
 ```typescript
 logger.info({ userId, action: 'login' }, 'User logged in');
 ```
 
 ✅ Log errors with error objects
+
 ```typescript
 logger.error({ error, context }, 'Operation failed');
 ```
 
 ✅ Use appropriate log levels
+
 ```typescript
-logger.debug({ details }, 'Debug info');  // Development only
+logger.debug({ details }, 'Debug info'); // Development only
 logger.info({ event }, 'Normal operation');
 logger.warn({ issue }, 'Potential problem');
 logger.error({ error }, 'Error occurred');
 ```
 
 ### DON'T:
+
 ❌ Log sensitive data (passwords, tokens, PII)
+
 ```typescript
 // BAD
 logger.info({ password, accessToken }, 'Auth data');
 ```
 
 ❌ Log in hot loops without throttling
+
 ```typescript
 // BAD
 for (const item of millionItems) {
-  logger.info({ item }, 'Processing');  // Creates millions of logs!
+  logger.info({ item }, 'Processing'); // Creates millions of logs!
 }
 
 // GOOD
@@ -183,6 +198,7 @@ logger.info({ count: millionItems.length }, 'Processing items');
 ```
 
 ❌ Use string concatenation
+
 ```typescript
 // BAD
 logger.info('User ' + userId + ' did ' + action);
@@ -194,6 +210,7 @@ logger.info({ userId, action }, 'User action');
 ## Integration with Other Services
 
 All backend services should use this logger:
+
 - ✅ API (`backend/api`)
 - ✅ Ingest (`backend/ingest`)
 - ✅ Enrichment (`backend/enrichment`)
@@ -201,6 +218,7 @@ All backend services should use this logger:
 - ✅ Scheduler (`backend/scheduler`)
 
 Packages can also use it:
+
 - ✅ Auth (`packages/auth`)
 - ✅ Database (`packages/database`)
 - ✅ ESI Client (`packages/esi-client`)
@@ -208,15 +226,18 @@ Packages can also use it:
 ## Troubleshooting
 
 ### File shows as "unknown"
+
 - Logger couldn't parse the stack trace
 - Might be from a native module or eval'd code
 - Check that the file is not in node_modules
 
 ### Package shows as "unknown"
+
 - File path doesn't match any known pattern
 - Add the pattern to `getCallerInfo()` in `packages/shared/src/logger.ts`
 
 ### Caller is undefined
+
 - Anonymous function or arrow function
 - Add a name: `const handler = function namedHandler() { ... }`
 - Or use method syntax: `{ async handleRequest() { ... } }`
@@ -227,11 +248,13 @@ To add a new package pattern:
 
 1. Edit `packages/shared/src/logger.ts`
 2. Add to the `getCallerInfo()` function:
+
 ```typescript
 else if (file.startsWith('backend/my-service/')) {
   pkg = 'my-service';
 }
 ```
+
 3. Rebuild shared package: `pnpm --filter @battlescope/shared run build`
 4. Rebuild services that use it
 

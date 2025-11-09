@@ -3,6 +3,7 @@
 ## Overview
 
 This guide covers the complete logging and observability stack for BattleScope using:
+
 - **Loki** - Lightweight log aggregation (like Prometheus, but for logs)
 - **Promtail** - Log collection agent (DaemonSet)
 - **OTEL Collector** - Logs pipeline and forwarding
@@ -11,6 +12,7 @@ This guide covers the complete logging and observability stack for BattleScope u
 ### Configuration Profile: Maximum Capture, Short Retention
 
 This setup is optimized for **real-time debugging** with:
+
 - ✅ **1 hour retention** - Aggressive cleanup for minimal storage costs
 - ✅ **Maximum log capture** - No rate limiting or sampling
 - ✅ **High ingestion limits** - Capture everything your apps log
@@ -42,6 +44,7 @@ kubectl apply -f infra/k8s/loki-deployment.yaml
 ```
 
 This creates:
+
 - Loki StatefulSet (with 10Gi persistent storage)
 - Loki Service
 - Loki ConfigMap with 7-day retention
@@ -55,6 +58,7 @@ kubectl apply -f infra/k8s/promtail-daemonset.yaml
 ```
 
 This creates:
+
 - Promtail DaemonSet (runs on every node)
 - ServiceAccount and RBAC permissions
 - Promtail ConfigMap for log scraping
@@ -84,6 +88,7 @@ kubectl rollout restart deployment/grafana -n battlescope
 ```
 
 Or use the convenient Makefile command:
+
 ```bash
 make k8s-restart-observability
 ```
@@ -106,6 +111,7 @@ kubectl logs -n battlescope -l app=promtail --tail=50
 ### Access Grafana
 
 1. Port-forward Grafana:
+
    ```bash
    kubectl port-forward -n battlescope svc/grafana 3001:3000
    ```
@@ -128,6 +134,7 @@ kubectl port-forward -n battlescope svc/loki 3100:3100
 ```
 
 Then access:
+
 - **LogQL API**: http://localhost:3100/loki/api/v1/query_range
 - **Metrics**: http://localhost:3100/metrics
 - **Health**: http://localhost:3100/ready
@@ -211,6 +218,7 @@ Promtail automatically adds these labels to all logs:
 - `file` - Source file path (e.g., backend/api/src/routes/auth.ts)
 
 Pino JSON logs also include:
+
 - `level` - Log level (10=trace, 20=debug, 30=info, 40=warn, 50=error, 60=fatal)
 - `msg` - Log message
 - `reqId` - Request ID (for request tracking)
@@ -232,6 +240,7 @@ Pino JSON logs also include:
 ### Why 1 Hour?
 
 This configuration is optimized for:
+
 1. **Real-time debugging** - Full logs available for recent activity
 2. **Minimal storage costs** - Logs older than 1 hour are automatically deleted
 3. **Maximum capture** - No rate limiting means you get ALL logs
@@ -243,26 +252,28 @@ If you need longer retention, edit `infra/k8s/loki-deployment.yaml`:
 
 ```yaml
 limits_config:
-  retention_period: 3h  # Or 6h, 12h, 24h, etc.
-  max_query_lookback: 3h  # Match retention period
-  reject_old_samples_max_age: 3h  # Match retention period
+  retention_period: 3h # Or 6h, 12h, 24h, etc.
+  max_query_lookback: 3h # Match retention period
+  reject_old_samples_max_age: 3h # Match retention period
 
 chunk_store_config:
-  max_look_back_period: 3h  # Match retention period
+  max_look_back_period: 3h # Match retention period
 
 table_manager:
-  retention_period: 3h  # Match retention period
+  retention_period: 3h # Match retention period
 ```
 
 **Important**: If increasing retention beyond 6h, also increase storage:
+
 ```yaml
 volumeClaimTemplates:
   resources:
     requests:
-      storage: 5Gi  # Or 10Gi for 24h+
+      storage: 5Gi # Or 10Gi for 24h+
 ```
 
 Then restart Loki:
+
 ```bash
 kubectl apply -f infra/k8s/loki-deployment.yaml
 kubectl rollout restart statefulset/loki -n battlescope
@@ -271,6 +282,7 @@ kubectl rollout restart statefulset/loki -n battlescope
 ### Storage Usage
 
 Check current storage:
+
 ```bash
 kubectl exec -n battlescope loki-0 -- df -h /loki
 ```
@@ -280,11 +292,13 @@ kubectl exec -n battlescope loki-0 -- df -h /loki
 ### Loki Not Receiving Logs
 
 1. Check Promtail is running:
+
    ```bash
    kubectl get ds promtail -n battlescope
    ```
 
 2. Check Promtail logs for errors:
+
    ```bash
    kubectl logs -n battlescope -l app=promtail --tail=100
    ```
@@ -297,6 +311,7 @@ kubectl exec -n battlescope loki-0 -- df -h /loki
 ### OTEL Logs Not Forwarding
 
 1. Check OTEL collector logs:
+
    ```bash
    kubectl logs -n battlescope -l app=otel-collector --tail=100 | grep -i loki
    ```
@@ -309,11 +324,13 @@ kubectl exec -n battlescope loki-0 -- df -h /loki
 ### Grafana Not Showing Loki Datasource
 
 1. Check Grafana logs:
+
    ```bash
    kubectl logs -n battlescope -l app=grafana --tail=100
    ```
 
 2. Verify datasources config:
+
    ```bash
    kubectl get cm grafana-datasources -n battlescope -o yaml
    ```
@@ -327,15 +344,16 @@ kubectl exec -n battlescope loki-0 -- df -h /loki
 
 Expected resource consumption with **1-hour retention, maximum capture** configuration:
 
-| Component | Memory | CPU | Storage | Notes |
-|-----------|--------|-----|---------|-------|
-| Loki | 128-512Mi | 100-500m | 2Gi | May spike during high log volume |
-| Promtail (per node) | 64-128Mi | 50-200m | None | Scales with number of pods |
-| OTEL Collector | 256-512Mi | 100-500m | None | - |
+| Component           | Memory    | CPU      | Storage | Notes                            |
+| ------------------- | --------- | -------- | ------- | -------------------------------- |
+| Loki                | 128-512Mi | 100-500m | 2Gi     | May spike during high log volume |
+| Promtail (per node) | 64-128Mi  | 50-200m  | None    | Scales with number of pods       |
+| OTEL Collector      | 256-512Mi | 100-500m | None    | -                                |
 
 Total additional overhead: ~500Mi-1Gi RAM, ~300m-1000m CPU, 2Gi storage
 
 **Note**: With maximum capture enabled (no rate limiting), Loki may use more CPU/memory during high log volume. The configuration allows:
+
 - Up to 100MB/s ingestion rate
 - 200MB burst capacity
 - Unlimited streams per service

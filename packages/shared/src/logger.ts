@@ -1,6 +1,3 @@
-import type { PinoLoggerOptions } from 'fastify/types/logger';
-import type pino from 'pino';
-
 /**
  * Extract file path and class/function name from stack trace
  */
@@ -73,11 +70,36 @@ function getCallerInfo(): { file: string; package: string; caller?: string } {
   return { file: 'unknown', package: 'unknown' };
 }
 
+interface RequestLike {
+  method?: string;
+  url?: string;
+  headers?: Record<string, unknown>;
+  ip?: string;
+}
+
+interface ResponseLike {
+  statusCode?: number;
+}
+
 /**
  * Create Pino logger configuration with automatic file/class tracking
  * Works with both Fastify and standalone Pino
  */
-export function createLoggerConfig(): PinoLoggerOptions | pino.LoggerOptions {
+export function createLoggerConfig(): {
+  level: string;
+  mixin: () => { file: string; package: string; caller?: string };
+  serializers: {
+    error: (err: Error) => { type: string; message: string; stack?: string };
+    req: (req: RequestLike) => {
+      method?: string;
+      url?: string;
+      headers?: Record<string, unknown>;
+      remoteAddress?: string;
+    };
+    res: (res: ResponseLike) => { statusCode?: number };
+  };
+  timestamp: () => string;
+} {
   return {
     level: process.env.LOG_LEVEL || 'info',
     // Add caller information to every log
@@ -91,13 +113,13 @@ export function createLoggerConfig(): PinoLoggerOptions | pino.LoggerOptions {
         message: err.message,
         stack: err.stack,
       }),
-      req: (req: any) => ({
+      req: (req: RequestLike) => ({
         method: req.method,
         url: req.url,
         headers: req.headers,
         remoteAddress: req.ip,
       }),
-      res: (res: any) => ({
+      res: (res: ResponseLike) => ({
         statusCode: res.statusCode,
       }),
     },
