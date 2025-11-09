@@ -13,8 +13,8 @@ import {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
-  createInMemoryDatabase,
 } from '@battlescope/database';
+import { createInMemoryDatabase } from '@battlescope/database/testing';
 import type { KillmailEventInsert } from '@battlescope/database';
 import type { EsiClient, UniverseName } from '@battlescope/esi-client';
 import { buildServer } from '../src/server.js';

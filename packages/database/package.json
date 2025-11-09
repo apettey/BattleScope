@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/database/src/index.js",
   "types": "dist/database/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/database/src/index.d.ts",
+      "default": "./dist/database/src/index.js"
+    },
+    "./testing": {
+      "types": "./dist/database/src/testing.d.ts",
+      "default": "./dist/database/src/testing.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
