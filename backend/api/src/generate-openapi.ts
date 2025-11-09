@@ -50,6 +50,7 @@ async function generateOpenApiSpec() {
       encryptionKey: 'mock-encryption-key-32-characters-long',
       sessionTtlSeconds: 2592000,
       sessionCookieName: 'battlescope_session',
+      sessionCookieSecure: true,
       authzCacheTtlSeconds: 60,
       frontendUrl: 'http://localhost:5173',
     },

@@ -6,7 +6,7 @@ import { SessionSchema, type Session } from '../schemas/index.js';
 const tracer = trace.getTracer('@battlescope/auth');
 
 export interface SessionServiceConfig {
-  sessionTtl: number; // seconds, default 30 days
+  sessionTtl: number; // seconds, default 8 hours (configurable via SESSION_TTL_SECONDS)
   cookieName: string;
 }
 
@@ -26,6 +26,7 @@ export class SessionService {
   private readonly sessionTtl: number;
   private readonly cookieName: string;
   private readonly keyPrefix = 'battlescope:session:';
+  private readonly accountSessionPrefix = 'battlescope:account-session:';
 
   constructor(
     private readonly redis: Redis | undefined,
@@ -38,12 +39,24 @@ export class SessionService {
   /**
    * Create a new session
    *
+   * NOTE: This enforces single-session-per-user. Any existing session for this account
+   * will be invalidated when a new session is created.
+   *
    * @param options - Session creation options
    * @returns Session token
    */
   async createSession(options: CreateSessionOptions): Promise<string> {
     return tracer.startActiveSpan('session.create', async (span) => {
       try {
+        // Check for existing session and invalidate it (single-session-per-user)
+        if (this.redis) {
+          const existingToken = await this.redis.get(this.getAccountSessionKey(options.accountId));
+          if (existingToken) {
+            await this.redis.del(this.getRedisKey(existingToken));
+            span.setAttribute('previous.session.invalidated', true);
+          }
+        }
+
         const token = this.generateToken();
         const expiresAt = Date.now() + this.sessionTtl * 1000;
 
@@ -56,7 +69,14 @@ export class SessionService {
 
         // Store in Redis if available
         if (this.redis) {
+          // Store session data
           await this.redis.setex(this.getRedisKey(token), this.sessionTtl, JSON.stringify(session));
+          // Track current session token for this account
+          await this.redis.setex(
+            this.getAccountSessionKey(options.accountId),
+            this.sessionTtl,
+            token,
+          );
         }
 
         span.setAttribute('account.id', options.accountId);
@@ -123,6 +143,23 @@ export class SessionService {
     return tracer.startActiveSpan('session.destroy', async (span) => {
       try {
         if (this.redis) {
+          // Get session to find accountId
+          const data = await this.redis.get(this.getRedisKey(token));
+          if (data) {
+            try {
+              const session = SessionSchema.parse(JSON.parse(data));
+              // Remove account-session mapping if this is the current session
+              const currentToken = await this.redis.get(
+                this.getAccountSessionKey(session.accountId),
+              );
+              if (currentToken === token) {
+                await this.redis.del(this.getAccountSessionKey(session.accountId));
+              }
+            } catch {
+              // Invalid session data, continue with deletion anyway
+            }
+          }
+          // Delete session data
           await this.redis.del(this.getRedisKey(token));
         }
       } catch (error) {
@@ -219,6 +256,13 @@ export class SessionService {
    */
   private getRedisKey(token: string): string {
     return `${this.keyPrefix}${token}`;
+  }
+
+  /**
+   * Get Redis key for account's current session
+   */
+  private getAccountSessionKey(accountId: string): string {
+    return `${this.accountSessionPrefix}${accountId}`;
   }
 
   /**

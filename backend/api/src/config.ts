@@ -18,8 +18,9 @@ const ConfigSchema = z.object({
   eveScopes: z.array(z.string()).default(['publicData']),
   encryptionKey: z.string().min(32).optional(),
   sessionRedisUrl: z.string().url().optional(),
-  sessionTtlSeconds: z.number().int().min(60).max(2_592_000).default(2_592_000), // 30 days default
+  sessionTtlSeconds: z.number().int().min(60).max(2_592_000).default(28_800), // 8 hours default
   sessionCookieName: z.string().default('battlescope_session'),
+  sessionCookieSecure: z.boolean().default(true), // Set to false for local/k8s without SSL
   authzCacheTtlSeconds: z.number().int().min(10).max(3600).default(60),
   frontendUrl: z.string().url().default('http://localhost:5173'),
 });
@@ -102,6 +103,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ApiConfig =>
     sessionRedisUrl: parseUrl(env.SESSION_REDIS_URL),
     sessionTtlSeconds: parseInteger(env.SESSION_TTL_SECONDS),
     sessionCookieName: env.SESSION_COOKIE_NAME,
+    sessionCookieSecure: parseBoolean(env.SESSION_COOKIE_SECURE),
     authzCacheTtlSeconds: parseInteger(env.AUTHZ_CACHE_TTL_SECONDS),
     frontendUrl: env.FRONTEND_URL,
   });

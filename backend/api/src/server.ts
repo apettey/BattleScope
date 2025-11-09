@@ -30,6 +30,7 @@ import type {
   AuthorizationService,
   EncryptionService,
 } from '@battlescope/auth';
+import { createAuthMiddleware } from '@battlescope/auth';
 import { registerBattleRoutes } from './routes/battles.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
@@ -231,6 +232,42 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     await db.selectFrom('battles').select('id').limit(1).execute();
     return { status: 'ok' };
   });
+
+  // Public routes that don't require authentication
+  const PUBLIC_ROUTES = new Set([
+    '/healthz',
+    '/auth/login',
+    '/auth/callback',
+    '/docs',
+    '/docs/static/*',
+    '/docs/json',
+  ]);
+
+  // Apply global auth middleware to all routes except public ones
+  if (sessionService) {
+    const authMiddleware = createAuthMiddleware(sessionService);
+
+    app.addHook('preHandler', async (request, reply) => {
+      // Skip auth for public routes
+      if (PUBLIC_ROUTES.has(request.url) || request.url.startsWith('/docs/')) {
+        return;
+      }
+
+      // Skip auth for exact pattern matches
+      for (const route of PUBLIC_ROUTES) {
+        if (route.endsWith('*') && request.url.startsWith(route.slice(0, -1))) {
+          return;
+        }
+      }
+
+      // Apply auth middleware
+      await authMiddleware(request, reply);
+    });
+
+    app.log.info('Global auth middleware enabled');
+  } else {
+    app.log.warn('Global auth middleware not enabled - session service not configured');
+  }
 
   // Register auth routes (only if auth services are configured)
   if (eveSSOService && sessionService && authorizationService && encryptionService) {

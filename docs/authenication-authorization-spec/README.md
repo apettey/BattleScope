@@ -1,7 +1,25 @@
 # Authentication & Authorization Spec (EVE Online SSO, Multi-Character, Feature-Scoped RBAC)
 
-_Last updated: 2025-11-07 20:30 (Europe/Berlin)_
+_Last updated: 2025-11-09_
 _Updated for BattleScope architecture: 2025-11-07_
+
+---
+
+## ⚠️ CRITICAL IMPLEMENTATION GAPS IDENTIFIED (2025-11-09)
+
+**Status**: Authentication flow is incomplete. The following pieces are MISSING and must be implemented:
+
+1. **❌ Session Cookie Not Set** - OAuth callback does not set `battlescope_session` cookie
+2. **❌ Session Storage Not Implemented** - Redis session management missing
+3. **❌ OAuth Token Storage Missing** - ESI tokens not encrypted and stored in database
+4. **❌ Token Refresh Not Implemented** - No automatic token refresh mechanism
+5. **❌ Multi-Character Support Incomplete** - Character linking flow not functional
+
+**See**: [Session Management Specification](./session-management-spec.md) for complete implementation requirements.
+
+**Impact**: Users authenticate but cannot stay logged in; ESI API calls on behalf of users are not possible.
+
+---
 
 ## 1) Purpose & Scope
 
@@ -417,10 +435,11 @@ export const registerAuthRoutes = (
       const { code, state } = request.query;
       const session = await authService.handleCallback(code, state);
 
-      // Set HTTP-only secure cookie
+      // ⚠️ CRITICAL: Set HTTP-only secure cookie
+      // See session-management-spec.md for complete implementation
       reply.setCookie('battlescope_session', session.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 30, // 30 days
       });
@@ -1039,11 +1058,16 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 
 ## 13) Implementation Phases
 
+**⚠️ CRITICAL: See [Session Management Spec](./session-management-spec.md) for required session cookie, token storage, and refresh implementation details.**
+
 ### Phase 1: Database & Core Auth (MVP)
 - [ ] Create database migrations for auth tables
 - [ ] Implement `AccountRepository` and `CharactersRepository` with Kysely
 - [ ] Build EVE SSO OAuth flow (`/auth/login`, `/auth/callback`)
-- [ ] Implement session management with Redis
+- [ ] **Implement session management with Redis** ⚠️ See session-management-spec.md
+- [ ] **Set session cookies after OAuth callback** ⚠️ Critical missing piece
+- [ ] **Implement token encryption/decryption** ⚠️ Required for ESI token storage
+- [ ] **Store encrypted OAuth tokens in characters table** ⚠️ Required for multi-character
 - [ ] Create `authMiddleware` for session validation
 - [ ] Add `GET /me` endpoint
 - [ ] Implement org gating logic (allow/deny lists)

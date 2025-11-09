@@ -4,6 +4,7 @@
 
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { fetchMe, logout as apiLogout, type MeResponse } from './api.js';
+import { ApiError } from '../api/http.js';
 
 interface AuthContextValue {
   user: MeResponse | null;
@@ -11,6 +12,7 @@ interface AuthContextValue {
   error: Error | null;
   refetch: () => Promise<void>;
   logout: () => Promise<void>;
+  handleApiError: (error: unknown) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -32,7 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(data);
     } catch (err) {
       // If unauthorized, user is not logged in - this is expected
-      if (err instanceof Error && err.message.includes('401')) {
+      if (err instanceof ApiError && err.status === 401) {
         setUser(null);
         setError(null);
       } else {
@@ -53,6 +55,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  /**
+   * Global API error handler
+   * - 401: Session expired/invalid -> log out user
+   * - 403: Insufficient permissions -> show error but keep logged in
+   * - Other: Show generic error
+   */
+  const handleApiError = (error: unknown) => {
+    if (error instanceof ApiError) {
+      if (error.status === 401) {
+        // Session expired or invalid - log out
+        setUser(null);
+        setError(new Error('Your session has expired. Please log in again.'));
+      } else if (error.status === 403) {
+        // Permission denied - keep user logged in but show error
+        setError(new Error('You do not have permission to access this feature.'));
+      } else {
+        setError(error);
+      }
+    } else if (error instanceof Error) {
+      setError(error);
+    } else {
+      setError(new Error('An unknown error occurred'));
+    }
+  };
+
   useEffect(() => {
     void fetchUser();
   }, []);
@@ -63,6 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     refetch: fetchUser,
     logout,
+    handleApiError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -43,6 +43,16 @@ export const buildUrl = (
   return url.toString();
 };
 
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export const fetchJson = async <TData = unknown>(
   input: string,
   init: RequestInit | undefined,
@@ -51,7 +61,10 @@ export const fetchJson = async <TData = unknown>(
   const response = await fetchFn(input, init);
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`Request failed (${response.status}): ${body || response.statusText}`);
+    throw new ApiError(
+      response.status,
+      `Request failed (${response.status}): ${body || response.statusText}`,
+    );
   }
   return (await response.json()) as TData;
 };

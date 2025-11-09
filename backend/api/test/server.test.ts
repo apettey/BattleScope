@@ -114,6 +114,7 @@ describe('API routes', () => {
     encryptionKey: 'test-encryption-key-32-characters-long',
     sessionTtlSeconds: 2592000,
     sessionCookieName: 'battlescope_session',
+    sessionCookieSecure: false,
     authzCacheTtlSeconds: 60,
     frontendUrl: 'http://localhost:5173',
   };

@@ -260,11 +260,15 @@ export function registerAuthRoutes(
 
         // Set cookie
         request.log.info('Setting session cookie');
+        // Extract hostname from request (strip port if present)
+        // This allows the cookie to be shared between API and frontend on different ports
+        const hostname = request.hostname.split(':')[0];
         void reply.setCookie(sessionService.getCookieName(), sessionToken, {
           httpOnly: true,
-          secure: !request.server.config.developerMode,
+          secure: request.server.config.sessionCookieSecure,
           sameSite: 'lax',
           path: '/',
+          domain: hostname,
           maxAge: request.server.config.sessionTtlSeconds,
         });
 

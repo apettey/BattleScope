@@ -48,7 +48,29 @@ vi.mock('../rules/api', () => ({
 }));
 
 vi.mock('../auth/api', () => ({
-  fetchMe: vi.fn().mockRejectedValue(new Error('401 Unauthorized')),
+  fetchMe: vi.fn().mockResolvedValue({
+    accountId: 'test-account-id',
+    displayName: 'Test User',
+    email: 'test@example.com',
+    isSuperAdmin: false,
+    primaryCharacter: {
+      id: 'char-1',
+      accountId: 'test-account-id',
+      eveCharacterId: '123456789',
+      eveCharacterName: 'Test Character',
+      corpId: '98765432',
+      corpName: 'Test Corporation',
+      allianceId: null,
+      allianceName: null,
+      portraitUrl: 'https://images.evetech.net/characters/123456789/portrait',
+      scopes: ['esi-killmails.read_killmails.v1'],
+      tokenStatus: 'valid' as const,
+      lastVerifiedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    },
+    characters: [],
+    featureRoles: [],
+  }),
   logout: vi.fn(),
   getLoginUrl: vi.fn().mockReturnValue('http://localhost:3000/auth/login'),
 }));
