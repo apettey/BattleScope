@@ -13,6 +13,7 @@
 ### Purpose
 
 Provide users with comprehensive battle reconstructions that group related killmails by:
+
 - Temporal proximity (kills happening close together in time)
 - Spatial proximity (kills in the same solar system)
 - Participant overlap (shared attackers/victims across kills)
@@ -28,14 +29,14 @@ Provide users with comprehensive battle reconstructions that group related killm
 
 ## 2. Feature Concepts
 
-| Concept | Description |
-|---------|-------------|
-| **Killmail Reference** | Minimal object containing killmail ID, timestamp, systemId, and zKillboard link |
-| **Battle** | Logical grouping of killmail references determined by clustering algorithm (time, system, participants) |
-| **Battle Participant** | Any character appearing in one or more killmails within the battle |
-| **Side** | Distinct group within a battle (based on attacker/victim overlap and alliance correlation) |
-| **Space Type** | K-space (known), J-space (wormhole), or Poch-space (Triglavian) |
-| **Source Link** | Permanent zKillboard "related kills" URL for the battle |
+| Concept                | Description                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Killmail Reference** | Minimal object containing killmail ID, timestamp, systemId, and zKillboard link                         |
+| **Battle**             | Logical grouping of killmail references determined by clustering algorithm (time, system, participants) |
+| **Battle Participant** | Any character appearing in one or more killmails within the battle                                      |
+| **Side**               | Distinct group within a battle (based on attacker/victim overlap and alliance correlation)              |
+| **Space Type**         | K-space (known), J-space (wormhole), or Poch-space (Triglavian)                                         |
+| **Source Link**        | Permanent zKillboard "related kills" URL for the battle                                                 |
 
 ---
 
@@ -91,6 +92,7 @@ Provide users with comprehensive battle reconstructions that group related killm
 ### 4.1 Tables
 
 #### battles
+
 ```sql
 CREATE TABLE battles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -111,6 +113,7 @@ CREATE INDEX idx_battles_system_id ON battles(system_id);
 ```
 
 #### battle_killmails
+
 ```sql
 CREATE TABLE battle_killmails (
   battle_id uuid NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
@@ -134,6 +137,7 @@ CREATE INDEX idx_battle_killmails_timestamp ON battle_killmails(timestamp DESC);
 ```
 
 #### battle_participants
+
 ```sql
 CREATE TABLE battle_participants (
   battle_id uuid NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
@@ -166,6 +170,7 @@ GET /battles?space_type={type}&limit={n}&cursor={cursor}
 **Authorization**: `feature.view` action on `battle-reports`
 
 **Query Parameters**:
+
 - `space_type`: Filter by `kspace`, `jspace`, or `pochven` (optional, multi-value)
 - `alliance_id`: Filter by alliance participation (optional)
 - `corp_id`: Filter by corporation participation (optional)
@@ -177,6 +182,7 @@ GET /battles?space_type={type}&limit={n}&cursor={cursor}
 - `cursor`: Pagination cursor (optional)
 
 **Response**:
+
 ```json
 {
   "items": [
@@ -209,6 +215,7 @@ GET /battles/{id}
 **Authorization**: `feature.view` action on `battle-reports`
 
 **Response**:
+
 ```json
 {
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -265,10 +272,12 @@ GET /killmails/recent?space_type={type}&limit={n}
 **Authorization**: `feature.view` action on `battle-reports`
 
 **Query Parameters**:
+
 - `space_type`: Filter by space type (optional, multi-value)
 - `limit`: Number of results (default 50, max 100)
 
 **Response**:
+
 ```json
 {
   "items": [
@@ -305,6 +314,7 @@ GET /killmails/stream?space_type={type}
 **Protocol**: Server-Sent Events (`text/event-stream`)
 
 **Event Format**:
+
 ```
 event: killmail
 data: {"killmailId":"12457890","systemId":"31000123","spaceType":"jspace",...}
@@ -324,6 +334,7 @@ data: {"timestamp":"2025-11-03T19:05:00Z"}
 **Access**: Requires `battle-reports` feature access (user role minimum)
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Battle Reports                                                  │
@@ -349,6 +360,7 @@ data: {"timestamp":"2025-11-03T19:05:00Z"}
 ```
 
 **Features**:
+
 - Filter by space type, time range, entities
 - Battle summary cards with key metrics
 - Click to view detailed battle report
@@ -363,6 +375,7 @@ data: {"timestamp":"2025-11-03T19:05:00Z"}
 **Access**: Requires `battle-reports` feature access (user role minimum)
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Battle Report: J115422 • November 3, 2025 18:42 UTC            │
@@ -408,6 +421,7 @@ data: {"timestamp":"2025-11-03T19:05:00Z"}
 **Access**: Requires `battle-reports` feature access (user role minimum)
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Recent Killmails                                                │
@@ -433,6 +447,7 @@ data: {"timestamp":"2025-11-03T19:05:00Z"}
 ```
 
 **Features**:
+
 - Real-time updates via SSE (Server-Sent Events)
 - Filter by space type
 - Live indicator showing stream status
@@ -465,6 +480,7 @@ When a user HAS access to `battle-reports`:
 **Location**: `backend/battle-reports/`
 
 **Structure**:
+
 ```
 backend/battle-reports/
 ├── src/
@@ -485,12 +501,14 @@ backend/battle-reports/
 ```
 
 **Dependencies**:
+
 - `@battlescope/database` (shared)
 - `@battlescope/shared` (types)
 - Kysely query builder
 - Zod for validation
 
 **Exports**:
+
 ```typescript
 export { BattleRepository } from './repositories/battle-repository.js';
 export { KillmailRepository } from './repositories/killmail-repository.js';
@@ -508,12 +526,7 @@ Battle Reports routes are registered in the API service:
 // backend/api/src/server.ts
 import { registerBattleReportsRoutes } from './routes/battle-reports.js';
 
-registerBattleReportsRoutes(
-  app,
-  battleRepository,
-  killmailRepository,
-  nameEnricher,
-);
+registerBattleReportsRoutes(app, battleRepository, killmailRepository, nameEnricher);
 ```
 
 All routes use feature-scoped authorization middleware:
@@ -521,7 +534,9 @@ All routes use feature-scoped authorization middleware:
 ```typescript
 app.get('/battles', {
   preHandler: [authMiddleware, requireFeatureRole('battle-reports', 'user')],
-  handler: async (request, reply) => { /* ... */ },
+  handler: async (request, reply) => {
+    /* ... */
+  },
 });
 ```
 

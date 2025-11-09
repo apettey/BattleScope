@@ -1,6 +1,7 @@
 # Linear Project & Issues
 
 ## Project: BattleScope MVP Product Features
+
 - **Linear URL:** https://linear.app/battlescope/project/battlescope-mvp-product-features-8b57df0a742a
 - **Summary:** Deliver the core BattleScope MVP product capabilities outlined in `docs/product_specs.md` while adhering to the technical foundations in `docs/technical_specs.md`.
 - **Product Focus Areas:** Battle Reconstruction, Reference-First Storage, Queryable Metadata, Efficient Enrichment, Publicly Verifiable Insights, Frontend Operational Awareness.

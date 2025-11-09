@@ -13,6 +13,7 @@
 ### Purpose
 
 Provide users with actionable intelligence and analytics about:
+
 - **Who**: Alliance, corporation, and character participation patterns
 - **Where**: Geographic battle distribution and favorite hunting grounds
 - **What**: Ship composition, doctrine trends, and fleet sizes
@@ -31,15 +32,15 @@ Provide users with actionable intelligence and analytics about:
 
 ## 2. Feature Concepts
 
-| Concept | Description |
-|---------|-------------|
-| **Entity Statistics** | Aggregate metrics for alliances, corporations, and characters |
-| **Opponent Analysis** | Breakdown of who an entity fights most frequently |
-| **Ship Composition** | Distribution of ship types used by an entity |
-| **Geographic Heatmap** | Systems where an entity is most active |
-| **ISK Efficiency** | Ratio of ISK destroyed vs ISK lost |
-| **Activity Timeline** | Historical pattern of battle participation |
-| **Doctrine Detection** | Identification of common fleet compositions |
+| Concept                | Description                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| **Entity Statistics**  | Aggregate metrics for alliances, corporations, and characters |
+| **Opponent Analysis**  | Breakdown of who an entity fights most frequently             |
+| **Ship Composition**   | Distribution of ship types used by an entity                  |
+| **Geographic Heatmap** | Systems where an entity is most active                        |
+| **ISK Efficiency**     | Ratio of ISK destroyed vs ISK lost                            |
+| **Activity Timeline**  | Historical pattern of battle participation                    |
+| **Doctrine Detection** | Identification of common fleet compositions                   |
 
 ---
 
@@ -102,6 +103,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY alliance_statistics;
 ### 4.2 Cache Keys
 
 **Redis Cache Keys**:
+
 - `battlescope:intel:alliance:{allianceId}:stats` - Alliance statistics (TTL: 1 hour)
 - `battlescope:intel:corp:{corpId}:stats` - Corporation statistics (TTL: 1 hour)
 - `battlescope:intel:character:{characterId}:stats` - Character statistics (TTL: 1 hour)
@@ -123,6 +125,7 @@ GET /intel/summary
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "totalBattles": 1543,
@@ -170,6 +173,7 @@ GET /intel/alliances/{id}
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "allianceId": "99001234",
@@ -254,6 +258,7 @@ GET /intel/corporations/{id}
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "corpId": "98001234",
@@ -268,7 +273,7 @@ GET /intel/corporations/{id}
     "totalLosses": 222,
     "totalIskDestroyed": "230000000000",
     "totalIskLost": "180000000000",
-    "iskEfficiency": 56.10,
+    "iskEfficiency": 56.1,
     "averageParticipants": 8.2,
     "topPilots": [
       {
@@ -318,6 +323,7 @@ GET /intel/characters/{id}
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "characterId": "90012345",
@@ -385,6 +391,7 @@ GET /intel/alliances/{id}/opponents?limit={n}
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "allianceId": "99001234",
@@ -416,6 +423,7 @@ GET /intel/alliances/{id}/ships?limit={n}
 **Authorization**: `feature.view` action on `battle-intel`
 
 **Response**:
+
 ```json
 {
   "allianceId": "99001234",
@@ -478,6 +486,7 @@ GET /intel/alliances/{id}/ships?limit={n}
 **Access**: Requires `battle-intel` feature access (user role minimum)
 
 **Layout**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Alliance Intelligence: Pandemic Legion [PL]                     │
@@ -550,11 +559,13 @@ Similar layout to Alliance Intel Page but with character-specific metrics and de
 ### When User Does NOT Have `battle-intel` Access:
 
 **Home Page**:
+
 - Intelligence statistics section is hidden
 - Top alliances/corps section is hidden
 - Only shows basic welcome message
 
 **Alliance/Corp/Character Pages**:
+
 - If accessed via URL, redirect to home with message: "Battle Intel feature requires access"
 - If has `battle-reports` access: Show basic entity info + battle history only
 - Statistics panels are hidden
@@ -563,6 +574,7 @@ Similar layout to Alliance Intel Page but with character-specific metrics and de
 - Geographic activity is hidden
 
 **Navigation**:
+
 - "Intel" navigation link is hidden (if we add one)
 
 ---
@@ -570,11 +582,13 @@ Similar layout to Alliance Intel Page but with character-specific metrics and de
 ### When User HAS `battle-intel` Access:
 
 **Home Page**:
+
 - Full intelligence dashboard visible
 - Statistics cards displayed
 - Top alliances/corps with "View Intel" links
 
 **Alliance/Corp/Character Pages**:
+
 - Full intel pages accessible
 - All statistics visible
 - Opponent analysis visible
@@ -582,6 +596,7 @@ Similar layout to Alliance Intel Page but with character-specific metrics and de
 - Geographic heatmaps visible
 
 **Hybrid Access (has `battle-reports` but NOT `battle-intel`)**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Pandemic Legion [PL]                                            │
@@ -606,6 +621,7 @@ Similar layout to Alliance Intel Page but with character-specific metrics and de
 **Location**: `backend/battle-intel/`
 
 **Structure**:
+
 ```
 backend/battle-intel/
 ├── src/
@@ -629,6 +645,7 @@ backend/battle-intel/
 ```
 
 **Dependencies**:
+
 - `@battlescope/database` (shared)
 - `@battlescope/shared` (types)
 - `@battlescope/battle-reports` (reads battle data)
@@ -636,6 +653,7 @@ backend/battle-intel/
 - ioredis (for caching)
 
 **Exports**:
+
 ```typescript
 export { IntelService } from './services/intel-service.js';
 export { AllianceAggregator } from './aggregators/alliance-aggregator.js';
@@ -652,12 +670,7 @@ Battle Intel routes are registered in the API service:
 // backend/api/src/server.ts
 import { registerBattleIntelRoutes } from './routes/battle-intel.js';
 
-registerBattleIntelRoutes(
-  app,
-  intelService,
-  nameEnricher,
-  redis,
-);
+registerBattleIntelRoutes(app, intelService, nameEnricher, redis);
 ```
 
 All routes use feature-scoped authorization middleware:
@@ -665,7 +678,9 @@ All routes use feature-scoped authorization middleware:
 ```typescript
 app.get('/intel/alliances/:id', {
   preHandler: [authMiddleware, requireFeatureRole('battle-intel', 'user')],
-  handler: async (request, reply) => { /* ... */ },
+  handler: async (request, reply) => {
+    /* ... */
+  },
 });
 ```
 
@@ -674,11 +689,13 @@ app.get('/intel/alliances/:id', {
 ## 9. Caching Strategy
 
 **Cache Invalidation**:
+
 - When new battles are created → invalidate global summary
 - When battle participants updated → invalidate entity-specific caches
 - Background job refreshes stale caches every hour
 
 **Cache Warming**:
+
 - Pre-compute statistics for top 50 alliances on startup
 - Background job refreshes top entities every 30 minutes
 

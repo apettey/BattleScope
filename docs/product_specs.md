@@ -6,12 +6,13 @@
 
 ## 1. Product Overview
 
-**BattleScope** is a modular data intelligence platform for *EVE Online* that provides two core features:
+**BattleScope** is a modular data intelligence platform for _EVE Online_ that provides two core features:
 
 1. **Battle Reports**: Reconstructs and classifies battles by clustering related killmails from zKillboard
 2. **Battle Intel**: Provides statistical analysis and intelligence about combat activities, participants, and trends
 
 The platform is designed with:
+
 - **Feature-based architecture**: Business logic separated at package level
 - **Permission-based access**: Users can have access to one or both features independently
 - **Reference-first storage**: Minimal data footprint by storing only essential metadata
@@ -21,20 +22,21 @@ The platform is designed with:
 
 ## 2. Platform Objectives
 
-| Goal | Description |
-|------|--------------|
-| **1. Modular Features** | Separate business logic for Battle Reports and Battle Intel at the package level |
-| **2. Feature-Scoped Permissions** | Users can access Battle Reports, Battle Intel, or both based on assigned roles |
-| **3. Graceful UI Degradation** | UI adapts based on feature access without breaking when permissions are restricted |
-| **4. Efficient Storage** | Store only essential metadata and references (not full killmail payloads) |
-| **5. Extensible Architecture** | Easy to add new features (e.g., Fleet Tracking, Market Intel) without affecting existing features |
-| **6. Authentication & Authorization** | EVE Online SSO with multi-character support and feature-scoped RBAC |
+| Goal                                  | Description                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **1. Modular Features**               | Separate business logic for Battle Reports and Battle Intel at the package level                  |
+| **2. Feature-Scoped Permissions**     | Users can access Battle Reports, Battle Intel, or both based on assigned roles                    |
+| **3. Graceful UI Degradation**        | UI adapts based on feature access without breaking when permissions are restricted                |
+| **4. Efficient Storage**              | Store only essential metadata and references (not full killmail payloads)                         |
+| **5. Extensible Architecture**        | Easy to add new features (e.g., Fleet Tracking, Market Intel) without affecting existing features |
+| **6. Authentication & Authorization** | EVE Online SSO with multi-character support and feature-scoped RBAC                               |
 
 ---
 
 ## 3. Feature Architecture
 
 BattleScope is organized into distinct features, each with its own:
+
 - Business logic package (`backend/{feature-name}/`)
 - API routes (`backend/api/src/routes/{feature-name}.ts`)
 - Permission requirements (feature roles: `user`, `fc`, `director`, `admin`)
@@ -42,12 +44,13 @@ BattleScope is organized into distinct features, each with its own:
 
 ### 3.1 Available Features
 
-| Feature Key | Feature Name | Description | Package |
-|-------------|--------------|-------------|---------|
-| `battle-reports` | Battle Reports | Killmail collection, clustering, and battle reconstruction | `@battlescope/battle-reports` |
-| `battle-intel` | Battle Intel | Statistical analysis, opponent tracking, and combat intelligence | `@battlescope/battle-intel` |
+| Feature Key      | Feature Name   | Description                                                      | Package                       |
+| ---------------- | -------------- | ---------------------------------------------------------------- | ----------------------------- |
+| `battle-reports` | Battle Reports | Killmail collection, clustering, and battle reconstruction       | `@battlescope/battle-reports` |
+| `battle-intel`   | Battle Intel   | Statistical analysis, opponent tracking, and combat intelligence | `@battlescope/battle-intel`   |
 
 **See Feature Specifications**:
+
 - [Battle Reports Feature Spec](./features/battle-reports-spec.md)
 - [Battle Intel Feature Spec](./features/battle-intel-spec.md)
 
@@ -55,15 +58,15 @@ BattleScope is organized into distinct features, each with its own:
 
 ## 4. Core Platform Concepts
 
-| Concept | Description |
-|----------|--------------|
-| **Feature** | A distinct product capability with its own business logic, permissions, and UI |
-| **Account** | User account authenticated via EVE Online SSO |
-| **Character** | EVE character linked to an account (primary + alts) |
-| **Feature Role** | Permission level for a feature: `user`, `fc`, `director`, `admin` |
-| **Space Type** | K-space (known), J-space (wormhole), or Poch-space (Triglavian) |
-| **Entity** | Alliance, corporation, or character in EVE Online |
-| **Ruleset** | Database-stored configuration controlling which killmails the ingestion service accepts |
+| Concept          | Description                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| **Feature**      | A distinct product capability with its own business logic, permissions, and UI          |
+| **Account**      | User account authenticated via EVE Online SSO                                           |
+| **Character**    | EVE character linked to an account (primary + alts)                                     |
+| **Feature Role** | Permission level for a feature: `user`, `fc`, `director`, `admin`                       |
+| **Space Type**   | K-space (known), J-space (wormhole), or Poch-space (Triglavian)                         |
+| **Entity**       | Alliance, corporation, or character in EVE Online                                       |
+| **Ruleset**      | Database-stored configuration controlling which killmails the ingestion service accepts |
 
 ---
 
@@ -71,19 +74,20 @@ BattleScope is organized into distinct features, each with its own:
 
 ### 5.1 Navigation Access Matrix
 
-| Nav Item | Battle Reports Access | Battle Intel Access | No Access |
-|----------|----------------------|---------------------|-----------|
-| **Home** | Shows battle list preview | Shows intel summary | Shows welcome message |
-| **Battles** | ✅ Visible | Hidden | Hidden |
-| **Recent Kills** | ✅ Visible | Hidden | Hidden |
-| **Intel** (future) | Hidden | ✅ Visible | Hidden |
-| **Rules** | Admin only | Admin only | Hidden |
+| Nav Item           | Battle Reports Access     | Battle Intel Access | No Access             |
+| ------------------ | ------------------------- | ------------------- | --------------------- |
+| **Home**           | Shows battle list preview | Shows intel summary | Shows welcome message |
+| **Battles**        | ✅ Visible                | Hidden              | Hidden                |
+| **Recent Kills**   | ✅ Visible                | Hidden              | Hidden                |
+| **Intel** (future) | Hidden                    | ✅ Visible          | Hidden                |
+| **Rules**          | Admin only                | Admin only          | Hidden                |
 
 ### 5.2 Entity Page Composition
 
 Entity pages (Alliance, Corporation, Character) adapt based on feature access:
 
 **With Both Features**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Pandemic Legion [PL]                                            │
@@ -96,6 +100,7 @@ Entity pages (Alliance, Corporation, Character) adapt based on feature access:
 ```
 
 **Battle Reports Only**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Pandemic Legion [PL]                                            │
@@ -108,6 +113,7 @@ Entity pages (Alliance, Corporation, Character) adapt based on feature access:
 ```
 
 **Battle Intel Only**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Pandemic Legion [PL]                                            │
@@ -122,6 +128,7 @@ Entity pages (Alliance, Corporation, Character) adapt based on feature access:
 ```
 
 **No Access**:
+
 - Redirect to home page with message: "This page requires feature access. Please contact an administrator."
 
 ### UI Layout & Navigation
@@ -184,6 +191,7 @@ Clicking "My Profile" or "Manage Characters" navigates to `/profile`.
 **Layout**: Full-page view with tabbed interface
 
 **Tabs**:
+
 1. **Overview** - Account summary and primary character
 2. **Characters** - Manage linked characters and alts
 3. **Roles & Permissions** - View assigned roles (admin can manage)
@@ -226,6 +234,7 @@ Clicking "My Profile" or "Manage Characters" navigates to `/profile`.
 ```
 
 **Features**:
+
 - Large primary character portrait (128x128px)
 - Character name links to zKillboard character page
 - Corporation and alliance names link to zKillboard pages
@@ -306,6 +315,7 @@ Clicking "My Profile" or "Manage Characters" navigates to `/profile`.
    - **View on zKillboard**: External link to character's zKillboard page
 
 **Validation Rules**:
+
 - Cannot unlink the primary character unless another character is set as primary first
 - Cannot unlink if it's the only character (must have at least one)
 - Setting a new primary character requires confirmation modal
@@ -385,15 +395,16 @@ User → FC → Director → Admin
 
 **Permissions Matrix**:
 
-| Action | User | FC | Director | Admin |
-|--------|------|----|----|-----|
-| View content | ✅ | ✅ | ✅ | ✅ |
-| Create content | ❌ | ✅ | ✅ | ✅ |
-| Edit any content | ❌ | ❌ | ✅ | ✅ |
-| Manage settings | ❌ | ❌ | ✅ | ✅ |
-| Manage roles | ❌ | ❌ | ❌ | ✅ |
+| Action           | User | FC  | Director | Admin |
+| ---------------- | ---- | --- | -------- | ----- |
+| View content     | ✅   | ✅  | ✅       | ✅    |
+| Create content   | ❌   | ✅  | ✅       | ✅    |
+| Edit any content | ❌   | ❌  | ✅       | ✅    |
+| Manage settings  | ❌   | ❌  | ✅       | ✅    |
+| Manage roles     | ❌   | ❌  | ❌       | ✅    |
 
 **Features**:
+
 - Display all features user has access to
 - Show current role for each feature
 - Display who granted the role and when
@@ -493,6 +504,7 @@ User → FC → Director → Admin
 After clicking OK, user is logged out and redirected to `/` (home page).
 
 **Features**:
+
 - Email management (add, change, remove)
 - Display name editing
 - Data export (GDPR compliance)
@@ -507,13 +519,13 @@ After clicking OK, user is logged out and redirected to `/` (home page).
 
 **Entity Name Display**: The UI must display human-readable names for all EVE Online entities instead of raw IDs.
 
-| Entity Type | Display Format | Example | zKillboard Link |
-|-------------|----------------|---------|-----------------|
-| **Alliance** | Alliance name as clickable link | [Pandemic Legion](https://zkillboard.com/alliance/99001234/) | `https://zkillboard.com/alliance/{allianceId}/` |
-| **Corporation** | Corporation name as clickable link | [Sniggerdly](https://zkillboard.com/corporation/98001234/) | `https://zkillboard.com/corporation/{corpId}/` |
-| **Character** | Character name as clickable link | [John Doe](https://zkillboard.com/character/90012345/) | `https://zkillboard.com/character/{characterId}/` |
-| **System** | System name with optional ID | J115422 (31000123) | N/A |
-| **Ship Type** | Ship name | Loki | N/A |
+| Entity Type     | Display Format                     | Example                                                      | zKillboard Link                                   |
+| --------------- | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------- |
+| **Alliance**    | Alliance name as clickable link    | [Pandemic Legion](https://zkillboard.com/alliance/99001234/) | `https://zkillboard.com/alliance/{allianceId}/`   |
+| **Corporation** | Corporation name as clickable link | [Sniggerdly](https://zkillboard.com/corporation/98001234/)   | `https://zkillboard.com/corporation/{corpId}/`    |
+| **Character**   | Character name as clickable link   | [John Doe](https://zkillboard.com/character/90012345/)       | `https://zkillboard.com/character/{characterId}/` |
+| **System**      | System name with optional ID       | J115422 (31000123)                                           | N/A                                               |
+| **Ship Type**   | Ship name                          | Loki                                                         | N/A                                               |
 
 **UI Implementation Rules**:
 
@@ -530,13 +542,11 @@ After clicking OK, user is logged out and redirected to `/` (home page).
   - Top Alliances: Display alliance names with battle counts
   - Top Corporations: Display corporation names with battle counts
   - Each entry links to zKillboard entity page
-  
 - **Recent Kills View**:
   - Show victim alliance/corp/character names
   - Show attacker alliance/corp names (summarized if many)
   - System name with space type indicator
   - All entity names link to zKillboard
-  
 - **Battles View**:
   - Battle list: Show system name and space type
   - Battle detail: Show all participant names with roles (victim/attacker)
@@ -567,14 +577,14 @@ After clicking OK, user is logged out and redirected to `/` (home page).
 
 ## 7. Non-Functional Requirements
 
-| Category | Specification |
-|-----------|----------------|
-| **Storage Efficiency** | Average battle storage footprint < 10 KB |
-| **Reliability** | Duplicate-safe ingestion with idempotent writes |
-| **Performance** | Cluster detection for 10k+ kills/hour |
-| **Scalability** | Stateless ingestion workers and async DB writes |
-| **Transparency** | All data verifiable via zKillboard URLs |
-| **Extensibility** | Easy to add optional enrichment jobs (ISK stats, doctrine tagging) |
+| Category               | Specification                                                      |
+| ---------------------- | ------------------------------------------------------------------ |
+| **Storage Efficiency** | Average battle storage footprint < 10 KB                           |
+| **Reliability**        | Duplicate-safe ingestion with idempotent writes                    |
+| **Performance**        | Cluster detection for 10k+ kills/hour                              |
+| **Scalability**        | Stateless ingestion workers and async DB writes                    |
+| **Transparency**       | All data verifiable via zKillboard URLs                            |
+| **Extensibility**      | Easy to add optional enrichment jobs (ISK stats, doctrine tagging) |
 
 ---
 
@@ -593,15 +603,16 @@ After clicking OK, user is logged out and redirected to `/` (home page).
 
 **Display Requirement**: The UI must display human-readable names for all EVE Online entities instead of raw IDs.
 
-| Entity Type | Display Format | zKillboard Link |
-|-------------|----------------|-----------------|
-| **Alliance** | Alliance name as clickable link | `https://zkillboard.com/alliance/{allianceId}/` |
-| **Corporation** | Corporation name as clickable link | `https://zkillboard.com/corporation/{corpId}/` |
-| **Character** | Character name as clickable link | `https://zkillboard.com/character/{characterId}/` |
-| **System** | System name with optional ID | N/A |
-| **Ship Type** | Ship name | N/A |
+| Entity Type     | Display Format                     | zKillboard Link                                   |
+| --------------- | ---------------------------------- | ------------------------------------------------- |
+| **Alliance**    | Alliance name as clickable link    | `https://zkillboard.com/alliance/{allianceId}/`   |
+| **Corporation** | Corporation name as clickable link | `https://zkillboard.com/corporation/{corpId}/`    |
+| **Character**   | Character name as clickable link   | `https://zkillboard.com/character/{characterId}/` |
+| **System**      | System name with optional ID       | N/A                                               |
+| **Ship Type**   | Ship name                          | N/A                                               |
 
 **UI Implementation Rules**:
+
 1. **Never display raw IDs**: All entity references must show names, not numeric IDs
 2. **External links**: All alliances, corporations, and characters must link to their respective zKillboard pages
 3. **Link styling**: Use visual indicators (color, underline, or icon) to distinguish external links
@@ -609,6 +620,7 @@ After clicking OK, user is logged out and redirected to `/` (home page).
 5. **Loading states**: Show skeleton loaders or placeholders while names are being fetched
 
 **Backend Resolution**:
+
 - All API responses include both IDs (as strings) and human-readable names
 - Names are resolved via ESI API during enrichment and cached for performance
 - Cache invalidation on ESI version changes
@@ -623,6 +635,7 @@ Feature-specific API endpoints are documented in their respective feature specif
 - **Battle Intel API**: See [Battle Intel Feature Spec](./features/battle-intel-spec.md#5-api-endpoints)
 
 **Common Authentication Endpoints**:
+
 - `GET /auth/login` - Initiate EVE SSO login
 - `GET /auth/callback` - OAuth callback handler
 - `GET /me` - Get current user profile
@@ -634,6 +647,7 @@ Feature-specific API endpoints are documented in their respective feature specif
 ## 10. Platform MVP Scope
 
 ✅ **Core Platform**:
+
 - EVE Online SSO authentication with multi-character support
 - Feature-scoped RBAC (roles: user, fc, director, admin)
 - Graceful UI degradation based on feature access
@@ -641,18 +655,21 @@ Feature-specific API endpoints are documented in their respective feature specif
 - zKillboard data ingestion with ruleset filtering
 
 ✅ **Battle Reports Feature**:
+
 - Killmail clustering and battle reconstruction
 - Battle detail views with participants and killmails
 - Real-time killmail feed (SSE)
 - Battle filtering and search
 
 ✅ **Battle Intel Feature**:
+
 - Alliance/Corporation/Character intelligence pages
 - Opponent analysis and tracking
 - Ship composition statistics
 - Geographic activity heatmaps
 
 ⏳ **Future Enhancements**:
+
 - Additional features (Fleet Tracking, Market Intel, etc.)
 - Discord/Slack integrations
 - Advanced analytics and predictions

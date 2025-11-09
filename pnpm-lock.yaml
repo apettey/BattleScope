@@ -185,6 +185,9 @@ importers:
       '@battlescope/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@battlescope/esi-client':
+        specifier: workspace:*
+        version: link:../../packages/esi-client
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../../packages/shared

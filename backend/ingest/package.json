@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@battlescope/database": "workspace:*",
+    "@battlescope/esi-client": "workspace:*",
     "@battlescope/shared": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "bullmq": "^4.13.1",

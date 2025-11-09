@@ -15,6 +15,7 @@ This document specifies the session management, cookie handling, and OAuth token
 **Session Duration**: 8 hours by default (configurable via `SESSION_TTL_SECONDS`)
 
 **Rationale**:
+
 - Prevents session proliferation and unauthorized access from stale sessions
 - Forces periodic re-authentication for security
 - Reduces Redis memory usage
@@ -28,6 +29,7 @@ This document specifies the session management, cookie handling, and OAuth token
 **Cookie Name**: `battlescope_session`
 
 **Cookie Attributes**:
+
 ```typescript
 {
   httpOnly: true,        // Prevents JavaScript access (XSS protection)
@@ -40,6 +42,7 @@ This document specifies the session management, cookie handling, and OAuth token
 ```
 
 **Environment Variables**:
+
 - `SESSION_TTL_SECONDS` - Session duration in seconds (default: 28800 = 8 hours)
 - `SESSION_COOKIE_SECURE` - Enable secure flag (default: true, set to false for HTTP)
 - `SESSION_COOKIE_NAME` - Cookie name (default: battlescope_session)
@@ -47,6 +50,7 @@ This document specifies the session management, cookie handling, and OAuth token
 ### Implementation Location
 
 **Backend** (`backend/api/src/routes/auth.ts`):
+
 ```typescript
 // After successful OAuth callback
 reply.setCookie('battlescope_session', sessionToken, {
@@ -58,6 +62,7 @@ reply.setCookie('battlescope_session', sessionToken, {
 ```
 
 **Cookie Clearing on Logout**:
+
 ```typescript
 reply.clearCookie('battlescope_session', {
   httpOnly: true,
@@ -87,20 +92,23 @@ export const getCookieConfig = () => ({
 ### Session Data Structure
 
 **Redis Keys**:
+
 1. `battlescope:session:{sessionToken}` - Session data
 2. `battlescope:account-session:{accountId}` - Current session token for account (enforces single session)
 
 **Session Value** (JSON):
+
 ```typescript
 interface Session {
-  accountId: string;              // UUID
+  accountId: string; // UUID
   isSuperAdmin: boolean;
-  roles: Record<string, number>;  // featureKey -> rank
-  expiresAt: number;              // Unix timestamp
+  roles: Record<string, number>; // featureKey -> rank
+  expiresAt: number; // Unix timestamp
 }
 ```
 
 **Example Session**:
+
 ```json
 {
   "accountId": "550e8400-e29b-41d4-a716-446655440000",
@@ -114,6 +122,7 @@ interface Session {
 ```
 
 **Example Account-Session Mapping**:
+
 ```
 battlescope:account-session:550e8400-e29b-41d4-a716-446655440000 -> "token123abc..."
 ```
@@ -121,6 +130,7 @@ battlescope:account-session:550e8400-e29b-41d4-a716-446655440000 -> "token123abc
 ### Single-Session-Per-User Implementation
 
 When a new session is created:
+
 1. Check if `battlescope:account-session:{accountId}` exists
 2. If yes, delete the old session using the token stored there
 3. Create new session at `battlescope:session:{newToken}`
@@ -130,6 +140,7 @@ When a new session is created:
 ### Redis Operations
 
 **Create Session**:
+
 ```typescript
 const sessionToken = crypto.randomBytes(32).toString('hex');
 const sessionData: SessionData = {
@@ -140,7 +151,7 @@ const sessionData: SessionData = {
   roles: await loadUserRoles(account.id),
   createdAt: Date.now(),
   lastAccessedAt: Date.now(),
-  expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days
+  expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
   ipAddress: request.ip,
   userAgent: request.headers['user-agent'] || 'unknown',
 };
@@ -148,11 +159,12 @@ const sessionData: SessionData = {
 await redis.setex(
   `battlescope:session:${sessionToken}`,
   60 * 60 * 24 * 30, // 30 days TTL
-  JSON.stringify(sessionData)
+  JSON.stringify(sessionData),
 );
 ```
 
 **Validate Session**:
+
 ```typescript
 const sessionData = await redis.get(`battlescope:session:${sessionToken}`);
 if (!sessionData) {
@@ -178,18 +190,20 @@ session.lastAccessedAt = Date.now();
 await redis.setex(
   `battlescope:session:${sessionToken}`,
   60 * 60 * 24 * 30,
-  JSON.stringify(session)
+  JSON.stringify(session),
 );
 
 return session;
 ```
 
 **Delete Session (Logout)**:
+
 ```typescript
 await redis.del(`battlescope:session:${sessionToken}`);
 ```
 
 **Delete All User Sessions**:
+
 ```typescript
 // When user is blocked or changes password
 const pattern = `battlescope:session:*`;
@@ -215,6 +229,7 @@ for (const key of keys) {
 **Encryption Method**: AES-256-GCM
 
 **Implementation**:
+
 ```typescript
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
@@ -252,6 +267,7 @@ export const decryptToken = (encryptedToken: string): string => {
 ```
 
 **Environment Variable**:
+
 ```bash
 # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 TOKEN_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
@@ -260,6 +276,7 @@ TOKEN_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789a
 ### Character Token Storage
 
 **On OAuth Callback** (New Character or Refresh):
+
 ```typescript
 // After exchanging OAuth code for tokens
 const encryptedAccessToken = encryptToken(esiTokens.access_token);
@@ -295,7 +312,7 @@ const character = await db
       scopes: esiTokens.scope.split(' '),
       last_verified_at: new Date(),
       updated_at: new Date(),
-    })
+    }),
   )
   .returningAll()
   .executeTakeFirstOrThrow();
@@ -304,6 +321,7 @@ const character = await db
 ### Token Refresh Flow
 
 **Automatic Token Refresh**:
+
 ```typescript
 export class CharacterTokenService {
   async getValidAccessToken(characterId: string): Promise<string> {
@@ -348,8 +366,8 @@ export class CharacterTokenService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(
-          `${config.eveClientId}:${config.eveClientSecret}`
+        Authorization: `Basic ${Buffer.from(
+          `${config.eveClientId}:${config.eveClientSecret}`,
         ).toString('base64')}`,
       },
       body: new URLSearchParams({
@@ -370,11 +388,9 @@ export class CharacterTokenService {
 ### Token Revocation
 
 **On Character Unlink**:
+
 ```typescript
-export const unlinkCharacter = async (
-  accountId: string,
-  characterId: string
-): Promise<void> => {
+export const unlinkCharacter = async (accountId: string, characterId: string): Promise<void> => {
   const character = await db
     .selectFrom('characters')
     .selectAll()
@@ -389,8 +405,8 @@ export const unlinkCharacter = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(
-          `${config.eveClientId}:${config.eveClientSecret}`
+        Authorization: `Basic ${Buffer.from(
+          `${config.eveClientId}:${config.eveClientSecret}`,
         ).toString('base64')}`,
       },
       body: new URLSearchParams({
@@ -490,14 +506,15 @@ export const createAuthMiddleware = (redis: Redis) => {
 
       // Update last accessed timestamp (don't await, fire and forget)
       sessionData.lastAccessedAt = Date.now();
-      redis.setex(
-        `battlescope:session:${sessionToken}`,
-        60 * 60 * 24 * 30,
-        JSON.stringify(sessionData)
-      ).catch((err) => {
-        request.log.warn({ err }, 'Failed to update session last accessed time');
-      });
-
+      redis
+        .setex(
+          `battlescope:session:${sessionToken}`,
+          60 * 60 * 24 * 30,
+          JSON.stringify(sessionData),
+        )
+        .catch((err) => {
+          request.log.warn({ err }, 'Failed to update session last accessed time');
+        });
     } catch (error) {
       request.log.error({ error }, 'Session validation error');
       return reply.status(500).send({
@@ -526,6 +543,7 @@ export const createAuthMiddleware = (redis: Redis) => {
 **Browser automatically handles cookies** - No JavaScript changes needed for basic cookie handling.
 
 **Reading Cookie in Frontend** (for debugging only):
+
 ```typescript
 // Frontend should NOT read the httpOnly cookie directly
 // Instead, call the /me endpoint to check auth status
@@ -551,6 +569,7 @@ export const checkAuthStatus = async (): Promise<User | null> => {
 ### API Requests with Credentials
 
 **All authenticated requests must include credentials**:
+
 ```typescript
 // fetch API
 fetch('/api/battles', {
@@ -648,8 +667,8 @@ app.get('/auth/callback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${Buffer.from(
-            `${config.eveClientId}:${config.eveClientSecret}`
+          Authorization: `Basic ${Buffer.from(
+            `${config.eveClientId}:${config.eveClientSecret}`,
           ).toString('base64')}`,
         },
         body: new URLSearchParams({
@@ -678,7 +697,7 @@ app.get('/auth/callback', {
       // 5. Check org gating
       const isAllowed = await authConfigRepository.isCharacterAllowed(
         characterInfo.corp_id,
-        characterInfo.alliance_id
+        characterInfo.alliance_id,
       );
 
       if (!isAllowed) {
@@ -718,7 +737,7 @@ app.get('/auth/callback', {
             scopes: tokens.scope.split(' '),
             last_verified_at: new Date(),
             updated_at: new Date(),
-          })
+          }),
         )
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -759,7 +778,7 @@ app.get('/auth/callback', {
         roles: rolesMap,
         createdAt: Date.now(),
         lastAccessedAt: Date.now(),
-        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000),
+        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
         ipAddress: request.ip,
         userAgent: request.headers['user-agent'] || 'unknown',
       };
@@ -767,7 +786,7 @@ app.get('/auth/callback', {
       await redis.setex(
         `battlescope:session:${sessionToken}`,
         60 * 60 * 24 * 30,
-        JSON.stringify(sessionData)
+        JSON.stringify(sessionData),
       );
 
       // 12. Set cookie
@@ -792,7 +811,6 @@ app.get('/auth/callback', {
 
       // 14. Redirect to frontend
       return reply.redirect(302, config.frontendUrl);
-
     } catch (error) {
       request.log.error({ error }, 'OAuth callback failed');
       return reply.redirect(302, `${config.frontendUrl}?error=auth_failed`);
@@ -821,7 +839,7 @@ app.get('/me/characters/link/start', {
       JSON.stringify({
         accountId: request.account.id,
         linkingCharacter: true,
-      })
+      }),
     );
 
     // Redirect to EVE SSO
@@ -915,13 +933,11 @@ describe('Session Management', () => {
 describe('Auth E2E Flow', () => {
   it('should complete full OAuth flow and set session cookie', async () => {
     // Mock EVE SSO responses
-    nock('https://login.eveonline.com')
-      .post('/v2/oauth/token')
-      .reply(200, {
-        access_token: 'mock_access_token',
-        refresh_token: 'mock_refresh_token',
-        expires_in: 1200,
-      });
+    nock('https://login.eveonline.com').post('/v2/oauth/token').reply(200, {
+      access_token: 'mock_access_token',
+      refresh_token: 'mock_refresh_token',
+      expires_in: 1200,
+    });
 
     const response = await server.inject({
       method: 'GET',
@@ -977,6 +993,7 @@ describe('Auth E2E Flow', () => {
 ## 11. Implementation Priority
 
 ### Phase 1: Basic Session (IMMEDIATE)
+
 1. Implement session creation in `/auth/callback`
 2. Set cookie after successful OAuth
 3. Create `authMiddleware` to validate sessions
@@ -984,17 +1001,20 @@ describe('Auth E2E Flow', () => {
 5. Implement logout endpoint
 
 ### Phase 2: Token Storage (HIGH PRIORITY)
+
 1. Implement token encryption/decryption
 2. Store OAuth tokens in `characters` table
 3. Implement token refresh service
 4. Add token revocation on character unlink
 
 ### Phase 3: Multi-Character (MEDIUM PRIORITY)
+
 1. Implement character linking flow
 2. Add primary character selection
 3. Support multiple ESI tokens per account
 
 ### Phase 4: Security Hardening (ONGOING)
+
 1. Add rate limiting to auth endpoints
 2. Implement session renewal
 3. Add suspicious activity detection
@@ -1040,6 +1060,7 @@ This specification addresses all three critical issues:
 3. ✅ **OAuth Token Storage** - Encrypted token storage with automatic refresh
 
 **Next Steps**:
+
 1. Implement session management service
 2. Add cookie handling to OAuth callback
 3. Implement token encryption utility

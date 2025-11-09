@@ -9,6 +9,7 @@ BattleScope uses **Fastify** with **Zod schemas** to automatically generate Open
 ## Architecture
 
 ### Stack
+
 - **Fastify**: Web framework with built-in OpenAPI support
 - **@fastify/swagger**: Plugin for OpenAPI generation
 - **@fastify/swagger-ui**: Interactive API documentation UI
@@ -17,14 +18,14 @@ BattleScope uses **Fastify** with **Zod schemas** to automatically generate Open
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `backend/api/src/schemas.ts` | Centralized Zod schemas for all API types |
-| `backend/api/src/server.ts` | Fastify server with Swagger plugins configured |
-| `backend/api/src/routes/*.ts` | Route handlers with schema definitions |
-| `backend/api/src/generate-openapi.ts` | CLI script to export OpenAPI spec |
-| `docs/openapi.json` | Generated JSON specification |
-| `docs/openapi-generated.yaml` | Generated YAML specification |
+| File                                  | Purpose                                        |
+| ------------------------------------- | ---------------------------------------------- |
+| `backend/api/src/schemas.ts`          | Centralized Zod schemas for all API types      |
+| `backend/api/src/server.ts`           | Fastify server with Swagger plugins configured |
+| `backend/api/src/routes/*.ts`         | Route handlers with schema definitions         |
+| `backend/api/src/generate-openapi.ts` | CLI script to export OpenAPI spec              |
+| `docs/openapi.json`                   | Generated JSON specification                   |
+| `docs/openapi-generated.yaml`         | Generated YAML specification                   |
 
 ## How It Works
 
@@ -85,6 +86,7 @@ pnpm run generate-openapi
 ```
 
 This will:
+
 1. Build a Fastify server instance
 2. Load all routes with their schemas
 3. Generate the OpenAPI specification
@@ -97,12 +99,14 @@ This will:
 When the API server is running, you can:
 
 1. Start the development server:
+
    ```bash
    cd backend/api
    pnpm run dev
    ```
 
 2. Open your browser to:
+
    ```
    http://localhost:3000/docs
    ```
@@ -221,9 +225,7 @@ void app.register(swagger, {
       contact: { name: 'BattleScope Support' },
       license: { name: 'MIT' },
     },
-    servers: [
-      { url: 'http://localhost:3000', description: 'Local development' },
-    ],
+    servers: [{ url: 'http://localhost:3000', description: 'Local development' }],
     tags: [
       { name: 'Battles', description: '...' },
       { name: 'Killmails', description: '...' },
@@ -253,7 +255,7 @@ Add to your CI pipeline:
   run: |
     cd backend/api
     pnpm run generate-openapi
-    
+
 - name: Validate Spec
   run: |
     npx @redocly/cli lint docs/openapi.json
@@ -275,10 +277,15 @@ git commit -m "chore: update OpenAPI specification"
 **Cause**: Route missing schema definition
 
 **Solution**: Add schema object to route configuration:
+
 ```typescript
 app.get('/my-route', {
-  schema: { /* add schema here */ },
-  handler: async () => { /* ... */ }
+  schema: {
+    /* add schema here */
+  },
+  handler: async () => {
+    /* ... */
+  },
 });
 ```
 
@@ -292,7 +299,8 @@ app.get('/my-route', {
 
 **Cause**: Missing dependencies or circular imports
 
-**Solution**: 
+**Solution**:
+
 1. Check that all dependencies are installed
 2. Verify imports don't create circular dependencies
 3. Ensure mock utilities properly stub all dependencies
@@ -354,6 +362,7 @@ openapi: {
 ```
 
 Follow semantic versioning:
+
 - **Major**: Breaking changes
 - **Minor**: New features (backward compatible)
 - **Patch**: Bug fixes

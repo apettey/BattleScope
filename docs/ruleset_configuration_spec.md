@@ -3,6 +3,7 @@
 ## Overview
 
 This document extends the BattleScope ruleset configuration to support filtering killmails by:
+
 - **Specific systems** - Track only killmails from designated solar systems
 - **Security types** - Track only killmails from specific security classifications
 
@@ -20,13 +21,13 @@ Ruleset configuration is managed directly in the database and does not have API 
 
 EVE Online systems are classified by security status:
 
-| Security Type | Security Status Range | Description |
-|---------------|----------------------|-------------|
-| `highsec` | 0.5 to 1.0 | High security space (CONCORD enforced) |
-| `lowsec` | 0.1 to 0.4 | Low security space (limited CONCORD) |
-| `nullsec` | -1.0 to 0.0 | Null security space (no CONCORD) |
-| `wormhole` | N/A | J-space wormhole systems |
-| `pochven` | N/A | Triglavian space (Pochven region) |
+| Security Type | Security Status Range | Description                            |
+| ------------- | --------------------- | -------------------------------------- |
+| `highsec`     | 0.5 to 1.0            | High security space (CONCORD enforced) |
+| `lowsec`      | 0.1 to 0.4            | Low security space (limited CONCORD)   |
+| `nullsec`     | -1.0 to 0.0           | Null security space (no CONCORD)       |
+| `wormhole`    | N/A                   | J-space wormhole systems               |
+| `pochven`     | N/A                   | Triglavian space (Pochven region)      |
 
 **Note**: Wormhole and Pochven systems don't have traditional security status and are identified by their space type.
 
@@ -39,10 +40,10 @@ ALTER TABLE rulesets ADD COLUMN tracked_system_ids bigint[] DEFAULT ARRAY[]::big
 ALTER TABLE rulesets ADD COLUMN tracked_security_types text[] DEFAULT ARRAY[]::text[];
 ```
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `tracked_system_ids` | `bigint[]` | Array of solar system IDs to track (empty = all) |
-| `tracked_security_types` | `text[]` | Array of security types to track: `highsec`, `lowsec`, `nullsec`, `wormhole`, `pochven` (empty = all) |
+| Column                   | Type       | Description                                                                                           |
+| ------------------------ | ---------- | ----------------------------------------------------------------------------------------------------- |
+| `tracked_system_ids`     | `bigint[]` | Array of solar system IDs to track (empty = all)                                                      |
+| `tracked_security_types` | `text[]`   | Array of security types to track: `highsec`, `lowsec`, `nullsec`, `wormhole`, `pochven` (empty = all) |
 
 ### TypeScript Types
 
@@ -54,8 +55,8 @@ interface RulesetRecord {
   minPilots: number;
   trackedAllianceIds: bigint[];
   trackedCorpIds: bigint[];
-  trackedSystemIds: bigint[];              // NEW
-  trackedSecurityTypes: SecurityType[];   // NEW
+  trackedSystemIds: bigint[]; // NEW
+  trackedSecurityTypes: SecurityType[]; // NEW
   ignoreUnlisted: boolean;
   updatedBy: string | null;
   createdAt: Date;
@@ -94,6 +95,7 @@ if (trackedSecurityTypes.length > 0) {
 ```
 
 **Combination Logic**:
+
 - Empty arrays mean "no filter" (accept all)
 - If both `trackedSystemIds` and `trackedSecurityTypes` are specified, a killmail must satisfy BOTH
 - System filters are applied BEFORE entity filters for efficiency
@@ -109,6 +111,7 @@ GET /universe/systems/{system_id}/
 ```
 
 Response includes:
+
 ```json
 {
   "system_id": 30000142,
@@ -141,6 +144,7 @@ function deriveSecurityType(systemId: bigint, securityStatus?: number): Security
 ### Caching Strategy
 
 To avoid excessive ESI calls:
+
 1. **Redis cache**: System security types cached with 24-hour TTL
 2. **Cache key**: `battlescope:system:security:{systemId}`
 3. **Batch fetching**: Support bulk system lookups for efficiency
@@ -186,6 +190,7 @@ Request body includes new fields:
 ```
 
 **Validation**:
+
 - `trackedSystemIds`: Maximum 1000 systems
 - `trackedSecurityTypes`: Must be valid security type enum values
 - System IDs are validated as bigint-safe values

@@ -81,6 +81,7 @@ Design a clean, extensible identity and authorization system for **BattleScope**
 ```
 
 **Component Responsibilities**:
+
 - **Auth Routes**: Handle EVE SSO login/callback, token refresh, logout, character linking via `/auth/*` endpoints
 - **Auth Middleware**: Fastify `preHandler` hook that validates JWT/session and attaches `request.account` to protected routes
 - **Authorization Module**: Lightweight policy engine (function calls, not separate service) that checks feature roles and permissions; cached in Redis
@@ -90,6 +91,7 @@ Design a clean, extensible identity and authorization system for **BattleScope**
 - **Redis**: Session storage, authorization cache (TTL 60-120s), ESI token cache
 
 **Integration with Existing BattleScope API**:
+
 - Auth routes are registered alongside existing battle/killmail routes in `backend/api/src/server.ts`
 - Uses existing `buildServer` pattern with dependency injection
 - Shares database client, Redis instance, and configuration with other API features
@@ -106,6 +108,7 @@ _Tech stack:_ **Fastify** with Zod type provider, **Kysely** query builder, **Po
 **Note**: Column names use `snake_case` following BattleScope conventions. All tables include `created_at` and `updated_at` timestamps (managed by Kysely or triggers). EVE entity IDs are stored as `bigint` to support values exceeding JavaScript's `Number.MAX_SAFE_INTEGER`.
 
 #### accounts
+
 ```sql
 CREATE TABLE accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -122,6 +125,7 @@ CREATE TABLE accounts (
 ```
 
 **Kysely Type**:
+
 ```typescript
 interface AccountsTable {
   id: Generated<string>;
@@ -138,6 +142,7 @@ interface AccountsTable {
 ```
 
 **Zod Schema** (API):
+
 ```typescript
 const AccountSchema = z.object({
   id: z.string().uuid(),
@@ -153,6 +158,7 @@ const AccountSchema = z.object({
 ---
 
 #### characters
+
 ```sql
 CREATE TABLE characters (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -178,6 +184,7 @@ CREATE INDEX idx_characters_eve_character_id ON characters(eve_character_id);
 ```
 
 **Kysely Type**:
+
 ```typescript
 interface CharactersTable {
   id: Generated<string>;
@@ -189,8 +196,8 @@ interface CharactersTable {
   alliance_id: bigint | null;
   alliance_name: string | null;
   portrait_url: string;
-  esi_access_token: string;  // encrypted
-  esi_refresh_token: string;  // encrypted
+  esi_access_token: string; // encrypted
+  esi_refresh_token: string; // encrypted
   esi_token_expires_at: Date;
   scopes: string[];
   last_verified_at: Generated<Date>;
@@ -202,6 +209,7 @@ interface CharactersTable {
 ---
 
 #### features
+
 ```sql
 CREATE TABLE features (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -214,6 +222,7 @@ CREATE TABLE features (
 ```
 
 **Seed Values**:
+
 ```sql
 INSERT INTO features (key, name, description) VALUES
   ('battle-reports', 'Battle Reports', 'View and analyze reconstructed battles'),
@@ -223,6 +232,7 @@ INSERT INTO features (key, name, description) VALUES
 ---
 
 #### roles
+
 ```sql
 CREATE TABLE roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -235,6 +245,7 @@ CREATE TABLE roles (
 ```
 
 **Seed Values**:
+
 ```sql
 INSERT INTO roles (key, name, rank) VALUES
   ('user', 'User', 10),
@@ -246,6 +257,7 @@ INSERT INTO roles (key, name, rank) VALUES
 ---
 
 #### account_feature_roles
+
 ```sql
 CREATE TABLE account_feature_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -264,6 +276,7 @@ CREATE INDEX idx_account_feature_roles_feature_id ON account_feature_roles(featu
 ---
 
 #### feature_settings
+
 ```sql
 CREATE TABLE feature_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -280,6 +293,7 @@ CREATE TABLE feature_settings (
 ---
 
 #### auth_config
+
 ```sql
 CREATE TABLE auth_config (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),  -- singleton row
@@ -298,6 +312,7 @@ INSERT INTO auth_config (id) VALUES ('00000000-0000-0000-0000-000000000001');
 ---
 
 #### audit_logs
+
 ```sql
 CREATE TABLE audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -315,6 +330,7 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 ```
 
 **Example Audit Log Entries**:
+
 - `{ action: 'account.login', target_type: 'account', target_id: '<uuid>', metadata: { eve_character_id: 12345 } }`
 - `{ action: 'role.granted', target_type: 'account_feature_role', target_id: '<uuid>', metadata: { feature: 'battle-reports', role: 'fc' } }`
 - `{ action: 'settings.updated', target_type: 'feature_settings', target_id: '<uuid>', metadata: { feature: 'battle-intel', key: 'alert_threshold' } }`
@@ -458,25 +474,31 @@ export const registerAuthRoutes = (
           id: z.string().uuid(),
           displayName: z.string(),
           email: z.string().email().nullable(),
-          primaryCharacter: z.object({
-            id: z.string().uuid(),
-            eveCharacterId: z.string(),
-            eveCharacterName: z.string(),
-            portraitUrl: z.string(),
-          }).nullable(),
-          characters: z.array(z.object({
-            id: z.string().uuid(),
-            eveCharacterId: z.string(),
-            eveCharacterName: z.string(),
-            corpName: z.string(),
-            allianceName: z.string().nullable(),
-            portraitUrl: z.string(),
-          })),
-          roles: z.array(z.object({
-            feature: z.string(),
-            role: z.string(),
-            rank: z.number(),
-          })),
+          primaryCharacter: z
+            .object({
+              id: z.string().uuid(),
+              eveCharacterId: z.string(),
+              eveCharacterName: z.string(),
+              portraitUrl: z.string(),
+            })
+            .nullable(),
+          characters: z.array(
+            z.object({
+              id: z.string().uuid(),
+              eveCharacterId: z.string(),
+              eveCharacterName: z.string(),
+              corpName: z.string(),
+              allianceName: z.string().nullable(),
+              portraitUrl: z.string(),
+            }),
+          ),
+          roles: z.array(
+            z.object({
+              feature: z.string(),
+              role: z.string(),
+              rank: z.number(),
+            }),
+          ),
           isSuperAdmin: z.boolean(),
         }),
       },
@@ -652,14 +674,11 @@ interface AuthenticatedRequest extends FastifyRequest {
   account: {
     id: string;
     isSuperAdmin: boolean;
-    roles: Map<string, number>;  // featureKey -> rank
+    roles: Map<string, number>; // featureKey -> rank
   };
 }
 
-export const authMiddleware = async (
-  request: FastifyRequest,
-  reply: FastifyReply,
-) => {
+export const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
   const token = request.cookies.battlescope_session;
   if (!token) {
     return reply.status(401).send({ message: 'Authentication required' });
@@ -689,9 +708,7 @@ export const requireRole = (minRole: string) => {
     }
 
     // Check if user has required rank in ANY feature
-    const hasRole = Array.from(authReq.account.roles.values()).some(
-      rank => rank >= minRank
-    );
+    const hasRole = Array.from(authReq.account.roles.values()).some((rank) => rank >= minRank);
 
     if (!hasRole) {
       return reply.status(403).send({ message: 'Insufficient permissions' });
@@ -733,6 +750,7 @@ export const requireFeatureRole = (minRole: string) => {
 ### Security Measures
 
 **OAuth2/OIDC Implementation**:
+
 - Use PKCE (Proof Key for Code Exchange) for all EVE SSO flows
 - Validate `state` parameter to prevent CSRF attacks
 - Validate `nonce` in ID tokens
@@ -740,12 +758,14 @@ export const requireFeatureRole = (minRole: string) => {
 - Store tokens encrypted at rest (use `crypto.subtle` or `node:crypto` with AES-256-GCM)
 
 **Session Management**:
+
 - HTTP-only, Secure, SameSite cookies for session tokens
 - Short-lived JWT tokens (15 minutes) with long-lived refresh tokens (30 days)
 - Store session state in Redis with automatic expiration
 - Rotate refresh tokens after use (if EVE SSO supports it)
 
 **API Security**:
+
 - Rate limiting via Fastify plugins (`@fastify/rate-limit`)
 - Request size limits (body parser limits)
 - Helmet headers for XSS/clickjacking protection
@@ -754,6 +774,7 @@ export const requireFeatureRole = (minRole: string) => {
 - SQL injection protection via Kysely parameterized queries
 
 **Encryption**:
+
 - ESI tokens encrypted at rest using environment variable key
 - Secrets managed via Kubernetes Secrets (existing pattern)
 - TLS termination at ingress (cert-manager + Let's Encrypt)
@@ -763,30 +784,35 @@ export const requireFeatureRole = (minRole: string) => {
 ### Operational Patterns
 
 **Observability** (existing BattleScope setup):
+
 - **Logging**: Pino structured JSON logs to stdout → Loki
 - **Tracing**: OpenTelemetry instrumentation for Fastify, Kysely, Redis
 - **Metrics**: OpenTelemetry metrics → Prometheus (auth latency, session count, failed logins)
 - **Dashboards**: Grafana dashboards for auth metrics, authorization cache hit rates
 
 **Caching Strategy**:
+
 - **Authorization cache**: Redis with 60-120s TTL (key: `battlescope:authz:{accountId}`)
 - **Session cache**: Redis with 30-day TTL (key: `battlescope:session:{token}`)
 - **ESI token cache**: Redis (reuse existing ESI cache patterns)
 - **Org gating cache**: Redis with 1-hour TTL for `auth_config` table
 
 **Performance**:
+
 - Authorization checks cached after first query (low latency for subsequent requests)
 - Bulk role loading on session creation (single query)
 - Redis pipelining for multi-key operations
 - Database connection pooling (existing Kysely pool config)
 
 **Reliability**:
+
 - Fail-closed for protected endpoints (deny access if cache/DB unavailable)
 - Circuit breaker for ESI API calls (existing pattern)
 - Graceful degradation: allow SuperAdmin access even if role cache fails
 - Health checks include session validation (`/healthz` endpoint)
 
 **Audit & Compliance**:
+
 - All authentication events logged to `audit_logs` table
 - All authorization decisions (allow/deny) logged with context
 - User management actions (block, role assignment) audited
@@ -794,6 +820,7 @@ export const requireFeatureRole = (minRole: string) => {
 - Audit log retention: 90 days (configurable)
 
 **Deployment** (existing BattleScope patterns):
+
 - Kubernetes Deployments with rolling updates
 - ConfigMaps for non-sensitive configuration
 - Secrets for ESI client credentials, encryption keys
@@ -802,6 +829,7 @@ export const requireFeatureRole = (minRole: string) => {
 - Redis persistence (AOF + RDB) for session recovery
 
 **Monitoring & Alerts**:
+
 - Alert on high failed login rate (potential brute force)
 - Alert on authorization cache miss rate > 50% (performance degradation)
 - Alert on ESI token refresh failures
@@ -812,6 +840,7 @@ export const requireFeatureRole = (minRole: string) => {
 ## 10) Seeds
 
 ### Auth Config
+
 ```json
 {
   "require_membership": true,
@@ -823,10 +852,11 @@ export const requireFeatureRole = (minRole: string) => {
 ```
 
 ### Features
+
 ```json
 [
   { "key": "battle-reports", "name": "Battle Reports" },
-  { "key": "battle-intel",   "name": "Battle Intel"   }
+  { "key": "battle-intel", "name": "Battle Intel" }
 ]
 ```
 
@@ -873,7 +903,7 @@ export class AuthorizationService {
 
     // Try cache first
     const cached = await this.getCached(ctx.accountId);
-    const roles = cached ?? await this.loadRoles(ctx.accountId);
+    const roles = cached ?? (await this.loadRoles(ctx.accountId));
 
     // Get role rank for the feature (if feature-scoped action)
     const rank = ctx.featureKey ? (roles.get(ctx.featureKey) ?? 0) : 0;
@@ -978,12 +1008,15 @@ export const requireAction = (action: string, featureKey?: string) => {
     });
 
     if (!result.allowed) {
-      app.log.warn({
-        accountId: authReq.account.id,
-        action,
-        featureKey,
-        reason: result.reason,
-      }, 'Authorization denied');
+      app.log.warn(
+        {
+          accountId: authReq.account.id,
+          action,
+          featureKey,
+          reason: result.reason,
+        },
+        'Authorization denied',
+      );
 
       return reply.status(403).send({
         message: 'Insufficient permissions',
@@ -1001,10 +1034,7 @@ export const requireAction = (action: string, featureKey?: string) => {
 ```typescript
 // Protect a route with specific action requirement
 appWithTypes.delete('/battles/{id}', {
-  preHandler: [
-    authMiddleware,
-    requireAction('feature.edit.any', 'battle-reports'),
-  ],
+  preHandler: [authMiddleware, requireAction('feature.edit.any', 'battle-reports')],
   handler: async (request, reply) => {
     // Handler only executes if authorized
   },
@@ -1027,6 +1057,7 @@ appWithTypes.put('/features/{featureKey}/settings', {
 ## 12) ESI Integration
 
 BattleScope already has an ESI client (`backend/api/src/services/esi-client.ts`) that handles:
+
 - Caching in Redis
 - Rate limiting
 - Error handling and retries
@@ -1050,6 +1081,7 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 ```
 
 **Token Management**:
+
 - Store ESI access/refresh tokens encrypted in `characters` table
 - Use existing ESI client refresh token mechanism
 - Share Redis cache namespace: `battlescope:esi:*`
@@ -1061,6 +1093,7 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 **⚠️ CRITICAL: See [Session Management Spec](./session-management-spec.md) for required session cookie, token storage, and refresh implementation details.**
 
 ### Phase 1: Database & Core Auth (MVP)
+
 - [ ] Create database migrations for auth tables
 - [ ] Implement `AccountRepository` and `CharactersRepository` with Kysely
 - [ ] Build EVE SSO OAuth flow (`/auth/login`, `/auth/callback`)
@@ -1073,6 +1106,7 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 - [ ] Implement org gating logic (allow/deny lists)
 
 ### Phase 2: Authorization & Admin
+
 - [ ] Implement `AuthorizationService` with role-based checks
 - [ ] Create `requireAction` middleware
 - [ ] Add admin routes for user management
@@ -1081,12 +1115,14 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 - [ ] Add authorization cache with Redis
 
 ### Phase 3: Multi-Character & Settings
+
 - [ ] Add character linking flow (`/me/characters/link/start`)
 - [ ] Implement primary character selection
 - [ ] Add feature settings management
 - [ ] Build admin UI for org gate configuration
 
 ### Phase 4: Frontend Integration
+
 - [ ] Add auth routes to frontend (login redirect)
 - [ ] Implement session cookie handling
 - [ ] Build user profile page (characters, roles)
@@ -1098,12 +1134,14 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 ## 14) Migration Path
 
 **Backward Compatibility**:
+
 - Existing unauthenticated endpoints remain accessible initially
 - Add `authMiddleware` selectively to new/sensitive endpoints
 - Frontend can detect auth availability via `GET /me` (returns 401 if not logged in)
 - Phase in required auth by feature over multiple releases
 
 **Rollout Strategy**:
+
 1. **Release 1**: Auth system available, all features still public (no breaking changes)
 2. **Release 2**: Battle Reports require "user" role minimum (soft gate)
 3. **Release 3**: Admin features require "admin" role (hard gate)
@@ -1114,6 +1152,7 @@ const portrait = `https://images.evetech.net/characters/${eveCharacterId}/portra
 ## 15) What's Included in this Spec
 
 This specification document provides:
+
 - ✅ BattleScope-integrated architecture (Fastify, Kysely, Redis, Kubernetes)
 - ✅ Database schema with Kysely types and Zod validation
 - ✅ Complete API implementation patterns with working code examples
@@ -1123,6 +1162,7 @@ This specification document provides:
 - ✅ Implementation phases and migration path
 
 **Next Steps**:
+
 1. Review this spec with the team
 2. Create database migration files in `backend/database/migrations/`
 3. Implement repositories in `backend/database/src/repositories/`

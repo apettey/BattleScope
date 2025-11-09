@@ -50,17 +50,20 @@ BattleScope is organized into two main features, each with its own package and b
 2. **Battle Intel** (`@battlescope/battle-intel`) - Statistical analysis, opponent tracking, and combat intelligence
 
 Features are:
+
 - **Separated at package level**: Each feature has its own directory in `packages/`
 - **Permission-scoped**: Users can have access to one or both features independently (planned)
 - **UI-adaptive**: Frontend gracefully degrades based on feature access (planned)
 
 **Current Implementation**:
+
 - ✅ `packages/battle-reports` - Contains clustering engine and clusterer service
 - ✅ `packages/battle-intel` - Package structure created for future intelligence services
 - ✅ `backend/clusterer` - Now uses `@battlescope/battle-reports` package
 - ⏳ Permission-based access control - Planned (see Authentication & Authorization)
 
 **See**:
+
 - [features/battle-reports-spec.md](./features/battle-reports-spec.md) for Battle Reports details
 - [features/battle-intel-spec.md](./features/battle-intel-spec.md) for Battle Intel details
 
@@ -74,6 +77,7 @@ Ingestion ruleset configuration is now available via the Rules API:
 - **PUT /rulesets/current** - Update ingestion filters
 
 **Supported Filters**:
+
 - Minimum pilots (e.g., only track battles with 5+ participants)
 - Tracked alliances (allowlist of alliance IDs)
 - Tracked corporations (allowlist of corporation IDs)
@@ -98,6 +102,7 @@ pnpm run generate-openapi
 ```
 
 This will update:
+
 - `docs/openapi.json`
 - `docs/openapi-generated.yaml`
 
@@ -226,7 +231,7 @@ npx @openapitools/openapi-generator-cli generate \
   -g typescript-axios \
   -o clients/typescript
 
-# Python client  
+# Python client
 npx @openapitools/openapi-generator-cli generate \
   -i docs/openapi.json \
   -g python \
@@ -245,6 +250,7 @@ npx @openapitools/openapi-generator-cli generate \
 ## Support
 
 For questions or issues:
+
 - Check existing documentation first
 - Review API examples in product specs
 - Consult OpenAPI generation guide
