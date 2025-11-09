@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: character-verifier
+  namespace: battlescope
+spec:
+  # Run every hour at the top of the hour
+  schedule: "0 * * * *"
+
+  # Don't run multiple instances simultaneously
+  concurrencyPolicy: Forbid
+
+  # Keep last 3 successful jobs
+  successfulJobsHistoryLimit: 3
+
+  # Keep last 3 failed jobs for debugging
+  failedJobsHistoryLimit: 3
+
+  # Job must complete within 1 hour
+  startingDeadlineSeconds: 300  # 5 minutes grace period to start
+
+  jobTemplate:
+    spec:
+      # Job must complete within 1 hour
+      activeDeadlineSeconds: 3600
+
+      # Don't retry on failure (will run again next hour)
+      backoffLimit: 0
+
+      template:
+        metadata:
+          labels:
+            app: character-verifier
+            component: cron
+        spec:
+          restartPolicy: Never
+
+          containers:
+            - name: verifier
+              image: docker.io/petdog/battlescope-verifier:latest
+              imagePullPolicy: Always
+
+              command:
+                - node
+                - dist/backend/verifier/src/index.js
+
+              envFrom:
+                - secretRef:
+                    name: battlescope-secrets
+                - configMapRef:
+                    name: character-verifier-config
+
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
+              # Security context
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false  # Node.js needs writable /tmp
+                capabilities:
+                  drop:
+                    - ALL

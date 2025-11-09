@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability k8s-reset k8s-reset-force k8s-deploy-all
 
 install:
 	pnpm install
@@ -148,3 +148,83 @@ k8s-restart-observability:
 	@echo "Restarting Loki..."
 	kubectl rollout restart statefulset/loki -n battlescope
 	@echo "✅ Observability stack restarted successfully!"
+
+k8s-deploy-all:
+	@echo "📦 Deploying all k8s resources to battlescope namespace..."
+	@echo ""
+	@echo "Step 1: Namespace and Secrets"
+	kubectl apply -f infra/k8s/namespace.yaml
+	kubectl apply -f infra/k8s/secrets.yaml
+	kubectl apply -f infra/k8s/postgres-secret.yaml
+	kubectl apply -f infra/k8s/redis-secret.yaml
+	@echo ""
+	@echo "Step 2: ConfigMaps"
+	kubectl apply -f infra/k8s/configmap.yaml
+	kubectl apply -f infra/k8s/grafana-config.yaml
+	kubectl apply -f infra/k8s/prometheus-config.yaml
+	kubectl apply -f infra/k8s/otel-collector-config.yaml
+	@echo ""
+	@echo "Step 3: StatefulSets (Postgres, Redis, Loki)"
+	kubectl apply -f infra/k8s/postgres-statefulset.yaml
+	kubectl apply -f infra/k8s/redis-statefulset.yaml
+	kubectl apply -f infra/k8s/loki-deployment.yaml
+	@echo "Waiting for statefulsets to be ready..."
+	kubectl wait --for=condition=ready pod -l app=postgres -n battlescope --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=redis -n battlescope --timeout=120s || true
+	kubectl wait --for=condition=ready pod -l app=loki -n battlescope --timeout=120s || true
+	@echo ""
+	@echo "Step 4: Observability Stack"
+	kubectl apply -f infra/k8s/prometheus-deployment.yaml
+	kubectl apply -f infra/k8s/jaeger-deployment.yaml
+	kubectl apply -f infra/k8s/grafana-deployment.yaml
+	kubectl apply -f infra/k8s/otel-collector-deployment.yaml
+	kubectl apply -f infra/k8s/promtail-daemonset.yaml
+	@echo ""
+	@echo "Step 5: Run Database Migration"
+	kubectl apply -f infra/k8s/db-migrate-job.yaml
+	@echo "Waiting for migration to complete..."
+	kubectl wait --for=condition=complete job/db-migrate -n battlescope --timeout=300s || true
+	@echo ""
+	@echo "Step 6: Application Services"
+	kubectl apply -f infra/k8s/api-deployment.yaml
+	kubectl apply -f infra/k8s/frontend-deployment.yaml
+	kubectl apply -f infra/k8s/ingest-deployment.yaml
+	kubectl apply -f infra/k8s/enrichment-deployment.yaml
+	kubectl apply -f infra/k8s/clusterer-deployment.yaml
+	kubectl apply -f infra/k8s/scheduler-cronjob.yaml
+	@echo ""
+	@echo "✅ All resources deployed!"
+	@echo ""
+	@echo "Checking pod status..."
+	kubectl get pods -n battlescope
+	@echo ""
+	@echo "To watch pods starting: kubectl get pods -n battlescope -w"
+	@echo "To check logs: kubectl logs -n battlescope -l app=<service-name>"
+
+k8s-reset-force:
+	@echo "💥 FORCE RESETTING k8s cluster (deleting all data)..."
+	@echo ""
+	@echo "Deleting namespace 'battlescope' (this will delete all resources and data)..."
+	kubectl delete namespace battlescope --ignore-not-found=true
+	@echo "Waiting for namespace deletion..."
+	@kubectl wait --for=delete namespace/battlescope --timeout=120s 2>/dev/null || echo "Namespace deleted or already gone"
+	@echo ""
+	@echo "Creating fresh namespace..."
+	kubectl apply -f infra/k8s/namespace.yaml
+	@echo ""
+	@echo "Deploying all resources..."
+	@$(MAKE) k8s-deploy-all
+
+k8s-reset:
+	@echo "⚠️  WARNING: This will DELETE ALL DATA in the battlescope namespace!"
+	@echo "⚠️  This includes:"
+	@echo "    - All PostgreSQL data (battles, killmails, accounts, etc.)"
+	@echo "    - All Redis data (cache, sessions, queues)"
+	@echo "    - All Loki logs"
+	@echo "    - All running pods"
+	@echo ""
+	@echo "The cluster will be completely reset and redeployed from scratch."
+	@echo ""
+	@read -p "Are you sure you want to continue? [yes/NO]: " confirm && [ "$$confirm" = "yes" ] || (echo "Aborted." && exit 1)
+	@echo ""
+	@$(MAKE) k8s-reset-force

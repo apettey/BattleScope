@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: character-verifier-config
+  namespace: battlescope
+data:
+  # Verification settings
+  BATCH_SIZE: "50"
+  DELAY_BETWEEN_BATCHES: "1000"
+  MAX_CHARACTERS_PER_RUN: "1000"
+  VERIFICATION_THRESHOLD_MINUTES: "55"
+
+  # Environment
+  NODE_ENV: "production"

@@ -353,4 +353,397 @@ describe('ClusteringEngine', () => {
       expect(result.battles[0].killmailIds).toHaveLength(3);
     });
   });
+
+  describe('alliance chain scenarios', () => {
+    const engine = new ClusteringEngine({
+      windowMinutes: 30,
+      gapMaxMinutes: 15,
+      minKills: 2,
+    });
+
+    it('clusters through alliance chains (A-B, B-C creates A-B-C cluster)', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n, // A
+          attackerAllianceIds: [99002222n], // B
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:20:00Z'), // 20 min gap (exceeds 15)
+          victimAllianceId: 99002222n, // B
+          attackerAllianceIds: [99003333n], // C
+        }),
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:25:00Z'),
+          victimAllianceId: 99003333n, // C
+          attackerAllianceIds: [99001111n], // A
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // All three should cluster because B links the first and second kills
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(3);
+    });
+
+    it('handles multi-alliance attackers (multiple attackers on single victim)', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n, 99003333n, 99004444n], // 3 attacking alliances
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:20:00Z'), // 20 min gap
+          victimAllianceId: 99005555n,
+          attackerAllianceIds: [99003333n], // Only one of the previous attackers
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should cluster because 99003333n is shared
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(2);
+    });
+
+    it('separates unrelated kills with large time gap and no alliance overlap', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:05:00Z'),
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n],
+        }),
+        // 20 minute gap with no shared alliances
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:25:00Z'),
+          victimAllianceId: 99003333n,
+          attackerAllianceIds: [99004444n],
+        }),
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:28:00Z'),
+          victimAllianceId: 99004444n,
+          attackerAllianceIds: [99003333n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      expect(result.battles).toHaveLength(2);
+      expect(result.battles[0].killmailIds).toHaveLength(2);
+      expect(result.battles[1].killmailIds).toHaveLength(2);
+    });
+  });
+
+  describe('complex multi-faction battles', () => {
+    const engine = new ClusteringEngine({
+      windowMinutes: 30,
+      gapMaxMinutes: 15,
+      minKills: 3,
+    });
+
+    it('clusters 3-way fight with rotating attackers/victims', () => {
+      const killmails: KillmailEventRecord[] = [
+        // Alliance A attacks Alliance B
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99002222n, // B
+          attackerAllianceIds: [99001111n], // A
+        }),
+        // Alliance B attacks Alliance C (5 min later)
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:05:00Z'),
+          victimAllianceId: 99003333n, // C
+          attackerAllianceIds: [99002222n], // B
+        }),
+        // Alliance C attacks Alliance A (10 min later)
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:15:00Z'),
+          victimAllianceId: 99001111n, // A
+          attackerAllianceIds: [99003333n], // C
+        }),
+        // Alliance A and C both attack B (20 min later - exceeds gap)
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:25:00Z'),
+          victimAllianceId: 99002222n, // B
+          attackerAllianceIds: [99001111n, 99003333n], // A and C
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // All should cluster together via alliance correlation
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(4);
+    });
+
+    it('handles free-for-all with 5 alliances', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:03:00Z'),
+          victimAllianceId: 99003333n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:06:00Z'),
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99004444n],
+        }),
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:09:00Z'),
+          victimAllianceId: 99004444n,
+          attackerAllianceIds: [99005555n],
+        }),
+        createKillmail({
+          killmailId: 5n,
+          occurredAt: new Date('2024-05-01T12:12:00Z'),
+          victimAllianceId: 99005555n,
+          attackerAllianceIds: [99001111n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // All should cluster together
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(5);
+    });
+  });
+
+  describe('time window boundary tests', () => {
+    const engine = new ClusteringEngine({
+      windowMinutes: 30,
+      gapMaxMinutes: 15,
+      minKills: 2,
+    });
+
+    it('excludes killmails just beyond window even with alliance correlation', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:30:01Z'), // 30 min 1 sec - just outside window
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n], // Shared alliance
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should NOT cluster - window exceeded
+      expect(result.battles).toHaveLength(0);
+      expect(result.ignoredKillmailIds).toHaveLength(2);
+    });
+
+    it('includes killmail at exactly window boundary with alliance correlation', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:30:00Z'), // Exactly 30 minutes
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should cluster - exactly at boundary
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(2);
+    });
+
+    it('separates kills when gap exceeded and no alliance correlation', () => {
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:04:00Z'),
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n],
+        }),
+        // 16 minutes from last kill, no shared alliances, but within 30 min window
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:20:00Z'),
+          victimAllianceId: 99003333n,
+          attackerAllianceIds: [99004444n],
+        }),
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:23:00Z'),
+          victimAllianceId: 99004444n,
+          attackerAllianceIds: [99003333n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should create two battles - gap exceeded without correlation
+      expect(result.battles).toHaveLength(2);
+      expect(result.battles[0].killmailIds).toHaveLength(2);
+      expect(result.battles[1].killmailIds).toHaveLength(2);
+    });
+  });
+
+  describe('sparse killmail patterns', () => {
+    const engine = new ClusteringEngine({
+      windowMinutes: 30,
+      gapMaxMinutes: 15,
+      minKills: 3,
+    });
+
+    it('handles spread-out kills with consistent alliance involvement', () => {
+      // Simulates a drawn-out battle with lulls in fighting
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        // 14 minute gap - just within limit
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:14:00Z'),
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n],
+        }),
+        // 14 minute gap again
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:28:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should cluster - each kill within gap of previous
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(3);
+    });
+
+    it('handles rapid burst then long gap with alliance link', () => {
+      const killmails: KillmailEventRecord[] = [
+        // Rapid burst
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:01:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:02:00Z'),
+          victimAllianceId: 99001111n,
+          attackerAllianceIds: [99002222n],
+        }),
+        // 20 minute gap but same alliances
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:22:00Z'),
+          victimAllianceId: 99002222n,
+          attackerAllianceIds: [99001111n],
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should cluster via alliance correlation
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(4);
+    });
+  });
+
+  describe('out-of-order killmail arrival', () => {
+    const engine = new ClusteringEngine({
+      windowMinutes: 30,
+      gapMaxMinutes: 15,
+      minKills: 2,
+    });
+
+    it('handles killmails arriving out of chronological order', () => {
+      // Killmails might arrive out of order from zKillboard
+      const killmails: KillmailEventRecord[] = [
+        createKillmail({
+          killmailId: 3n,
+          occurredAt: new Date('2024-05-01T12:10:00Z'),
+        }),
+        createKillmail({
+          killmailId: 1n,
+          occurredAt: new Date('2024-05-01T12:00:00Z'),
+        }),
+        createKillmail({
+          killmailId: 4n,
+          occurredAt: new Date('2024-05-01T12:15:00Z'),
+        }),
+        createKillmail({
+          killmailId: 2n,
+          occurredAt: new Date('2024-05-01T12:05:00Z'),
+        }),
+      ];
+
+      const result = engine.cluster(killmails);
+
+      // Should still cluster correctly after sorting
+      expect(result.battles).toHaveLength(1);
+      expect(result.battles[0].killmailIds).toHaveLength(4);
+      // Should be in chronological order in the battle
+      expect(result.battles[0].killmailIds[0]).toBe(1n);
+      expect(result.battles[0].killmailIds[1]).toBe(2n);
+      expect(result.battles[0].killmailIds[2]).toBe(3n);
+      expect(result.battles[0].killmailIds[3]).toBe(4n);
+    });
+  });
 });
