@@ -69,6 +69,77 @@ export const AccountDetailSchema = AccountSchema.extend({
 
 export type AccountDetail = z.infer<typeof AccountDetailSchema>;
 
+// Detailed character schema for View User Page
+export const DetailedCharacterSchema = z.object({
+  id: z.string().uuid(),
+  eveCharacterId: z.string(),
+  eveCharacterName: z.string(),
+  portraitUrl: z.string().url(),
+  corpId: z.string(),
+  corpName: z.string(),
+  allianceId: z.string().nullable(),
+  allianceName: z.string().nullable(),
+  isPrimary: z.boolean(),
+  scopes: z.array(z.string()),
+  tokenExpiresAt: z.string().datetime(),
+  tokenStatus: z.enum(['valid', 'expiring', 'expired']),
+  lastVerifiedAt: z.string().datetime(),
+  createdAt: z.string().datetime(),
+});
+
+export type DetailedCharacter = z.infer<typeof DetailedCharacterSchema>;
+
+// Account detail with characters grouped by alliance/corporation
+export const AccountDetailWithCharactersSchema = z.object({
+  account: z.object({
+    id: z.string().uuid(),
+    displayName: z.string(),
+    email: z.string().email().nullable(),
+    isBlocked: z.boolean(),
+    isSuperAdmin: z.boolean(),
+    lastLoginAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+  }),
+  primaryCharacter: z
+    .object({
+      id: z.string().uuid(),
+      eveCharacterId: z.string(),
+      eveCharacterName: z.string(),
+      portraitUrl: z.string(),
+      corpId: z.string(),
+      corpName: z.string(),
+      allianceId: z.string().nullable(),
+      allianceName: z.string().nullable(),
+      isPrimary: z.boolean(),
+      tokenStatus: z.enum(['valid', 'expiring', 'expired']),
+    })
+    .nullable(),
+  charactersGrouped: z.array(
+    z.object({
+      allianceId: z.string().nullable(),
+      allianceName: z.string().nullable(),
+      corporations: z.array(
+        z.object({
+          corpId: z.string(),
+          corpName: z.string(),
+          characters: z.array(DetailedCharacterSchema),
+        }),
+      ),
+    }),
+  ),
+  featureRoles: z.array(
+    FeatureRoleSchema.extend({
+      featureName: z.string(),
+      roleName: z.string(),
+    }),
+  ),
+  stats: z.object({
+    totalCharacters: z.number(),
+  }),
+});
+
+export type AccountDetailWithCharacters = z.infer<typeof AccountDetailWithCharactersSchema>;
+
 export const AccountListResponseSchema = z.object({
   accounts: z.array(AccountSchema),
   total: z.number(),
@@ -159,7 +230,7 @@ export const fetchAccounts = async (
 };
 
 /**
- * Get account details (Admin only)
+ * Get account details (Admin only) - DEPRECATED: Use fetchAccountDetailWithCharacters instead
  */
 export const fetchAccountDetail = async (
   accountId: string,
@@ -180,6 +251,30 @@ export const fetchAccountDetail = async (
 
   const data = await response.json();
   return AccountDetailSchema.parse(data);
+};
+
+/**
+ * Get account details with characters grouped by alliance/corporation (Admin only)
+ */
+export const fetchAccountDetailWithCharacters = async (
+  accountId: string,
+  options: ApiOptions = {},
+): Promise<AccountDetailWithCharacters> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'GET',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  return AccountDetailWithCharactersSchema.parse(data);
 };
 
 /**
@@ -231,4 +326,70 @@ export const assignRoles = async (
     body: JSON.stringify({ roles }),
     signal: options.signal,
   });
+};
+
+/**
+ * Promote account to SuperAdmin (SuperAdmin only)
+ */
+export const promoteToSuperAdmin = async (
+  accountId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}/superadmin`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'POST',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to promote to SuperAdmin: ${errorText}`);
+  }
+};
+
+/**
+ * Demote account from SuperAdmin (SuperAdmin only)
+ */
+export const demoteFromSuperAdmin = async (
+  accountId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}/superadmin`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'DELETE',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to demote from SuperAdmin: ${errorText}`);
+  }
+};
+
+/**
+ * Delete account (soft delete, SuperAdmin only)
+ */
+export const deleteAccount = async (
+  accountId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'DELETE',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to delete account: ${errorText}`);
+  }
 };
