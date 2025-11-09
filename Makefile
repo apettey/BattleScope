@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push
 
 install:
 	pnpm install
@@ -79,3 +79,47 @@ battlescope-images-clean:
 	else \
 		echo "No Battlescope images found."; \
 	fi
+
+k8s-build-push:
+	@echo "Building and pushing all k8s images for arm64..."
+	@echo "Building frontend..."
+	docker buildx build --platform linux/arm64 --push \
+		-t docker.io/petdog/battlescope-frontend:latest \
+		-f frontend/Dockerfile .
+	@echo "Building api..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/api \
+		--build-arg BUILD_TARGET=backend/api \
+		-t docker.io/petdog/battlescope-api:latest \
+		-f Dockerfile .
+	@echo "Building ingest..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/ingest \
+		--build-arg BUILD_TARGET=backend/ingest \
+		-t docker.io/petdog/battlescope-ingest:latest \
+		-f Dockerfile .
+	@echo "Building enrichment..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/enrichment \
+		--build-arg BUILD_TARGET=backend/enrichment \
+		-t docker.io/petdog/battlescope-enrichment:latest \
+		-f Dockerfile .
+	@echo "Building clusterer..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/clusterer \
+		--build-arg BUILD_TARGET=backend/clusterer \
+		-t docker.io/petdog/battlescope-clusterer:latest \
+		-f Dockerfile .
+	@echo "Building scheduler..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/scheduler \
+		--build-arg BUILD_TARGET=backend/scheduler \
+		-t docker.io/petdog/battlescope-scheduler:latest \
+		-f Dockerfile .
+	@echo "Building db-migrate..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/database \
+		--build-arg BUILD_TARGET=packages/database \
+		-t docker.io/petdog/battlescope-db-migrate:latest \
+		-f Dockerfile .
+	@echo "All images built and pushed successfully!"
