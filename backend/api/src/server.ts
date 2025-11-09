@@ -225,6 +225,18 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     }
 
     const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+
+    // Log error for debugging
+    request.log.error(
+      {
+        err: error,
+        url: request.url,
+        method: request.method,
+        statusCode,
+      },
+      'Request error'
+    );
+
     return reply.status(statusCode).send({ message: error.message });
   });
 

@@ -27,11 +27,12 @@ type RouteState =
       entityId: string;
     };
 
-const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element }> = [
+const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element; adminOnly?: boolean }> = [
   { id: 'home', label: 'Home', render: () => <HomeView /> },
   { id: 'recent', label: 'Recent Kills', render: () => <RecentKillsView /> },
   { id: 'rules', label: 'Rules', render: () => <RulesView /> },
   { id: 'battles', label: 'Battles', render: () => <BattlesView /> },
+  { id: 'admin', label: 'Admin', render: () => <AdminView />, adminOnly: true },
 ];
 
 const isValidTab = (value: string): value is TabId => tabs.some((tab) => tab.id === value);
@@ -117,6 +118,17 @@ export const App: FC = () => {
   }, [route]);
 
   const activeTab = route.type === 'tab' ? route.tabId : null;
+
+  // Check if user is admin/super admin
+  const isAdmin = user?.isSuperAdmin || user?.featureRoles.some((r) => r.roleKey === 'admin');
+
+  // Filter tabs based on user permissions
+  const visibleTabs = tabs.filter((tab) => {
+    if (tab.adminOnly) {
+      return isAdmin;
+    }
+    return true;
+  });
 
   const renderView = () => {
     if (route.type === 'entity') {
@@ -266,7 +278,7 @@ export const App: FC = () => {
               flexWrap: 'wrap',
             }}
           >
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
               const isActive = tab.id === activeTab;
               return (
                 <li key={tab.id}>

@@ -183,8 +183,24 @@ export class AccountRepository {
       queryBuilder = queryBuilder.where('isDeleted', '=', false);
     }
 
-    // Get total count
-    const countResult = await queryBuilder
+    // Get total count (create separate query without selectAll)
+    const countQuery = this.db.selectFrom('accounts');
+
+    // Apply same filters as main query
+    let countBuilder = countQuery;
+    if (query) {
+      countBuilder = countBuilder.where((eb) =>
+        eb.or([eb('displayName', 'ilike', `%${query}%`), eb('email', 'ilike', `%${query}%`)]),
+      );
+    }
+    if (!includeBlocked) {
+      countBuilder = countBuilder.where('isBlocked', '=', false);
+    }
+    if (!includeDeleted) {
+      countBuilder = countBuilder.where('isDeleted', '=', false);
+    }
+
+    const countResult = await countBuilder
       .select((eb) => eb.fn.count('id').as('count'))
       .executeTakeFirst();
     const total = Number(countResult?.count ?? 0);
