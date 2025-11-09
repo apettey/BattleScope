@@ -5,9 +5,10 @@ node_modules
 **/node_modules
 pnpm-store
 coverage
-dist
-**/dist
-frontend/dist
+# Temporarily commented out to ensure built packages are included
+# dist
+# **/dist
+# frontend/dist
 *.log
 .env
 .env.*
