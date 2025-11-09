@@ -5,6 +5,7 @@ Background job that periodically verifies character corporation and alliance mem
 ## Overview
 
 This service runs as a Kubernetes CronJob every hour to:
+
 1. Check all active characters for corporation/alliance changes
 2. Verify new organizations are still approved
 3. Invalidate sessions for characters that moved to unapproved organizations
@@ -37,6 +38,7 @@ VERIFICATION_THRESHOLD_MINUTES=55     # How old last_verified_at must be
 ## Security Model
 
 **Two-Layer Defense**:
+
 1. **Login-time verification**: Corp/alliance checked during OAuth callback
 2. **Hourly background verification**: Catches changes during active sessions
 
@@ -76,6 +78,7 @@ For each character:
 ### Logs
 
 Structured JSON logs (Pino):
+
 - Job start/completion
 - Batch progress
 - Org changes detected

@@ -9,11 +9,7 @@ import {
 } from '@battlescope/database';
 import { type EsiClient, EsiHttpError } from '@battlescope/esi-client';
 import { EncryptionService } from '@battlescope/auth';
-import type {
-  CharacterVerificationResult,
-  VerificationStats,
-  CharacterToVerify,
-} from './types.js';
+import type { CharacterVerificationResult, VerificationStats, CharacterToVerify } from './types.js';
 import {
   verificationJobDuration,
   charactersProcessed,
@@ -256,10 +252,7 @@ export class CharacterVerifierService {
       try {
         accessToken = this.encryptionService.decryptFromBuffer(character.esiAccessToken);
       } catch (error) {
-        this.logger.error(
-          { error, characterId: character.id },
-          'Failed to decrypt access token',
-        );
+        this.logger.error({ error, characterId: character.id }, 'Failed to decrypt access token');
 
         // Use last known values
         const isAllowed = await this.authConfigRepo.isCharacterAllowed(
@@ -320,7 +313,9 @@ export class CharacterVerifierService {
           'Failed to fetch character info from ESI',
         );
 
-        esiErrors.inc({ error_code: error instanceof EsiHttpError ? error.statusCode.toString() : 'unknown' });
+        esiErrors.inc({
+          error_code: error instanceof EsiHttpError ? error.statusCode.toString() : 'unknown',
+        });
 
         return {
           characterId: character.id,
@@ -444,9 +439,7 @@ export class CharacterVerifierService {
   /**
    * Invalidate session if character is no longer allowed
    */
-  private async invalidateSessionIfDisallowed(
-    result: CharacterVerificationResult,
-  ): Promise<void> {
+  private async invalidateSessionIfDisallowed(result: CharacterVerificationResult): Promise<void> {
     if (result.isAllowed) {
       return; // Character still in approved org, no action needed
     }
@@ -462,9 +455,7 @@ export class CharacterVerifierService {
 
     try {
       // 1. Get current session token for account
-      const sessionToken = await this.redis.get(
-        `battlescope:account-session:${result.accountId}`,
-      );
+      const sessionToken = await this.redis.get(`battlescope:account-session:${result.accountId}`);
 
       if (sessionToken) {
         // 2. Delete session
@@ -483,7 +474,7 @@ export class CharacterVerifierService {
       }
 
       // 4. Audit log
-      await this.auditLogRepo.record({
+      await this.auditLogRepo.create({
         actorAccountId: null, // System action
         action: 'session.invalidated',
         targetType: 'account',
@@ -496,10 +487,7 @@ export class CharacterVerifierService {
         },
       });
     } catch (error) {
-      this.logger.error(
-        { error, accountId: result.accountId },
-        'Failed to invalidate session',
-      );
+      this.logger.error({ error, accountId: result.accountId }, 'Failed to invalidate session');
       // Don't throw - we don't want to fail the entire job if session invalidation fails
     }
   }

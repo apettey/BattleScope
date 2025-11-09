@@ -5,7 +5,7 @@ metadata:
   namespace: battlescope
 spec:
   # Run every hour at the top of the hour
-  schedule: "0 * * * *"
+  schedule: '0 * * * *'
 
   # Don't run multiple instances simultaneously
   concurrencyPolicy: Forbid
@@ -17,7 +17,7 @@ spec:
   failedJobsHistoryLimit: 3
 
   # Job must complete within 1 hour
-  startingDeadlineSeconds: 300  # 5 minutes grace period to start
+  startingDeadlineSeconds: 300 # 5 minutes grace period to start
 
   jobTemplate:
     spec:
@@ -63,7 +63,7 @@ spec:
                 runAsNonRoot: true
                 runAsUser: 1000
                 allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: false  # Node.js needs writable /tmp
+                readOnlyRootFilesystem: false # Node.js needs writable /tmp
                 capabilities:
                   drop:
                     - ALL

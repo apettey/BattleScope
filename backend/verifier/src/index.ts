@@ -1,20 +1,23 @@
 import { Redis } from 'ioredis';
+import { pino } from 'pino';
 import { createDb } from '@battlescope/database';
 import { EsiClient } from '@battlescope/esi-client';
 import { createEncryptionService } from '@battlescope/auth';
-import { createLogger } from '@battlescope/shared';
 import { CharacterVerifierService } from './service.js';
 import { loadConfig } from './config.js';
 import { register } from './metrics.js';
 
 async function main() {
   const config = loadConfig();
-  const logger = createLogger({ name: 'character-verifier' });
+  const logger = pino({ name: 'character-verifier', level: process.env.LOG_LEVEL ?? 'info' });
 
-  logger.info({ config: { ...config, encryptionKey: '[REDACTED]' } }, 'Starting verifier with config');
+  logger.info(
+    { config: { ...config, encryptionKey: '[REDACTED]' } },
+    'Starting verifier with config',
+  );
 
   // Create database client
-  const db = createDb({ connectionString: config.databaseUrl });
+  const db = createDb();
 
   // Create Redis client
   const redis = new Redis(config.redisUrl, {
@@ -37,9 +40,7 @@ async function main() {
   });
 
   // Create ESI client
-  const esiClient = new EsiClient({
-    userAgent: 'BattleScope Character Verifier/1.0',
-  });
+  const esiClient = new EsiClient();
 
   // Create encryption service
   const encryptionService = createEncryptionService(config.encryptionKey);

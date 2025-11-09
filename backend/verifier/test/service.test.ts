@@ -19,6 +19,7 @@ describe('CharacterVerifierService', () => {
   beforeEach(() => {
     mockDb = {
       selectFrom: vi.fn().mockReturnThis(),
+      selectAll: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
@@ -27,9 +28,9 @@ describe('CharacterVerifierService', () => {
 
     mockRedis = {
       get: vi.fn(),
-      del: vi.fn(),
+      del: vi.fn() as any,
       setex: vi.fn(),
-    };
+    } as any;
 
     mockEsiClient = {
       getCharacterInfo: vi.fn(),
