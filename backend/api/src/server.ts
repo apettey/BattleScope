@@ -248,14 +248,17 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     const authMiddleware = createAuthMiddleware(sessionService);
 
     app.addHook('preHandler', async (request, reply) => {
+      // Extract pathname without query parameters
+      const pathname = request.url.split('?')[0];
+
       // Skip auth for public routes
-      if (PUBLIC_ROUTES.has(request.url) || request.url.startsWith('/docs/')) {
+      if (PUBLIC_ROUTES.has(pathname) || pathname.startsWith('/docs/')) {
         return;
       }
 
       // Skip auth for exact pattern matches
       for (const route of PUBLIC_ROUTES) {
-        if (route.endsWith('*') && request.url.startsWith(route.slice(0, -1))) {
+        if (route.endsWith('*') && pathname.startsWith(route.slice(0, -1))) {
           return;
         }
       }

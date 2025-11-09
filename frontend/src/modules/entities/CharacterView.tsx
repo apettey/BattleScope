@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { fetchCharacterDetail, formatIsk, type CharacterDetail } from './api.js';
 import { EntityLink } from '../common/components/EntityLink.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 interface FetchError {
   message: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const CharacterView: FC<Props> = ({ characterId }) => {
+  const { wrapApiCall } = useApiCall();
   const [character, setCharacter] = useState<CharacterDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FetchError | null>(null);
@@ -28,7 +30,7 @@ export const CharacterView: FC<Props> = ({ characterId }) => {
     setLoading(true);
     setError(null);
 
-    fetchCharacterDetail(characterId, { signal: controller.signal })
+    wrapApiCall(() => fetchCharacterDetail(characterId, { signal: controller.signal }))
       .then((detail) => {
         if (controller.signal.aborted) return;
         setCharacter(detail);
@@ -42,7 +44,7 @@ export const CharacterView: FC<Props> = ({ characterId }) => {
       });
 
     return () => controller.abort();
-  }, [characterId]);
+  }, [characterId, wrapApiCall]);
 
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading character details...</div>;

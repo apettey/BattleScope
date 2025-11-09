@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { fetchCorporationDetail, formatIsk, type CorporationDetail } from './api.js';
 import { EntityLink } from '../common/components/EntityLink.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 interface FetchError {
   message: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const CorporationView: FC<Props> = ({ corpId }) => {
+  const { wrapApiCall } = useApiCall();
   const [corporation, setCorporation] = useState<CorporationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FetchError | null>(null);
@@ -28,7 +30,7 @@ export const CorporationView: FC<Props> = ({ corpId }) => {
     setLoading(true);
     setError(null);
 
-    fetchCorporationDetail(corpId, { signal: controller.signal })
+    wrapApiCall(() => fetchCorporationDetail(corpId, { signal: controller.signal }))
       .then((detail) => {
         if (controller.signal.aborted) return;
         setCorporation(detail);
@@ -42,7 +44,7 @@ export const CorporationView: FC<Props> = ({ corpId }) => {
       });
 
     return () => controller.abort();
-  }, [corpId]);
+  }, [corpId, wrapApiCall]);
 
   if (loading) {
     return (

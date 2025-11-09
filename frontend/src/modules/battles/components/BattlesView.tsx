@@ -9,6 +9,7 @@ import {
 } from '../api.js';
 import { EntityLink } from '../../common/components/EntityLink.js';
 import { EntityList } from '../../common/components/EntityList.js';
+import { useApiCall } from '../../api/useApiCall.js';
 
 interface FetchError {
   message: string;
@@ -34,6 +35,7 @@ const spaceTypeColors: Record<string, string> = {
 };
 
 export const BattlesView = () => {
+  const { wrapApiCall } = useApiCall();
   const [battles, setBattles] = useState<BattleSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
@@ -47,42 +49,45 @@ export const BattlesView = () => {
 
   const detailAbortRef = useRef<AbortController | null>(null);
 
-  const loadBattle = useCallback((battleId: string) => {
-    setSelectedBattleId(battleId);
-    setDetailLoading(true);
-    setDetailError(null);
-    setSelectedBattle(null);
+  const loadBattle = useCallback(
+    (battleId: string) => {
+      setSelectedBattleId(battleId);
+      setDetailLoading(true);
+      setDetailError(null);
+      setSelectedBattle(null);
 
-    detailAbortRef.current?.abort();
-    const controller = new AbortController();
-    detailAbortRef.current = controller;
+      detailAbortRef.current?.abort();
+      const controller = new AbortController();
+      detailAbortRef.current = controller;
 
-    fetchBattleDetail(battleId, { signal: controller.signal })
-      .then((detail: BattleDetail) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        setSelectedBattle(detail);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        setDetailError(toError(error));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setDetailLoading(false);
-        }
-      });
-  }, []);
+      wrapApiCall(() => fetchBattleDetail(battleId, { signal: controller.signal }))
+        .then((detail: BattleDetail) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          setSelectedBattle(detail);
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          setDetailError(toError(error));
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setDetailLoading(false);
+          }
+        });
+    },
+    [wrapApiCall],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
     setListLoading(true);
     setListError(null);
 
-    fetchBattles({ limit: 10, signal: controller.signal })
+    wrapApiCall(() => fetchBattles({ limit: 10, signal: controller.signal }))
       .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
         if (controller.signal.aborted) {
           return;
@@ -109,7 +114,7 @@ export const BattlesView = () => {
       controller.abort();
       detailAbortRef.current?.abort();
     };
-  }, [loadBattle]);
+  }, [loadBattle, wrapApiCall]);
 
   const handleSelect = useCallback(
     (battleId: string) => {
@@ -128,7 +133,7 @@ export const BattlesView = () => {
     setLoadingMore(true);
     setListError(null);
 
-    fetchBattles({ cursor: nextCursor })
+    wrapApiCall(() => fetchBattles({ cursor: nextCursor }))
       .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
         setNextCursor(response.nextCursor ?? null);
         setBattles((current) => {
@@ -148,7 +153,7 @@ export const BattlesView = () => {
       .finally(() => {
         setLoadingMore(false);
       });
-  }, [loadingMore, nextCursor]);
+  }, [loadingMore, nextCursor, wrapApiCall]);
 
   const selectedSummary = useMemo(
     () => battles.find((battle) => battle.id === selectedBattleId) ?? null,

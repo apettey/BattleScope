@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DashboardSummary } from '../dashboard/api.js';
 import { fetchDashboardSummary } from '../dashboard/api.js';
 import { EntityLink } from '../common/components/EntityLink.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -22,6 +23,7 @@ const REFRESH_INTERVAL_MS = 30_000;
 export const HomeView = () => {
   const [{ summary, loading, error }, setState] = useState<LoadState>(initialState);
   const abortRef = useRef<AbortController | null>(null);
+  const { wrapApiCall } = useApiCall();
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -29,7 +31,9 @@ export const HomeView = () => {
     abortRef.current = controller;
     setState((current) => ({ ...current, loading: true, error: null }));
     try {
-      const nextSummary = await fetchDashboardSummary({ signal: controller.signal });
+      const nextSummary = await wrapApiCall(() =>
+        fetchDashboardSummary({ signal: controller.signal }),
+      );
       if (!controller.signal.aborted) {
         setState({ summary: nextSummary, loading: false, error: null });
       }
@@ -42,7 +46,7 @@ export const HomeView = () => {
         }));
       }
     }
-  }, []);
+  }, [wrapApiCall]);
 
   useEffect(() => {
     void load();

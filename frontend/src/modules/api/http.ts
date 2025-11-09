@@ -58,7 +58,12 @@ export const fetchJson = async <TData = unknown>(
   init: RequestInit | undefined,
   fetchFn: FetchFn = defaultFetch,
 ): Promise<TData> => {
-  const response = await fetchFn(input, init);
+  // Always include credentials (cookies) with requests
+  const requestInit: RequestInit = {
+    ...init,
+    credentials: 'include',
+  };
+  const response = await fetchFn(input, requestInit);
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     throw new ApiError(

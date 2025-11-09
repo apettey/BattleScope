@@ -8,6 +8,7 @@ import {
 } from './api.js';
 import { EntityLink } from '../common/components/EntityLink.js';
 import { EntityList } from '../common/components/EntityList.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 const MAX_ITEMS = 50;
 const SPACE_TYPES: SpaceType[] = ['kspace', 'jspace', 'pochven'];
@@ -52,6 +53,7 @@ const formatIsk = (value: string | null): string => {
 };
 
 export const RecentKillsView = () => {
+  const { wrapApiCall } = useApiCall();
   const [items, setItems] = useState<KillmailFeedItem[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export const RecentKillsView = () => {
 
     const establishStream = async () => {
       try {
-        const initial = await fetchRecentKillmails({ limit: MAX_ITEMS });
+        const initial = await wrapApiCall(() => fetchRecentKillmails({ limit: MAX_ITEMS }));
         if (!cancelled) {
           applySnapshot(initial.items);
         }
@@ -125,7 +127,7 @@ export const RecentKillsView = () => {
       cancelled = true;
       streamCancelRef.current?.();
     };
-  }, [applySnapshot, applyUpdate, handleError]);
+  }, [applySnapshot, applyUpdate, handleError, wrapApiCall]);
 
   const toggleFilter = useCallback((spaceType: SpaceType) => {
     setActiveFilters((current) => {

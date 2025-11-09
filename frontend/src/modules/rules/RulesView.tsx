@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchCurrentRuleset, updateRuleset, type Ruleset } from './api.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 interface FormState {
   minPilots: number;
@@ -28,6 +29,7 @@ const buildFormState = (ruleset: Ruleset): FormState => ({
 });
 
 export const RulesView = () => {
+  const { wrapApiCall } = useApiCall();
   const [ruleset, setRuleset] = useState<Ruleset | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export const RulesView = () => {
     setLoading(true);
     setError(null);
     try {
-      const current = await fetchCurrentRuleset({ signal: controller.signal });
+      const current = await wrapApiCall(() => fetchCurrentRuleset({ signal: controller.signal }));
       if (!controller.signal.aborted) {
         setRuleset(current);
         setForm(buildFormState(current));
@@ -57,7 +59,7 @@ export const RulesView = () => {
         setLoading(false);
       }
     }
-  }, []);
+  }, [wrapApiCall]);
 
   useEffect(() => {
     void load();
@@ -80,13 +82,17 @@ export const RulesView = () => {
       setSuccess(null);
       setError(null);
       try {
-        const next = await updateRuleset({
-          minPilots: Number.isFinite(form.minPilots) ? Math.max(1, Math.trunc(form.minPilots)) : 1,
-          trackedAllianceIds: parseList(form.trackedAllianceIds),
-          trackedCorpIds: parseList(form.trackedCorpIds),
-          ignoreUnlisted: form.ignoreUnlisted,
-          updatedBy: form.updatedBy.trim() || null,
-        });
+        const next = await wrapApiCall(() =>
+          updateRuleset({
+            minPilots: Number.isFinite(form.minPilots)
+              ? Math.max(1, Math.trunc(form.minPilots))
+              : 1,
+            trackedAllianceIds: parseList(form.trackedAllianceIds),
+            trackedCorpIds: parseList(form.trackedCorpIds),
+            ignoreUnlisted: form.ignoreUnlisted,
+            updatedBy: form.updatedBy.trim() || null,
+          }),
+        );
         setRuleset(next);
         setForm(buildFormState(next));
         setSuccess('Rules updated successfully.');
@@ -96,7 +102,7 @@ export const RulesView = () => {
         setSaving(false);
       }
     },
-    [form],
+    [form, wrapApiCall],
   );
 
   const canSubmit = useMemo(() => {

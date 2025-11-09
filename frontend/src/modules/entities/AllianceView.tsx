@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { fetchAllianceDetail, formatIsk, type AllianceDetail } from './api.js';
 import { EntityLink } from '../common/components/EntityLink.js';
+import { useApiCall } from '../api/useApiCall.js';
 
 interface FetchError {
   message: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const AllianceView: FC<Props> = ({ allianceId }) => {
+  const { wrapApiCall } = useApiCall();
   const [alliance, setAlliance] = useState<AllianceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FetchError | null>(null);
@@ -28,7 +30,7 @@ export const AllianceView: FC<Props> = ({ allianceId }) => {
     setLoading(true);
     setError(null);
 
-    fetchAllianceDetail(allianceId, { signal: controller.signal })
+    wrapApiCall(() => fetchAllianceDetail(allianceId, { signal: controller.signal }))
       .then((detail) => {
         if (controller.signal.aborted) return;
         setAlliance(detail);
@@ -42,7 +44,7 @@ export const AllianceView: FC<Props> = ({ allianceId }) => {
       });
 
     return () => controller.abort();
-  }, [allianceId]);
+  }, [allianceId, wrapApiCall]);
 
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading alliance details...</div>;

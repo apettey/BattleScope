@@ -12,6 +12,7 @@ import {
   type Account,
   type AccountDetail,
 } from '../api.js';
+import { useApiCall } from '../../api/useApiCall.js';
 
 const AccountListItem: React.FC<{
   account: Account;
@@ -84,6 +85,7 @@ const AccountDetail: React.FC<{
   onClose: () => void;
   onUpdate: () => void;
 }> = ({ accountId, onClose, onUpdate }) => {
+  const { wrapApiCall } = useApiCall();
   const [detail, setDetail] = useState<AccountDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,9 @@ const AccountDetail: React.FC<{
     const load = async () => {
       try {
         setLoading(true);
-        const data = await fetchAccountDetail(accountId, { signal: abortController.signal });
+        const data = await wrapApiCall(() =>
+          fetchAccountDetail(accountId, { signal: abortController.signal }),
+        );
         setDetail(data);
       } catch (err) {
         if (!abortController.signal.aborted) {
@@ -109,14 +113,14 @@ const AccountDetail: React.FC<{
     void load();
 
     return () => abortController.abort();
-  }, [accountId]);
+  }, [accountId, wrapApiCall]);
 
   const handleBlock = async () => {
     if (!detail || !confirm(`Block user ${detail.displayName}?`)) return;
 
     setActionLoading(true);
     try {
-      await blockAccount(accountId);
+      await wrapApiCall(() => blockAccount(accountId));
       onUpdate();
     } catch (err) {
       alert(`Failed to block: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -130,7 +134,7 @@ const AccountDetail: React.FC<{
 
     setActionLoading(true);
     try {
-      await unblockAccount(accountId);
+      await wrapApiCall(() => unblockAccount(accountId));
       onUpdate();
     } catch (err) {
       alert(`Failed to unblock: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -320,6 +324,7 @@ const AccountDetail: React.FC<{
 
 export const AdminView: React.FC = () => {
   const { user } = useAuth();
+  const { wrapApiCall } = useApiCall();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -335,9 +340,8 @@ export const AdminView: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchAccounts(
-        { query: search || undefined, limit: 100 },
-        { signal: controller.signal },
+      const data = await wrapApiCall(() =>
+        fetchAccounts({ query: search || undefined, limit: 100 }, { signal: controller.signal }),
       );
       setAccounts(data.accounts);
     } catch (err) {
