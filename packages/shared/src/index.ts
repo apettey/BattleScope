@@ -93,3 +93,4 @@ export interface DashboardSummaryDto {
 export { startTelemetry, stopTelemetry } from './otel/index.js';
 export { SystemSecurityResolver, deriveSecurityType, type SystemInfo } from './system-security.js';
 export type { SecurityType } from '@battlescope/database';
+export { createLoggerConfig } from './logger.js';

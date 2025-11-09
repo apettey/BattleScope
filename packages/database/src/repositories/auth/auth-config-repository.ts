@@ -49,12 +49,13 @@ export class AuthConfigRepository {
       throw new Error('Auth config not found');
     }
 
+    // Ensure all IDs are bigints (pg-mem may return numbers)
     return {
       requireMembership: result.requireMembership,
-      allowedCorpIds: result.allowedCorpIds,
-      allowedAllianceIds: result.allowedAllianceIds,
-      deniedCorpIds: result.deniedCorpIds,
-      deniedAllianceIds: result.deniedAllianceIds,
+      allowedCorpIds: result.allowedCorpIds.map((id) => BigInt(id)),
+      allowedAllianceIds: result.allowedAllianceIds.map((id) => BigInt(id)),
+      deniedCorpIds: result.deniedCorpIds.map((id) => BigInt(id)),
+      deniedAllianceIds: result.deniedAllianceIds.map((id) => BigInt(id)),
       updatedAt: result.updatedAt,
     };
   }
@@ -63,19 +64,34 @@ export class AuthConfigRepository {
    * Update the auth config
    */
   async update(input: UpdateAuthConfigInput): Promise<AuthConfigRecord> {
+    // Normalize input to ensure all IDs are bigints
+    const normalizedInput: Record<string, unknown> = { ...input };
+    if (input.allowedCorpIds) {
+      normalizedInput.allowedCorpIds = input.allowedCorpIds.map((id) => BigInt(id));
+    }
+    if (input.allowedAllianceIds) {
+      normalizedInput.allowedAllianceIds = input.allowedAllianceIds.map((id) => BigInt(id));
+    }
+    if (input.deniedCorpIds) {
+      normalizedInput.deniedCorpIds = input.deniedCorpIds.map((id) => BigInt(id));
+    }
+    if (input.deniedAllianceIds) {
+      normalizedInput.deniedAllianceIds = input.deniedAllianceIds.map((id) => BigInt(id));
+    }
+
     const result = await this.db
       .updateTable('auth_config')
-      .set(input)
+      .set(normalizedInput)
       .where('id', '=', true)
       .returningAll()
       .executeTakeFirstOrThrow();
 
     return {
       requireMembership: result.requireMembership,
-      allowedCorpIds: result.allowedCorpIds,
-      allowedAllianceIds: result.allowedAllianceIds,
-      deniedCorpIds: result.deniedCorpIds,
-      deniedAllianceIds: result.deniedAllianceIds,
+      allowedCorpIds: result.allowedCorpIds.map((id) => BigInt(id)),
+      allowedAllianceIds: result.allowedAllianceIds.map((id) => BigInt(id)),
+      deniedCorpIds: result.deniedCorpIds.map((id) => BigInt(id)),
+      deniedAllianceIds: result.deniedAllianceIds.map((id) => BigInt(id)),
       updatedAt: result.updatedAt,
     };
   }

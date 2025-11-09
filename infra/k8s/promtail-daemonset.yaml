@@ -54,6 +54,9 @@ data:
                 res: res
                 responseTime: responseTime
                 error: error
+                file: file
+                package: package
+                caller: caller
 
           # Map Pino log levels to standard levels
           - labels:
@@ -62,6 +65,8 @@ data:
               pod:
               namespace:
               container:
+              package:
+              file:
 
           # Extract timestamp
           - timestamp:

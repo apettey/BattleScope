@@ -38,7 +38,7 @@ data:
       attributes:
         actions:
           - key: loki.attribute.labels
-            value: level, service.name, service.namespace
+            value: level, service.name, service.namespace, package, file
             action: insert
 
     exporters:
@@ -66,6 +66,8 @@ data:
             service.namespace: "service_namespace"
           attributes:
             level: "level"
+            package: "package"
+            file: "file"
         # Format for Loki
         format: json
 

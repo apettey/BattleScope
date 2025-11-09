@@ -152,20 +152,45 @@ Note: Loki's built-in UI is minimal. For querying logs, use Grafana's Explore vi
 {app="ingest"} [5m]
 ```
 
+### Filtering by Package and File
+
+```logql
+# All logs from auth package (across all services)
+{package="auth"}
+
+# Logs from a specific file
+{file="backend/api/src/routes/auth.ts"}
+
+# Auth package error logs
+{package="auth"} | json | level >= 50
+
+# Database package logs
+{package="database"}
+
+# All auth route logs
+{file=~".*routes/auth.*"}
+```
+
 ### Advanced Queries
 
 ```logql
-# Count errors per minute
-sum by (app) (rate({namespace="battlescope"} |= "error" [1m]))
+# Count errors per minute by package
+sum by (package) (rate({namespace="battlescope"} | json | level >= 50 [1m]))
 
 # Filter by log level (Pino)
 {app="api"} | json | level >= 50
 
-# OAuth callback logs
-{app="api"} |= "auth callback"
+# OAuth callback logs from specific file
+{file="backend/api/src/routes/auth.ts"} |= "auth callback"
 
 # Response time > 1s
 {app="api"} | json | responseTime > 1000
+
+# All database query logs
+{package="database"} |= "query"
+
+# ESI client errors
+{package="esi-client"} | json | level >= 50
 ```
 
 ### Trace Correlation
@@ -182,12 +207,17 @@ Promtail automatically adds these labels to all logs:
 - `app` - Application name (api, ingest, enrichment, etc.)
 - `pod` - Pod name
 - `container` - Container name
+- `package` - Source package (api, ingest, auth, database, etc.)
+- `file` - Source file path (e.g., backend/api/src/routes/auth.ts)
 
 Pino JSON logs also include:
 - `level` - Log level (10=trace, 20=debug, 30=info, 40=warn, 50=error, 60=fatal)
 - `msg` - Log message
-- `reqId` - Request ID
+- `reqId` - Request ID (for request tracking)
 - `time` - Timestamp
+- `caller` - Function/method name (when available)
+- `package` - Package that generated the log
+- `file` - File that generated the log
 
 ## Storage and Retention
 

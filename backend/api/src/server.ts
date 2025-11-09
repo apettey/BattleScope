@@ -40,6 +40,7 @@ import { registerAdminRoutes } from './routes/admin.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
+import { createLoggerConfig } from '@battlescope/shared';
 
 // Extend Fastify types with custom decorators
 declare module 'fastify' {
@@ -97,7 +98,7 @@ export const buildServer = ({
   encryptionService,
   redis,
 }: BuildServerOptions) => {
-  const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
+  const app = Fastify({ logger: createLoggerConfig() }).withTypeProvider<ZodTypeProvider>();
 
   // Decorate app with DB and config for middleware access
   app.decorate('db', db);
