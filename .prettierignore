@@ -1,0 +1,14 @@
+node_modules
+dist
+**/dist
+coverage
+*.log
+.next
+.cache
+build
+.DS_Store
+# Generated TypeScript output in src folders
+**/src/**/*.js
+**/src/**/*.js.map
+**/src/**/*.d.ts
+**/src/**/*.d.ts.map
