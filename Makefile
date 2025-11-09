@@ -122,6 +122,12 @@ k8s-build-push:
 		--build-arg BUILD_TARGET=packages/database \
 		-t docker.io/petdog/battlescope-db-migrate:latest \
 		-f Dockerfile .
+		@echo "Building verifier..."
+		docker buildx build --platform linux/arm64 --push \
+			--build-arg SERVICE_SCOPE=@battlescope/verifier \
+			--build-arg BUILD_TARGET=packages/verifier \
+			-t docker.io/petdog/verifier:latest \
+			-f Dockerfile .
 	@echo "All images built and pushed successfully!"
 
 k8s-redeploy:

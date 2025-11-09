@@ -203,3 +203,40 @@ export function createRequireActionMiddleware(
     }
   };
 }
+
+/**
+ * Create middleware that requires SuperAdmin privileges
+ *
+ * This middleware ensures that only accounts with is_super_admin=true can access the route.
+ * SuperAdmins have unrestricted access to all administrative functions.
+ *
+ * @returns Fastify preHandler hook
+ */
+export function createRequireSuperAdminMiddleware() {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const authReq = request as AuthenticatedRequest;
+
+    if (!authReq.account) {
+      return reply.status(401).send({
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+    }
+
+    if (!authReq.account.isSuperAdmin) {
+      request.log.warn(
+        {
+          accountId: authReq.account.id,
+        },
+        'SuperAdmin access denied',
+      );
+
+      return reply.status(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'SuperAdmin access required',
+      });
+    }
+  };
+}

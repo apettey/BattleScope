@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   createAuthMiddleware,
   createRequireRoleMiddleware,
+  createRequireSuperAdminMiddleware,
   AccountListQuerySchema,
 } from '@battlescope/auth';
 import type {
@@ -42,6 +43,7 @@ export function registerAdminRoutes(
   const appWithTypes = app.withTypeProvider<ZodTypeProvider>();
   const authMiddleware = createAuthMiddleware(sessionService);
   const requireAdmin = createRequireRoleMiddleware('admin');
+  const requireSuperAdmin = createRequireSuperAdminMiddleware();
 
   // List accounts
   appWithTypes.get(
@@ -92,23 +94,70 @@ export function registerAdminRoutes(
     },
   );
 
-  // Get account details
+  // Get account details with characters grouped by corp/alliance (View User Page)
   appWithTypes.get(
     '/admin/accounts/:id',
     {
       preHandler: [authMiddleware, requireAdmin],
       schema: {
         tags: ['Admin'],
-        description: 'Get account details (Admin only)',
+        description: 'Get detailed account view with all characters grouped by corporation and alliance',
         params: AccountIdParamSchema,
         response: {
           200: z.object({
-            id: z.string().uuid(),
-            displayName: z.string(),
-            email: z.string().email().nullable(),
-            isBlocked: z.boolean(),
-            isSuperAdmin: z.boolean(),
-            lastLoginAt: z.string().datetime().nullable(),
+            account: z.object({
+              id: z.string().uuid(),
+              displayName: z.string(),
+              email: z.string().email().nullable(),
+              isBlocked: z.boolean(),
+              isSuperAdmin: z.boolean(),
+              lastLoginAt: z.string().datetime().nullable(),
+              createdAt: z.string().datetime(),
+            }),
+            primaryCharacter: z
+              .object({
+                id: z.string().uuid(),
+                eveCharacterId: z.string(),
+                eveCharacterName: z.string(),
+                portraitUrl: z.string(),
+                corpId: z.string(),
+                corpName: z.string(),
+                allianceId: z.string().nullable(),
+                allianceName: z.string().nullable(),
+                isPrimary: z.boolean(),
+                tokenStatus: z.enum(['valid', 'expiring', 'expired']),
+              })
+              .nullable(),
+            charactersGrouped: z.array(
+              z.object({
+                allianceId: z.string().nullable(),
+                allianceName: z.string().nullable(),
+                corporations: z.array(
+                  z.object({
+                    corpId: z.string(),
+                    corpName: z.string(),
+                    characters: z.array(
+                      z.object({
+                        id: z.string().uuid(),
+                        eveCharacterId: z.string(),
+                        eveCharacterName: z.string(),
+                        portraitUrl: z.string(),
+                        corpId: z.string(),
+                        corpName: z.string(),
+                        allianceId: z.string().nullable(),
+                        allianceName: z.string().nullable(),
+                        isPrimary: z.boolean(),
+                        scopes: z.array(z.string()),
+                        tokenExpiresAt: z.string().datetime(),
+                        tokenStatus: z.enum(['valid', 'expiring', 'expired']),
+                        lastVerifiedAt: z.string().datetime(),
+                        createdAt: z.string().datetime(),
+                      }),
+                    ),
+                  }),
+                ),
+              }),
+            ),
             featureRoles: z.array(
               z.object({
                 featureKey: z.string(),
@@ -118,6 +167,9 @@ export function registerAdminRoutes(
                 roleRank: z.number(),
               }),
             ),
+            stats: z.object({
+              totalCharacters: z.number(),
+            }),
           }),
           404: z.object({
             statusCode: z.number(),
@@ -128,8 +180,8 @@ export function registerAdminRoutes(
       },
     },
     async (request, reply) => {
-      const account = await accountRepository.getById(request.params.id);
-      if (!account) {
+      const accountDetail = await accountRepository.getDetailWithCharactersGrouped(request.params.id);
+      if (!accountDetail) {
         return reply.status(404).send({
           statusCode: 404,
           error: 'Not Found',
@@ -137,16 +189,59 @@ export function registerAdminRoutes(
         });
       }
 
-      const featureRoles = await featureRepository.getAccountFeatureRoles(account.id);
+      const featureRoles = await featureRepository.getAccountFeatureRoles(accountDetail.account.id);
 
+      // Map response to camelCase for API
       return reply.send({
-        id: account.id,
-        displayName: account.displayName,
-        email: account.email,
-        isBlocked: account.isBlocked,
-        isSuperAdmin: account.isSuperAdmin,
-        lastLoginAt: account.lastLoginAt?.toISOString() ?? null,
+        account: {
+          id: accountDetail.account.id,
+          displayName: accountDetail.account.displayName,
+          email: accountDetail.account.email,
+          isBlocked: accountDetail.account.isBlocked,
+          isSuperAdmin: accountDetail.account.isSuperAdmin,
+          lastLoginAt: accountDetail.account.lastLoginAt?.toISOString() ?? null,
+          createdAt: accountDetail.account.createdAt.toISOString(),
+        },
+        primaryCharacter: accountDetail.primaryCharacter
+          ? {
+              id: accountDetail.primaryCharacter.id,
+              eveCharacterId: accountDetail.primaryCharacter.eveCharacterId,
+              eveCharacterName: accountDetail.primaryCharacter.eveCharacterName,
+              portraitUrl: accountDetail.primaryCharacter.portraitUrl,
+              corpId: accountDetail.primaryCharacter.corpId,
+              corpName: accountDetail.primaryCharacter.corpName,
+              allianceId: accountDetail.primaryCharacter.allianceId,
+              allianceName: accountDetail.primaryCharacter.allianceName,
+              isPrimary: accountDetail.primaryCharacter.isPrimary,
+              tokenStatus: accountDetail.primaryCharacter.tokenStatus,
+            }
+          : null,
+        charactersGrouped: accountDetail.charactersGrouped.map((alliance) => ({
+          allianceId: alliance.allianceId,
+          allianceName: alliance.allianceName,
+          corporations: alliance.corporations.map((corp) => ({
+            corpId: corp.corpId,
+            corpName: corp.corpName,
+            characters: corp.characters.map((char) => ({
+              id: char.id,
+              eveCharacterId: char.eveCharacterId,
+              eveCharacterName: char.eveCharacterName,
+              portraitUrl: char.portraitUrl,
+              corpId: char.corpId,
+              corpName: char.corpName,
+              allianceId: char.allianceId,
+              allianceName: char.allianceName,
+              isPrimary: char.isPrimary,
+              scopes: char.scopes,
+              tokenExpiresAt: char.tokenExpiresAt.toISOString(),
+              tokenStatus: char.tokenStatus,
+              lastVerifiedAt: char.lastVerifiedAt.toISOString(),
+              createdAt: char.createdAt.toISOString(),
+            })),
+          })),
+        })),
         featureRoles,
+        stats: accountDetail.stats,
       });
     },
   );
@@ -243,6 +338,219 @@ export function registerAdminRoutes(
         targetType: 'account',
         targetId: request.params.id,
         metadata: { roles },
+      });
+
+      return reply.status(204).send();
+    },
+  );
+
+  // Promote to SuperAdmin (SuperAdmin only)
+  appWithTypes.post(
+    '/admin/accounts/:id/superadmin',
+    {
+      preHandler: [authMiddleware, requireSuperAdmin],
+      schema: {
+        tags: ['Admin'],
+        description: 'Promote account to SuperAdmin (SuperAdmin only)',
+        params: AccountIdParamSchema,
+        response: {
+          204: BlockAccountResponseSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      // Check if account exists
+      const account = await accountRepository.getById(request.params.id);
+      if (!account) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Account not found',
+        });
+      }
+
+      // Check if already SuperAdmin
+      if (account.isSuperAdmin) {
+        return reply.status(204).send();
+      }
+
+      // Promote to SuperAdmin
+      await accountRepository.promoteToSuperAdmin(request.params.id);
+
+      // Invalidate session cache (forces re-auth with new privileges)
+      await sessionService.destroyAllSessionsForAccount(request.params.id);
+
+      // Audit log
+      await auditLogRepository.create({
+        actorAccountId: request.account.id,
+        action: 'account.superadmin.promoted',
+        targetType: 'account',
+        targetId: request.params.id,
+        metadata: {
+          promotedBy: request.account.id,
+        },
+      });
+
+      return reply.status(204).send();
+    },
+  );
+
+  // Demote from SuperAdmin (SuperAdmin only)
+  appWithTypes.delete(
+    '/admin/accounts/:id/superadmin',
+    {
+      preHandler: [authMiddleware, requireSuperAdmin],
+      schema: {
+        tags: ['Admin'],
+        description: 'Demote account from SuperAdmin (SuperAdmin only)',
+        params: AccountIdParamSchema,
+        response: {
+          204: BlockAccountResponseSchema,
+          400: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      // Check if account exists
+      const account = await accountRepository.getById(request.params.id);
+      if (!account) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Account not found',
+        });
+      }
+
+      // Cannot demote yourself
+      if (request.params.id === request.account.id) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Cannot demote yourself from SuperAdmin',
+        });
+      }
+
+      // Check if this is the last SuperAdmin
+      const superAdminCount = await accountRepository.countSuperAdmins();
+      if (superAdminCount <= 1) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Cannot demote the last SuperAdmin',
+        });
+      }
+
+      // Check if not already SuperAdmin
+      if (!account.isSuperAdmin) {
+        return reply.status(204).send();
+      }
+
+      // Demote from SuperAdmin
+      await accountRepository.demoteFromSuperAdmin(request.params.id);
+
+      // Invalidate session cache (forces re-auth with reduced privileges)
+      await sessionService.destroyAllSessionsForAccount(request.params.id);
+
+      // Audit log
+      await auditLogRepository.create({
+        actorAccountId: request.account.id,
+        action: 'account.superadmin.demoted',
+        targetType: 'account',
+        targetId: request.params.id,
+        metadata: {
+          demotedBy: request.account.id,
+        },
+      });
+
+      return reply.status(204).send();
+    },
+  );
+
+  // Delete account (soft delete, SuperAdmin only)
+  appWithTypes.delete(
+    '/admin/accounts/:id',
+    {
+      preHandler: [authMiddleware, requireSuperAdmin],
+      schema: {
+        tags: ['Admin'],
+        description: 'Delete account (soft delete, SuperAdmin only)',
+        params: AccountIdParamSchema,
+        response: {
+          204: BlockAccountResponseSchema,
+          400: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      // Check if account exists
+      const account = await accountRepository.getById(request.params.id);
+      if (!account) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Account not found',
+        });
+      }
+
+      // Cannot delete yourself
+      if (request.params.id === request.account.id) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Cannot delete your own account',
+        });
+      }
+
+      // Cannot delete SuperAdmin if it's the last one
+      if (account.isSuperAdmin) {
+        const superAdminCount = await accountRepository.countSuperAdmins();
+        if (superAdminCount <= 1) {
+          return reply.status(400).send({
+            statusCode: 400,
+            error: 'Bad Request',
+            message: 'Cannot delete the last SuperAdmin',
+          });
+        }
+      }
+
+      // Soft delete the account
+      await accountRepository.delete(request.params.id);
+
+      // Invalidate all sessions
+      await sessionService.destroyAllSessionsForAccount(request.params.id);
+
+      // Audit log
+      await auditLogRepository.create({
+        actorAccountId: request.account.id,
+        action: 'account.deleted',
+        targetType: 'account',
+        targetId: request.params.id,
+        metadata: {
+          deletedBy: request.account.id,
+        },
       });
 
       return reply.status(204).send();

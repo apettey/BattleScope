@@ -217,6 +217,170 @@ export class AccountRepository {
   }
 
   /**
+   * Get detailed account information with characters grouped by alliance and corporation
+   * Used for admin View User Page
+   */
+  async getDetailWithCharactersGrouped(accountId: string): Promise<AccountDetailWithCharacters | null> {
+    const account = await this.getById(accountId);
+    if (!account) {
+      return null;
+    }
+
+    // Get all characters for this account
+    const characters = await this.db
+      .selectFrom('characters')
+      .selectAll()
+      .where('accountId', '=', accountId)
+      .orderBy('eveCharacterName', 'asc')
+      .execute();
+
+    // Get primary character details if exists
+    let primaryCharacter: CharacterDetail | null = null;
+    if (account.primaryCharacterId) {
+      const primaryChar = characters.find((c) => c.id === account.primaryCharacterId);
+      if (primaryChar) {
+        primaryCharacter = this.mapCharacterToDetail(primaryChar, true);
+      }
+    }
+
+    // Group characters by alliance and corporation
+    const groupedMap = new Map<
+      string,
+      {
+        allianceId: bigint | null;
+        allianceName: string | null;
+        corporations: Map<
+          string,
+          {
+            corpId: bigint;
+            corpName: string;
+            characters: CharacterDetail[];
+          }
+        >;
+      }
+    >();
+
+    for (const char of characters) {
+      const allianceKey = char.allianceId?.toString() ?? 'null';
+      const corpKey = char.corpId.toString();
+
+      // Get or create alliance group
+      if (!groupedMap.has(allianceKey)) {
+        groupedMap.set(allianceKey, {
+          allianceId: char.allianceId,
+          allianceName: char.allianceName,
+          corporations: new Map(),
+        });
+      }
+
+      const allianceGroup = groupedMap.get(allianceKey)!;
+
+      // Get or create corporation group
+      if (!allianceGroup.corporations.has(corpKey)) {
+        allianceGroup.corporations.set(corpKey, {
+          corpId: char.corpId,
+          corpName: char.corpName,
+          characters: [],
+        });
+      }
+
+      const corpGroup = allianceGroup.corporations.get(corpKey)!;
+      corpGroup.characters.push(this.mapCharacterToDetail(char, char.id === account.primaryCharacterId));
+    }
+
+    // Convert map to array format
+    const charactersGrouped = Array.from(groupedMap.values()).map((alliance) => ({
+      allianceId: alliance.allianceId?.toString() ?? null,
+      allianceName: alliance.allianceName,
+      corporations: Array.from(alliance.corporations.values()).map((corp) => ({
+        corpId: corp.corpId.toString(),
+        corpName: corp.corpName,
+        characters: corp.characters,
+      })),
+    }));
+
+    return {
+      account,
+      primaryCharacter,
+      charactersGrouped,
+      stats: {
+        totalCharacters: characters.length,
+      },
+    };
+  }
+
+  /**
+   * Promote account to SuperAdmin
+   */
+  async promoteToSuperAdmin(accountId: string): Promise<void> {
+    await this.db
+      .updateTable('accounts')
+      .set({ isSuperAdmin: true })
+      .where('id', '=', accountId)
+      .execute();
+  }
+
+  /**
+   * Demote account from SuperAdmin
+   */
+  async demoteFromSuperAdmin(accountId: string): Promise<void> {
+    await this.db
+      .updateTable('accounts')
+      .set({ isSuperAdmin: false })
+      .where('id', '=', accountId)
+      .execute();
+  }
+
+  /**
+   * Count total SuperAdmins (safety check to prevent demoting last admin)
+   */
+  async countSuperAdmins(): Promise<number> {
+    const result = await this.db
+      .selectFrom('accounts')
+      .select((eb) => eb.fn.count('id').as('count'))
+      .where('isSuperAdmin', '=', true)
+      .where('isDeleted', '=', false)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Map character database result to CharacterDetail
+   */
+  private mapCharacterToDetail(char: any, isPrimary: boolean): CharacterDetail {
+    const now = new Date();
+    const expiresAt = new Date(char.esiTokenExpiresAt);
+    const daysUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+
+    let tokenStatus: 'valid' | 'expiring' | 'expired';
+    if (expiresAt < now) {
+      tokenStatus = 'expired';
+    } else if (daysUntilExpiry < 7) {
+      tokenStatus = 'expiring';
+    } else {
+      tokenStatus = 'valid';
+    }
+
+    return {
+      id: char.id,
+      eveCharacterId: char.eveCharacterId.toString(),
+      eveCharacterName: char.eveCharacterName,
+      portraitUrl: char.portraitUrl ?? `https://images.evetech.net/characters/${char.eveCharacterId}/portrait?size=128`,
+      corpId: char.corpId.toString(),
+      corpName: char.corpName,
+      allianceId: char.allianceId?.toString() ?? null,
+      allianceName: char.allianceName,
+      isPrimary,
+      scopes: char.scopes,
+      tokenExpiresAt: char.esiTokenExpiresAt,
+      tokenStatus,
+      lastVerifiedAt: char.lastVerifiedAt,
+      createdAt: char.createdAt,
+    };
+  }
+
+  /**
    * Map database result to AccountRecord
    */
   private mapToRecord(row: unknown): AccountRecord {
@@ -234,4 +398,44 @@ export class AccountRepository {
       updatedAt: r.updatedAt as unknown as Date,
     };
   }
+}
+
+/**
+ * Character detail for admin view
+ */
+export interface CharacterDetail {
+  id: string;
+  eveCharacterId: string;
+  eveCharacterName: string;
+  portraitUrl: string;
+  corpId: string;
+  corpName: string;
+  allianceId: string | null;
+  allianceName: string | null;
+  isPrimary: boolean;
+  scopes: string[];
+  tokenExpiresAt: Date;
+  tokenStatus: 'valid' | 'expiring' | 'expired';
+  lastVerifiedAt: Date;
+  createdAt: Date;
+}
+
+/**
+ * Detailed account view with characters grouped by alliance/corporation
+ */
+export interface AccountDetailWithCharacters {
+  account: AccountRecord;
+  primaryCharacter: CharacterDetail | null;
+  charactersGrouped: {
+    allianceId: string | null;
+    allianceName: string | null;
+    corporations: {
+      corpId: string;
+      corpName: string;
+      characters: CharacterDetail[];
+    }[];
+  }[];
+  stats: {
+    totalCharacters: number;
+  };
 }
