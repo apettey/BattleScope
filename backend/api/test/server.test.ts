@@ -200,8 +200,7 @@ describe('API routes', () => {
     const authConfigRepository = new AuthConfigRepository(db.db);
     const auditLogRepository = new AuditLogRepository(db.db);
 
-    // Create mock auth services and ESI client
-    const mockAuthServices = createMockAuthServices();
+    // Create mock ESI client but NOT auth services to disable auth middleware
     const mockEsiClient = createMockEsiClient();
 
     nameEnricher = createNameEnricher();
@@ -219,7 +218,7 @@ describe('API routes', () => {
       config: baseConfig,
       nameEnricher,
       esiClient: mockEsiClient,
-      ...mockAuthServices,
+      // Auth services NOT provided to disable authentication for these tests
     });
     await app.ready();
   });
@@ -427,17 +426,23 @@ describe('API routes', () => {
 
   it('includes CORS headers on killmail stream responses for allowed origins', async () => {
     const corsApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
         corsAllowedOrigins: ['https://app.example.com'],
       },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await corsApp.ready();
 
@@ -457,17 +462,23 @@ describe('API routes', () => {
 
   it('includes CORS headers on killmail stream responses in developer mode for localhost', async () => {
     const devApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
         developerMode: true,
       },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await devApp.ready();
 
@@ -487,17 +498,23 @@ describe('API routes', () => {
 
   it('includes CORS headers on standard responses in developer mode for localhost', async () => {
     const devApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
         developerMode: true,
       },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await devApp.ready();
 
@@ -552,17 +569,23 @@ describe('API routes', () => {
 
   it('sends CORS headers on simple requests for configured origins', async () => {
     const corsApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
         corsAllowedOrigins: ['https://app.example.com'],
       },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await corsApp.ready();
 
@@ -580,14 +603,20 @@ describe('API routes', () => {
 
   it('allows localhost origins when developer mode is enabled', async () => {
     const devApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: { ...baseConfig, developerMode: true },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await devApp.ready();
 
@@ -606,14 +635,20 @@ describe('API routes', () => {
 
   it('blocks disallowed origins when allowlist is configured', async () => {
     const restrictedApp = buildServer({
-      ...createMockBuildServerOptions(),
       battleRepository,
       killmailRepository,
       rulesetRepository,
       dashboardRepository: new DashboardRepository(db.db),
+      accountRepository: new AccountRepository(db.db),
+      characterRepository: new CharacterRepository(db.db),
+      featureRepository: new FeatureRepository(db.db),
+      authConfigRepository: new AuthConfigRepository(db.db),
+      auditLogRepository: new AuditLogRepository(db.db),
       db: db.db,
       config: { ...baseConfig, corsAllowedOrigins: ['https://app.example.com'] },
       nameEnricher: createNameEnricher(),
+      esiClient: createMockEsiClient(),
+      // No auth services to disable authentication
     });
     await restrictedApp.ready();
 

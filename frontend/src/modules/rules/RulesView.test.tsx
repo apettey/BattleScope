@@ -2,10 +2,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { RulesView } from './RulesView.js';
+import { AuthProvider } from '../auth/AuthContext.js';
 
 vi.mock('./api', () => ({
   fetchCurrentRuleset: vi.fn(),
   updateRuleset: vi.fn(),
+}));
+
+vi.mock('../auth/api', () => ({
+  fetchMe: vi.fn().mockResolvedValue({
+    accountId: 'test-account-id',
+    displayName: 'Test User',
+    isSuperAdmin: false,
+    primaryCharacter: null,
+    characters: [],
+    featureRoles: [],
+  }),
+  logout: vi.fn(),
 }));
 
 import { fetchCurrentRuleset, updateRuleset } from './api.js';
@@ -37,13 +50,18 @@ describe('RulesView', () => {
   });
 
   it('submits updated ruleset', async () => {
-    render(<RulesView />);
+    render(
+      <AuthProvider>
+        <RulesView />
+      </AuthProvider>,
+    );
 
     expect(await screen.findByLabelText(/Minimum pilots/)).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.clear(screen.getByLabelText(/Minimum pilots/));
-    await user.type(screen.getByLabelText(/Minimum pilots/), '2');
+    const minPilotsInput = screen.getByLabelText(/Minimum pilots/);
+    await user.tripleClick(minPilotsInput);
+    await user.keyboard('2');
     await user.type(screen.getByLabelText(/Tracked alliance IDs/), '99001234');
     await user.click(screen.getByLabelText(/Ignore killmails/));
     await user.type(screen.getByLabelText(/Change note/), 'ops');

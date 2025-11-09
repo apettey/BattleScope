@@ -3,11 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { RecentKillsView } from './RecentKillsView.js';
+import { AuthProvider } from '../auth/AuthContext.js';
 
 vi.mock('./api', () => ({
   fetchRecentKillmails: vi.fn(),
   createKillmailStream: vi.fn(),
   formatParticipantCount: (count: number) => `${count} pilots`,
+}));
+
+vi.mock('../auth/api', () => ({
+  fetchMe: vi.fn().mockResolvedValue({
+    accountId: 'test-account-id',
+    displayName: 'Test User',
+    isSuperAdmin: false,
+    primaryCharacter: null,
+    characters: [],
+    featureRoles: [],
+  }),
+  logout: vi.fn(),
 }));
 
 import { fetchRecentKillmails, createKillmailStream, type KillmailStreamOptions } from './api.js';
@@ -53,7 +66,11 @@ describe('RecentKillsView', () => {
       return () => {};
     });
 
-    render(<RecentKillsView />);
+    render(
+      <AuthProvider>
+        <RecentKillsView />
+      </AuthProvider>,
+    );
 
     expect(await screen.findByText(/Jita/)).toBeInTheDocument();
     expect(createKillmailStreamMock).toHaveBeenCalled();
