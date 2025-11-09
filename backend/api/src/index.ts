@@ -39,7 +39,7 @@ export const start = async (): Promise<void> => {
   const accountRepository = new AccountRepository(db);
   const characterRepository = new CharacterRepository(db);
   const featureRepository = new FeatureRepository(db);
-  const authConfigRepository = new AuthConfigRepository(db);
+  const authConfigRepository = new AuthConfigRepository(db, logger);
   const auditLogRepository = new AuditLogRepository(db);
 
   let redis: RedisClient | null = null;

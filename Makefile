@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy
+.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability
 
 install:
 	pnpm install
@@ -138,3 +138,13 @@ k8s-redeploy:
 	kubectl rollout restart deployment/clusterer -n battlescope
 	@echo "Note: scheduler CronJob will pick up the latest image on its next scheduled run"
 	@echo "✅ All application deployments restarted successfully!"
+
+k8s-restart-observability:
+	@echo "🔄 Restarting observability stack to pick up config changes..."
+	@echo "Restarting OTEL Collector..."
+	kubectl rollout restart deployment/otel-collector -n battlescope
+	@echo "Restarting Grafana..."
+	kubectl rollout restart deployment/grafana -n battlescope
+	@echo "Restarting Loki..."
+	kubectl rollout restart statefulset/loki -n battlescope
+	@echo "✅ Observability stack restarted successfully!"

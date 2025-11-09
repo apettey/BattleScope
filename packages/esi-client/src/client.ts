@@ -53,7 +53,6 @@ const UniverseSystemInfoSchema = z.object({
 export interface UniverseSystemInfo extends z.infer<typeof UniverseSystemInfoSchema> {}
 
 const CharacterInfoSchema = z.object({
-  character_id: z.number().int(),
   name: z.string(),
   corporation_id: z.number().int(),
   alliance_id: z.number().int().optional(),
@@ -68,7 +67,6 @@ const CharacterInfoSchema = z.object({
 export interface CharacterInfo extends z.infer<typeof CharacterInfoSchema> {}
 
 const CorporationInfoSchema = z.object({
-  corporation_id: z.number().int(),
   name: z.string(),
   ticker: z.string(),
   member_count: z.number().int(),
@@ -84,7 +82,6 @@ const CorporationInfoSchema = z.object({
 export interface CorporationInfo extends z.infer<typeof CorporationInfoSchema> {}
 
 const AllianceInfoSchema = z.object({
-  alliance_id: z.number().int(),
   name: z.string(),
   ticker: z.string(),
   creator_id: z.number().int(),

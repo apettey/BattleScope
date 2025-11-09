@@ -18,11 +18,21 @@ export interface UpdateAuthConfigInput {
   deniedAllianceIds?: (bigint | number | string)[];
 }
 
+export interface Logger {
+  info(obj: unknown, msg?: string): void;
+  warn(obj: unknown, msg?: string): void;
+  error(obj: unknown, msg?: string): void;
+  debug(obj: unknown, msg?: string): void;
+}
+
 /**
  * Repository for managing auth configuration (singleton)
  */
 export class AuthConfigRepository {
-  constructor(private readonly db: Kysely<Database>) {}
+  constructor(
+    private readonly db: Kysely<Database>,
+    private readonly logger?: Logger,
+  ) {}
 
   /**
    * Get the auth config (singleton)
@@ -76,17 +86,59 @@ export class AuthConfigRepository {
   async isCharacterAllowed(corpId: bigint, allianceId: bigint | null): Promise<boolean> {
     const config = await this.get();
 
+    this.logger?.info(
+      {
+        checkingAuth: {
+          corpId: corpId.toString(),
+          allianceId: allianceId?.toString() ?? null,
+          config: {
+            requireMembership: config.requireMembership,
+            allowedCorpIds: config.allowedCorpIds.map((id) => id.toString()),
+            allowedAllianceIds: config.allowedAllianceIds.map((id) => id.toString()),
+            deniedCorpIds: config.deniedCorpIds.map((id) => id.toString()),
+            deniedAllianceIds: config.deniedAllianceIds.map((id) => id.toString()),
+          },
+        },
+      },
+      'Starting auth check for character',
+    );
+
     // Check deny lists first
-    if (config.deniedCorpIds.some((id) => id === corpId)) {
+    const isCorpDenied = config.deniedCorpIds.some((id) => id === corpId);
+    if (isCorpDenied) {
+      this.logger?.warn(
+        {
+          corpId: corpId.toString(),
+          deniedCorpIds: config.deniedCorpIds.map((id) => id.toString()),
+        },
+        'Character DENIED: Corporation is in deny list',
+      );
       return false;
     }
 
-    if (allianceId && config.deniedAllianceIds.some((id) => id === allianceId)) {
-      return false;
+    if (allianceId) {
+      const isAllianceDenied = config.deniedAllianceIds.some((id) => id === allianceId);
+      if (isAllianceDenied) {
+        this.logger?.warn(
+          {
+            allianceId: allianceId.toString(),
+            deniedAllianceIds: config.deniedAllianceIds.map((id) => id.toString()),
+          },
+          'Character DENIED: Alliance is in deny list',
+        );
+        return false;
+      }
     }
 
     // If require_membership is false, allow all
     if (!config.requireMembership) {
+      this.logger?.info(
+        {
+          corpId: corpId.toString(),
+          allianceId: allianceId?.toString() ?? null,
+        },
+        'Character ALLOWED: requireMembership is false (public access enabled)',
+      );
       return true;
     }
 
@@ -95,8 +147,44 @@ export class AuthConfigRepository {
     const inAllowedAlliance =
       allianceId !== null && config.allowedAllianceIds.some((id) => id === allianceId);
 
+    this.logger?.info(
+      {
+        corpId: corpId.toString(),
+        allianceId: allianceId?.toString() ?? null,
+        inAllowedCorp,
+        inAllowedAlliance,
+        allowedCorpIds: config.allowedCorpIds.map((id) => id.toString()),
+        allowedAllianceIds: config.allowedAllianceIds.map((id) => id.toString()),
+      },
+      'Checking allow lists',
+    );
+
     // Allow if in either allowed corps or allowed alliances
-    return inAllowedCorp || inAllowedAlliance;
+    const isAllowed = inAllowedCorp || inAllowedAlliance;
+
+    if (isAllowed) {
+      this.logger?.info(
+        {
+          corpId: corpId.toString(),
+          allianceId: allianceId?.toString() ?? null,
+          matchedBy: inAllowedCorp ? 'corporation' : 'alliance',
+        },
+        'Character ALLOWED: Found in allow list',
+      );
+    } else {
+      this.logger?.warn(
+        {
+          corpId: corpId.toString(),
+          allianceId: allianceId?.toString() ?? null,
+          requireMembership: config.requireMembership,
+          allowedCorpIds: config.allowedCorpIds.map((id) => id.toString()),
+          allowedAllianceIds: config.allowedAllianceIds.map((id) => id.toString()),
+        },
+        'Character DENIED: Not in any allow list (requireMembership is true)',
+      );
+    }
+
+    return isAllowed;
   }
 
   /**

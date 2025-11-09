@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: battlescope
+data:
+  loki.yaml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+      log_level: info
+
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    limits_config:
+      # 1 hour retention - aggressive cleanup
+      retention_period: 1h
+
+      # Maximum log capture - no limits
+      max_query_series: 500000
+      max_query_lookback: 1h
+      max_entries_limit_per_query: 10000
+      max_streams_per_user: 0  # No limit on streams
+      max_global_streams_per_user: 0  # No limit
+
+      # Ingestion limits - capture everything
+      ingestion_rate_mb: 100  # 100MB/s per tenant
+      ingestion_burst_size_mb: 200  # 200MB burst
+      per_stream_rate_limit: 100MB  # No practical limit per stream
+      per_stream_rate_limit_burst: 200MB
+
+      # No query limits
+      max_query_length: 1h
+      max_query_parallelism: 256
+
+      # Cardinality limits - very high for 1 hour window
+      max_label_name_length: 2048
+      max_label_value_length: 4096
+      max_label_names_per_series: 100
+
+      # Reject old samples outside 1 hour window
+      reject_old_samples: true
+      reject_old_samples_max_age: 1h
+
+    chunk_store_config:
+      max_look_back_period: 1h
+
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 1h
+
+    compactor:
+      working_directory: /loki/compactor
+      # Run compaction every 5 minutes for fast cleanup
+      compaction_interval: 5m
+      retention_enabled: true
+      # Delete old data almost immediately
+      retention_delete_delay: 5m
+      retention_delete_worker_count: 150
+
+    ingester:
+      # Flush chunks more frequently for 1h retention
+      chunk_idle_period: 5m
+      max_chunk_age: 10m
+      chunk_target_size: 1048576
+      chunk_retain_period: 10s
+      max_transfer_retries: 0
+      # Flush to storage quickly
+      flush_check_period: 30s
+      flush_op_timeout: 30s
+      wal:
+        enabled: true
+        dir: /loki/wal
+        # Replay WAL quickly on restart
+        replay_memory_ceiling: 1GB
+
+    query_range:
+      align_queries_with_step: true
+      cache_results: true
+      max_retries: 5
+
+    # Query scheduler for better performance
+    query_scheduler:
+      max_outstanding_requests_per_tenant: 2048
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki
+  namespace: battlescope
+spec:
+  serviceName: loki
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:2.9.3
+          args:
+            - '-config.file=/etc/loki/loki.yaml'
+          ports:
+            - name: http
+              containerPort: 3100
+              protocol: TCP
+            - name: grpc
+              containerPort: 9096
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: storage
+              mountPath: /loki
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: loki-config
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            # 2Gi is plenty for 1 hour of logs
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: battlescope
+  labels:
+    app: loki
+spec:
+  type: ClusterIP
+  selector:
+    app: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+    - name: grpc
+      port: 9096
+      targetPort: grpc

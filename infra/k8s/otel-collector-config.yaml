@@ -27,6 +27,20 @@ data:
         limit_mib: 512
         spike_limit_mib: 128
 
+      # Add resource attributes for better log filtering
+      resource:
+        attributes:
+          - key: service.namespace
+            value: battlescope
+            action: upsert
+
+      # Extract useful attributes from logs
+      attributes:
+        actions:
+          - key: loki.attribute.labels
+            value: level, service.name, service.namespace
+            action: insert
+
     exporters:
       # Export traces to Jaeger
       otlp/jaeger:
@@ -40,6 +54,20 @@ data:
         endpoint: http://prometheus:9090/api/v1/write
         tls:
           insecure: true
+
+      # Export logs to Loki
+      loki:
+        endpoint: http://loki:3100/loki/api/v1/push
+        tls:
+          insecure: true
+        labels:
+          resource:
+            service.name: "service_name"
+            service.namespace: "service_namespace"
+          attributes:
+            level: "level"
+        # Format for Loki
+        format: json
 
       # For debugging - logs to console
       logging:
@@ -58,3 +86,8 @@ data:
           receivers: [otlp]
           processors: [memory_limiter, batch]
           exporters: [prometheusremotewrite, logging]
+
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, attributes, batch]
+          exporters: [loki, logging]
