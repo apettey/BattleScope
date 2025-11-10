@@ -223,7 +223,6 @@ describe('API routes', () => {
       config: baseConfig,
       nameEnricher,
       esiClient: mockEsiClient,
-      searchService: createMockSearchService(),
       // Auth services NOT provided to disable authentication for these tests
     });
     await app.ready();
@@ -448,7 +447,6 @@ describe('API routes', () => {
       },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await corsApp.ready();
@@ -485,7 +483,6 @@ describe('API routes', () => {
       },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await devApp.ready();
@@ -522,7 +519,6 @@ describe('API routes', () => {
       },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await devApp.ready();
@@ -594,7 +590,6 @@ describe('API routes', () => {
       },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await corsApp.ready();
@@ -626,7 +621,6 @@ describe('API routes', () => {
       config: { ...baseConfig, developerMode: true },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await devApp.ready();
@@ -659,7 +653,6 @@ describe('API routes', () => {
       config: { ...baseConfig, corsAllowedOrigins: ['https://app.example.com'] },
       nameEnricher: createNameEnricher(),
       esiClient: createMockEsiClient(),
-      searchService: createMockSearchService(),
       // No auth services to disable authentication
     });
     await restrictedApp.ready();

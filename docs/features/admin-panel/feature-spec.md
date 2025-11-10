@@ -401,8 +401,36 @@ interface FeatureRoleDistribution {
 // Admin: 5 accounts (2.5%)
 ```
 
-#### Feature Settings
-Display and edit feature-specific settings from `feature_settings` table:
+#### Feature Configuration Pages
+
+Each feature has its own dedicated configuration page accessible from the feature detail view:
+
+**Available Feature Configuration Pages**:
+
+- **Battle Reports** (`/admin/features/battle-reports/config`)
+  - Ingestion filters:
+    - Minimum pilot threshold
+    - Tracked entities (alliances, corporations, characters)
+    - Specific systems whitelist
+    - Space types (K-Space, J-Space, Pochven)
+    - K-Space security levels (high-sec, low-sec, null-sec)
+  - Enrichment settings (auto-enrichment, API throttle)
+  - Clustering settings (time windows, minimum kills per battle)
+  - Current ingestion statistics
+  - ⚠️ **Note**: This is the PRIMARY place where killmail data collection is configured
+  - Changes here affect what data is available for Battle Intel analytics
+
+- **Battle Intel** (`/admin/features/battle-intel/config`)
+  - Cache settings (TTL for various stat types, cache warming)
+  - Display settings (default time ranges, list sizes, ISK format)
+  - Data availability statistics
+  - 📝 **Note**: References Battle Reports configuration for data collection
+  - Only manages caching and display preferences, NOT data ingestion
+
+- **Other Features**: Similar dedicated configuration pages as needed
+
+**Feature Settings (Legacy/Simple Features)**:
+For features without dedicated configuration pages, display and edit settings from `feature_settings` table:
 ```typescript
 interface FeatureSetting {
   id: string;
@@ -421,6 +449,22 @@ Settings editor with:
 - JSON editor for complex values
 - Validation based on feature requirements
 - Change history (who changed what when)
+
+**Configuration Page Links**:
+Feature detail view shows a prominent link to the feature's configuration page:
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Battle Reports Feature                                       │
+├─────────────────────────────────────────────────────────────┤
+│ Status: Enabled                                              │
+│ Users: 150 accounts                                          │
+│                                                              │
+│ [⚙️  Configure Feature Settings →]                          │
+│                                                              │
+│ ℹ️  This feature controls killmail ingestion and battle     │
+│    clustering. Configuration affects Battle Intel analytics.│
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### 4.2 Create New Feature
 
@@ -858,6 +902,52 @@ Response: 204 No Content
 // Get feature role distribution
 GET /admin/features/:key/role-distribution
 Response: FeatureRoleDistribution[]
+
+// Get feature configuration
+GET /admin/features/:key/config
+Response: Record<string, unknown>
+
+// Update feature configuration
+PUT /admin/features/:key/config
+Body: {
+  configKey: string,     // e.g., 'ingestion', 'cache', 'display'
+  configValue: Record<string, unknown>
+}
+Response: 204 No Content
+
+// Examples:
+
+// Battle Reports ingestion config
+PUT /admin/features/battle-reports/config
+Body: {
+  configKey: 'ingestion',
+  configValue: {
+    minPilots: 5,
+    trackedAlliances: [99001234, 99005678],
+    trackedCorporations: [],
+    trackedCharacters: [],
+    ignoreUnlisted: false,
+    trackedSystems: [],
+    spaceTypes: ['kspace', 'jspace', 'pochven'],
+    kspaceSecurityLevels: ['lowsec', 'nullsec'],
+    enrichmentThrottle: 1000
+  }
+}
+
+// Battle Intel cache config
+PUT /admin/features/battle-intel/config
+Body: {
+  configKey: 'cache',
+  configValue: {
+    entityStatsTTL: 3600,
+    globalSummaryTTL: 300,
+    opponentAnalysisTTL: 3600,
+    shipCompositionTTL: 7200,
+    warmingEnabled: true,
+    warmingInterval: 1800,
+    topEntitiesToWarm: 50
+  }
+}
 ```
 
 #### Organization Gating

@@ -19,6 +19,7 @@ import {
 } from '@battlescope/auth';
 import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { createEsiClient } from '@battlescope/esi-client';
+import { createTypesenseClient, createSearchService } from '@battlescope/search';
 import { Redis as RedisConstructor } from 'ioredis';
 import type { Redis as RedisClient } from 'ioredis';
 import { loadConfig } from './config.js';
@@ -119,6 +120,30 @@ export const start = async (): Promise<void> => {
   }
 
   const nameEnricher = new NameEnricher(esiClient);
+
+  // Initialize Typesense client and search service
+  const typesenseClient = createTypesenseClient(
+    {
+      nodes: [
+        {
+          host: config.typesenseHost,
+          port: config.typesensePort,
+          protocol: config.typesenseProtocol,
+        },
+      ],
+      apiKey: config.typesenseApiKey,
+      connectionTimeoutSeconds: 5,
+      numRetries: 3,
+    },
+    logger.child({ component: 'typesense' }),
+  );
+
+  const searchService = createSearchService(typesenseClient, logger.child({ component: 'search' }));
+  logger.info(
+    { host: config.typesenseHost, port: config.typesensePort },
+    'Search service initialized',
+  );
+
   const app = buildServer({
     battleRepository,
     killmailRepository,
@@ -138,6 +163,7 @@ export const start = async (): Promise<void> => {
     authorizationService,
     encryptionService,
     redis: redis ?? undefined,
+    searchService,
   });
 
   const shutdown = async () => {

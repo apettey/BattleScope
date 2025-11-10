@@ -23,6 +23,11 @@ const ConfigSchema = z.object({
   sessionCookieSecure: z.boolean().default(true), // Set to false for local/k8s without SSL
   authzCacheTtlSeconds: z.number().int().min(10).max(3600).default(60),
   frontendUrl: z.string().url().default('http://localhost:5173'),
+  // Typesense search configuration
+  typesenseHost: z.string().default('typesense.battlescope.svc.cluster.local'),
+  typesensePort: z.number().int().min(1).max(65535).default(8108),
+  typesenseProtocol: z.enum(['http', 'https']).default('http'),
+  typesenseApiKey: z.string().min(1).default('battlescope-search-key'),
 });
 
 export type ApiConfig = z.infer<typeof ConfigSchema>;
@@ -106,4 +111,9 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ApiConfig =>
     sessionCookieSecure: parseBoolean(env.SESSION_COOKIE_SECURE),
     authzCacheTtlSeconds: parseInteger(env.AUTHZ_CACHE_TTL_SECONDS),
     frontendUrl: env.FRONTEND_URL,
+    // Typesense config
+    typesenseHost: env.TYPESENSE_HOST,
+    typesensePort: parseInteger(env.TYPESENSE_PORT),
+    typesenseProtocol: env.TYPESENSE_PROTOCOL as 'http' | 'https' | undefined,
+    typesenseApiKey: env.TYPESENSE_API_KEY,
   });

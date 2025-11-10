@@ -686,7 +686,203 @@ app.get('/intel/alliances/:id', {
 
 ---
 
-## 9. Caching Strategy
+## 9. Configuration Page
+
+### 9.1 Overview
+
+**Route**: `/admin/features/battle-intel/config`
+
+**Access**: Requires `battle-intel` feature access with `admin` role
+
+The Battle Intel configuration page provides limited configuration options, as most data collection is controlled by the Battle Reports feature. This page primarily manages caching and display preferences.
+
+---
+
+### 9.2 Configuration Sections
+
+#### 9.2.1 Data Source Notice
+
+```
+ℹ️  Battle Intel Data Source
+
+Battle Intel computes all statistics from killmails and battles collected by the
+Battle Reports feature. The quality and coverage of intelligence depends entirely
+on what data is ingested.
+
+🔗 Configure Data Collection:
+   The Battle Reports feature controls which killmails are ingested into the system.
+   If you're missing intelligence about certain entities or battles, check the
+   ingestion configuration:
+
+   → [Configure Battle Reports Ingestion]
+
+   Ingestion filters (alliances, corps, systems, security types) determine what
+   killmail data is available for intelligence analysis.
+```
+
+---
+
+#### 9.2.2 Cache Settings
+
+```
+Cache Configuration:
+
+Entity Statistics Cache TTL: [___3600___] seconds (1 hour)
+ℹ️  How long to cache alliance/corp/character statistics before recomputing.
+
+Global Summary Cache TTL: [___300___] seconds (5 minutes)
+ℹ️  How long to cache the global intelligence summary shown on the home page.
+
+Opponent Analysis Cache TTL: [___3600___] seconds (1 hour)
+ℹ️  How long to cache "top opponents" data for each entity.
+
+Ship Composition Cache TTL: [___7200___] seconds (2 hours)
+ℹ️  How long to cache ship usage statistics for each entity.
+
+Cache Warming Enabled: [Enabled ✓]
+ℹ️  Pre-compute statistics for top entities on startup and periodically refresh.
+
+Cache Warming Interval: [___30___] minutes
+ℹ️  How often to refresh cached statistics for top entities in the background.
+
+Top Entities to Warm: [___50___] entities
+ℹ️  Number of top alliances/corps to pre-compute statistics for.
+```
+
+---
+
+#### 9.2.3 Display Settings
+
+```
+Display Configuration:
+
+Default Time Range: [Last 30 days ▼]
+ℹ️  Default time range for intelligence statistics when viewing entity pages.
+
+Minimum Battles to Show: [___3___] battles
+ℹ️  Entities with fewer battles than this won't appear in top lists.
+
+Top Opponents List Size: [___10___] opponents
+ℹ️  Number of top opponents to show by default on entity intel pages.
+
+Top Ships List Size: [___15___] ships
+ℹ️  Number of most-used ships to show by default on entity intel pages.
+
+ISK Value Display Format: [Abbreviated (3.6B) ▼]
+ℹ️  How to display ISK values throughout the intel UI.
+   Options: Abbreviated (3.6B), Full (3,600,000,000), Scientific (3.6×10⁹)
+```
+
+---
+
+#### 9.2.4 Current Intelligence Statistics
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Intelligence Data Availability                               │
+├─────────────────────────────────────────────────────────────┤
+│ • Total Battles:          1,543                             │
+│ • Total Killmails:        8,721                             │
+│ • Unique Alliances:          42                             │
+│ • Unique Corporations:      156                             │
+│ • Unique Characters:      2,318                             │
+│                                                             │
+│ • Date Range:      2025-10-01 to 2025-11-10                 │
+│ • Most Recent Battle:  23 minutes ago                       │
+│                                                             │
+│ Cache Performance (Last Hour):                              │
+│ • Cache Hit Rate:         87.3%                             │
+│ • Avg Query Time:        142 ms                             │
+│ • Cache Size:           ~24 MB                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 9.2.5 Data Collection Reference
+
+```
+⚠️  IMPORTANT: Data Collection & Ingestion
+
+Battle Intel does NOT collect its own data. All intelligence is computed from
+killmails and battles ingested by the Battle Reports feature.
+
+📊 What This Means:
+   • Missing entities? Check Battle Reports ingestion filters
+   • Intelligence gaps? Verify tracked alliances/corps are configured
+   • Low battle counts? Adjust minimum pilot threshold or security type filters
+
+🔧 To Modify Data Collection:
+   1. Navigate to Battle Reports configuration
+   2. Update ingestion filters (alliances, systems, security types)
+   3. New killmails matching the updated filters will be ingested going forward
+   4. Intelligence statistics will automatically include new data
+
+🔗 Quick Links:
+   → [Configure Battle Reports Ingestion]
+   → [View Current Ingestion Statistics]
+   → [View Ingestion Audit Log]
+
+📝 Note: Battle Intel configuration only affects caching and display preferences,
+not what data is collected.
+```
+
+---
+
+### 9.3 Configuration Validation
+
+The UI performs client-side validation:
+
+- Cache TTL values: Must be > 0 seconds
+- Warming interval: Must be ≥ 5 minutes
+- List sizes: Must be between 1 and 100
+- Minimum battles: Must be ≥ 1
+
+Server-side validation ensures:
+
+- Cache TTL values are reasonable (not too short to avoid thrashing)
+- Configuration changes are logged for audit trail
+- Invalid configurations are rejected with clear error messages
+
+---
+
+### 9.4 Configuration Storage
+
+Configuration is stored in the database:
+
+```sql
+CREATE TABLE feature_config (
+  feature_key text NOT NULL,
+  config_key text NOT NULL,
+  config_value jsonb NOT NULL,
+  updated_by uuid REFERENCES users(id),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (feature_key, config_key)
+);
+
+-- Example: battle-intel cache config
+INSERT INTO feature_config (feature_key, config_key, config_value) VALUES
+('battle-intel', 'cache', '{
+  "entityStatsTTL": 3600,
+  "globalSummaryTTL": 300,
+  "opponentAnalysisTTL": 3600,
+  "shipCompositionTTL": 7200,
+  "warmingEnabled": true,
+  "warmingInterval": 1800,
+  "topEntitiesToWarm": 50
+}'),
+('battle-intel', 'display', '{
+  "defaultTimeRange": "30d",
+  "minimumBattles": 3,
+  "topOpponentsSize": 10,
+  "topShipsSize": 15,
+  "iskFormat": "abbreviated"
+}');
+```
+
+---
+
+## 10. Caching Strategy
 
 **Cache Invalidation**:
 
@@ -703,7 +899,7 @@ app.get('/intel/alliances/:id', {
 
 ---
 
-## 10. Success Metrics
+## 11. Success Metrics
 
 - **Query Performance**: Intel API responses < 500ms (p95)
 - **Cache Hit Rate**: >85% for entity statistics

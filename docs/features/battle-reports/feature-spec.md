@@ -542,17 +542,232 @@ app.get('/battles', {
 
 ---
 
-## 9. Success Metrics
+## 9. Configuration Page
+
+### 9.1 Overview
+
+**Route**: `/admin/features/battle-reports/config`
+
+**Access**: Requires `battle-reports` feature access with `admin` role
+
+The Battle Reports configuration page controls the **ingestion ruleset** that determines which killmails are collected from zKillboard. This configuration is critical as it affects:
+
+- What killmails are stored in the system
+- What battles can be reconstructed
+- What data is available for Battle Intel analytics
+
+⚠️ **Important**: Changes to ingestion configuration only affect NEW killmails going forward. Historical data is not reprocessed.
+
+---
+
+### 9.2 Configuration Sections
+
+#### 9.2.1 Ingestion Filters
+
+These filters determine which killmails are accepted from the zKillboard feed BEFORE storage.
+
+**Minimum Pilot Threshold**:
+```
+Minimum Pilots in Killmail: [___5___] pilots
+
+ℹ️  Only killmails with at least this many total participants (victim + attackers)
+   will be ingested. Higher values reduce noise but may miss small engagements.
+```
+
+**Tracked Entities**:
+```
+Track Specific Alliances:  [Enabled ✓]
+  • Alliance Whitelist: [______________________________] [+ Add]
+    - Pandemic Legion (99001234)                      [Remove]
+    - Goonswarm Federation (99005678)                 [Remove]
+    - Test Alliance Please Ignore (99003456)          [Remove]
+
+Track Specific Corporations: [Disabled ☐]
+  • Corporation Whitelist: [______________________________] [+ Add]
+    (disabled)
+
+Track Specific Characters:  [Disabled ☐]
+  • Character Whitelist: [______________________________] [+ Add]
+    (disabled)
+
+  ☐ Ignore Unlisted: Only ingest kills where tracked entities are involved
+
+ℹ️  When enabled, only killmails involving these entities (as victim OR attacker)
+   will be ingested. Use "Ignore Unlisted" to strictly limit to ONLY these
+   entities. At least one filter must be enabled if "Ignore Unlisted" is checked.
+```
+
+**Geographic Filters**:
+```
+Track Specific Systems:  [Disabled ☐]
+  • System Whitelist: [______________________________] [+ Add]
+    (disabled)
+
+ℹ️  When enabled, only killmails in these specific systems will be ingested.
+
+Track by Space Type:  [Enabled ✓]
+  ☑ K-Space (Known Space - high/low/null sec)
+  ☑ J-Space (Wormhole Space)
+  ☑ Pochven (Triglavian Space)
+
+ℹ️  Filter killmails by space type. Disable types you don't want to track.
+
+Track by K-Space Security:  [Enabled ✓] (only applies to K-Space)
+  ☑ High-sec (1.0 to 0.5)
+  ☑ Low-sec (0.4 to 0.1)
+  ☑ Null-sec (0.0 and below)
+
+ℹ️  Filter K-Space killmails by security level. Disabling high-sec can
+   significantly reduce noise from non-PvP kills. This filter only applies
+   to K-Space systems; J-Space and Pochven are not affected.
+```
+
+---
+
+#### 9.2.2 Enrichment Settings
+
+**Enrichment Worker**:
+```
+Auto-Enrichment:  [Enabled ✓]
+
+ℹ️  When enabled, accepted killmails are automatically queued for enrichment
+   (fetching full details from zKillboard API). Required for battle clustering.
+
+Enrichment Throttle: [___1000___] ms between API calls
+
+ℹ️  Delay between zKillboard API requests to respect rate limits.
+```
+
+---
+
+#### 9.2.3 Clustering Settings
+
+**Battle Clustering**:
+```
+Auto-Clustering:  [Enabled ✓]
+
+Time Window: [___30___] minutes
+ℹ️  Maximum time between kills to be considered part of the same battle.
+
+Minimum Kills per Battle: [___2___] kills
+ℹ️  Battles with fewer kills than this will not be created.
+
+Maximum Kill Gap: [___15___] minutes
+ℹ️  Maximum time between consecutive kills within a battle.
+
+Reclustering Interval: [___5___] minutes
+ℹ️  How often the clustering engine processes new unprocessed killmails.
+```
+
+---
+
+#### 9.2.4 Current Ingestion Statistics
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Ingestion Stats (Last 24 Hours)                             │
+├─────────────────────────────────────────────────────────────┤
+│ • Killmails Received:     1,245                             │
+│ • Killmails Accepted:       892  (71.6% pass rate)          │
+│ • Killmails Rejected:       353                             │
+│   - Below min pilots:        87                             │
+│   - Untracked entities:     203                             │
+│   - Filtered systems:        42                             │
+│   - Security type:           21                             │
+│                                                             │
+│ • Enrichment Queue:          24  (pending)                  │
+│ • Enrichment Success:       868  (97.3%)                    │
+│ • Clustering Lag:         ~3 min  (avg processing delay)    │
+│ • Battles Created:           47                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 9.2.5 Configuration Impact Warning
+
+```
+⚠️  IMPORTANT: Ingestion Configuration Impact
+
+The configuration on this page controls what killmail data is collected by the system.
+This directly affects:
+
+• Battle Reports: Only battles composed of ingested killmails can be reconstructed
+• Battle Intel: All statistics and analytics are computed from ingested data
+
+If you're missing battles or intelligence about certain entities, check that your
+ingestion filters are not excluding them.
+
+📝 Note: Configuration changes only affect NEW killmails going forward. Historical
+data is not reprocessed.
+
+🔗 Related Features:
+   • Battle Intel feature uses this data → [Configure Battle Intel]
+```
+
+---
+
+### 9.3 Configuration Validation
+
+The UI performs client-side validation:
+
+- Minimum pilots: Must be ≥ 1
+- Time windows: Must be > 0 minutes
+- Minimum kills per battle: Must be ≥ 2
+- Enrichment throttle: Must be ≥ 100ms
+- At least one security type must be selected (if filtering by security)
+
+Server-side validation ensures:
+
+- Alliance/Corp/System IDs are valid EVE Online entity IDs
+- Configuration changes are logged for audit trail
+- Invalid configurations are rejected with clear error messages
+
+---
+
+### 9.4 Configuration Storage
+
+Configuration is stored in the database:
+
+```sql
+CREATE TABLE feature_config (
+  feature_key text NOT NULL,
+  config_key text NOT NULL,
+  config_value jsonb NOT NULL,
+  updated_by uuid REFERENCES users(id),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (feature_key, config_key)
+);
+
+-- Example: battle-reports ingestion config
+INSERT INTO feature_config (feature_key, config_key, config_value) VALUES
+('battle-reports', 'ingestion', '{
+  "minPilots": 5,
+  "trackedAlliances": [99001234, 99005678],
+  "trackedCorporations": [],
+  "trackedCharacters": [],
+  "ignoreUnlisted": false,
+  "trackedSystems": [],
+  "spaceTypes": ["kspace", "jspace", "pochven"],
+  "kspaceSecurityLevels": ["lowsec", "nullsec"],
+  "enrichmentThrottle": 1000
+}');
+```
+
+---
+
+## 10. Success Metrics
 
 - **Data Efficiency**: Average battle storage < 10 KB
 - **Clustering Accuracy**: >95% of related kills grouped correctly
 - **API Performance**: Battle list query < 200ms (p95)
 - **Stream Reliability**: <1% message loss on killmail stream
 - **User Engagement**: Average battle detail page views per user per day
+- **Configuration Effectiveness**: Pass rate > 60% (not rejecting too much)
 
 ---
 
-## 10. Future Enhancements
+## 11. Future Enhancements
 
 - [ ] Battle notifications (Discord/Slack integration)
 - [ ] Battle tagging/categorization by users

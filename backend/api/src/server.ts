@@ -39,9 +39,11 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerProfileRoutes } from './routes/profile.js';
+import { registerSearchRoutes } from './routes/search.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
+import type { SearchService } from '@battlescope/search';
 import { createLoggerConfig } from '@battlescope/shared';
 
 // Extend Fastify types with custom decorators
@@ -78,6 +80,7 @@ interface BuildServerOptions {
   authorizationService?: AuthorizationService;
   encryptionService?: EncryptionService;
   redis?: Redis;
+  searchService: SearchService;
 }
 
 export const buildServer = ({
@@ -99,6 +102,7 @@ export const buildServer = ({
   authorizationService,
   encryptionService,
   redis,
+  searchService,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: createLoggerConfig() }).withTypeProvider<ZodTypeProvider>();
 
@@ -158,6 +162,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         { name: 'Killmails', description: 'Killmail feed and streaming' },
         { name: 'Dashboard', description: 'Statistical summaries' },
         { name: 'Rules', description: 'Ingestion ruleset configuration' },
+        { name: 'Search', description: 'Typesense-powered search for battles, entities, and systems' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -339,6 +344,9 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
   );
   registerDashboardRoutes(app, dashboardRepository, nameEnricher);
   registerRulesRoutes(app, rulesetRepository, nameEnricher, redis);
+
+  // Register search routes
+  registerSearchRoutes(app, searchService);
 
   return app;
 };

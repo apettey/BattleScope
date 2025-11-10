@@ -18,6 +18,7 @@
     "@battlescope/auth": "workspace:*",
     "@battlescope/database": "workspace:*",
     "@battlescope/esi-client": "workspace:*",
+    "@battlescope/search": "workspace:*",
     "@battlescope/shared": "workspace:*",
     "@fastify/cookie": "^9.0.0",
     "@fastify/cors": "^9.0.0",

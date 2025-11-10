@@ -1,0 +1,26 @@
+{
+  "name": "@battlescope/search",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/shared": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
+    "typesense": "^1.8.2",
+    "pino": "^8.17.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "vitest": "^1.5.0"
+  }
+}

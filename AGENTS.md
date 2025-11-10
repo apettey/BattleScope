@@ -103,12 +103,24 @@ All application code lives in a single repository, with the React frontend under
   3. Run `make generate-openapi` to regenerate `docs/openapi.json` and `docs/openapi-generated.yaml`
   4. Commit all changes (code + generated specs) in the same PR
 - **CI validation:** the CI pipeline should verify that OpenAPI specs are up-to-date by running generation and checking for uncommitted changes.
-- **Documentation location:** 
+- **Documentation location:**
   - Generated specs: `docs/openapi.json`, `docs/openapi-generated.yaml`
   - Generation guide: `docs/openapi-generation.md`
   - Interactive UI: Available at `/docs` when the API server runs
 - **Type safety:** Zod schemas provide both TypeScript types (via inference) and runtime validation, eliminating drift between types and actual request/response handling.
 - **Breaking changes:** when making breaking API changes, update the version in `backend/api/src/server.ts` following semantic versioning (major.minor.patch) and document migration steps.
+
+### 3.11 Infrastructure & Kubernetes Manifests Location
+- **Canonical location:** ALL Kubernetes manifests, Helm charts, and infrastructure-as-code MUST be placed in `/infra/k8s/` directory.
+- **Flat file structure (preferred):** Use flat files with naming pattern `<service>-<resource-type>.yaml` (e.g., `api-deployment.yaml`, `postgres-statefulset.yaml`, `typesense-statefulset.yaml`, `typesense-secret.yaml`)
+- **Never use `/k8s/` at repo root:** The `/k8s/` directory at the repository root is deprecated and should not be used. All infrastructure must live under `/infra/k8s/`.
+- **Related infrastructure:** Keep related observability configs in adjacent directories:
+  - Helm values: `/infra/helm/`
+  - Grafana dashboards: `/infra/grafana/`
+  - OpenTelemetry configs: `/infra/otel/`
+  - Prometheus configs: `/infra/prometheus/`
+- **Documentation:** Service-specific documentation should be placed in `/infra/k8s/` as `<SERVICE>.md` (e.g., `TYPESENSE.md`, `OBSERVABILITY.md`) with deployment instructions, configuration details, and operational runbooks.
+- **Deployment references:** When documenting deployment steps in feature specs or implementation guides, always reference the correct path: `infra/k8s/<service>-<resource>.yaml` not `k8s/<service>/`.
 
 ---
 

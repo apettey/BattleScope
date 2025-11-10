@@ -22,6 +22,7 @@ import type {
 } from '@battlescope/auth';
 import type { EsiClient } from '@battlescope/esi-client';
 import type { NameEnricher } from './services/name-enricher.js';
+import type { SearchService } from '@battlescope/search';
 
 export const createMockDatabase = (): DatabaseClient => {
   return {
@@ -167,6 +168,45 @@ export const createMockNameEnricher = (): NameEnricher => {
   } as NameEnricher;
 };
 
+export const createMockSearchService = (): SearchService => {
+  return {
+    autocompleteEntities: async () => ({
+      alliances: [],
+      corporations: [],
+      characters: [],
+      processingTimeMs: 0,
+      query: '',
+    }),
+    autocompleteSystems: async () => ({
+      systems: [],
+      processingTimeMs: 0,
+      query: '',
+    }),
+    searchBattles: async () => ({
+      hits: [],
+      estimatedTotalHits: 0,
+      limit: 20,
+      offset: 0,
+      processingTimeMs: 0,
+    }),
+    searchGlobal: async () => ({
+      battles: [],
+      entities: { alliances: [], corporations: [], characters: [] },
+      systems: [],
+      processingTimeMs: 0,
+      query: '',
+      totalResults: { battles: 0, entities: 0, systems: 0 },
+    }),
+    getClient: () => ({
+      checkHealth: async () => ({
+        healthy: true,
+        latencyMs: 0,
+        collections: { battles: true, entities: true, systems: true },
+      }),
+    }) as any,
+  } as unknown as SearchService;
+};
+
 export const createMockEsiClient = (): EsiClient => {
   return {
     getCharacterInfo: async () => ({
@@ -239,5 +279,6 @@ export const createMockBuildServerOptions = () => {
     db: createMockDatabase(),
     esiClient: createMockEsiClient(),
     nameEnricher: createMockNameEnricher(),
+    searchService: createMockSearchService(),
   };
 };
