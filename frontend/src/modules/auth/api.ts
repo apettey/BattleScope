@@ -393,3 +393,103 @@ export const deleteAccount = async (
     throw new Error(`Failed to delete account: ${errorText}`);
   }
 };
+
+// ============================================================================
+// Profile Management API (User Self-Service)
+// ============================================================================
+
+/**
+ * Response schema for GET /me/profile
+ */
+export const ProfileResponseSchema = AccountDetailWithCharactersSchema.extend({
+  stats: z.object({
+    totalCharacters: z.number(),
+    uniqueAlliances: z.number(),
+    uniqueCorporations: z.number(),
+  }),
+});
+
+export type ProfileResponse = z.infer<typeof ProfileResponseSchema>;
+
+/**
+ * Get current user's profile with characters and roles
+ */
+export const fetchProfile = async (options: ApiOptions = {}): Promise<ProfileResponse> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/me/profile`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'GET',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  return ProfileResponseSchema.parse(data);
+};
+
+/**
+ * Set primary character for current user
+ */
+export const setPrimaryCharacter = async (
+  characterId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/me/profile/primary-character`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ characterId }),
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to set primary character: ${errorText}`);
+  }
+};
+
+/**
+ * Remove a character from current user's account
+ */
+export const removeCharacter = async (
+  characterId: string,
+  options: ApiOptions = {},
+): Promise<void> => {
+  const baseUrl = options.baseUrl ?? resolveBaseUrl();
+  const url = buildUrl(`${baseUrl}/me/profile/characters/${characterId}`, {}, baseUrl);
+
+  const response = await (options.fetchFn ?? fetch)(url, {
+    method: 'DELETE',
+    credentials: 'include',
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to remove character: ${errorText}`);
+  }
+};
+
+/**
+ * Get URL to refresh character token via EVE SSO
+ */
+export const getRefreshTokenUrl = (characterId: string): string => {
+  const baseUrl = resolveBaseUrl();
+  return `${baseUrl}/me/profile/characters/${characterId}/refresh`;
+};
+
+/**
+ * Get URL to add a new character via EVE SSO
+ */
+export const getAddCharacterUrl = (): string => {
+  const baseUrl = resolveBaseUrl();
+  return `${baseUrl}/auth/login?add_character=true`;
+};

@@ -9,6 +9,7 @@ import {
 } from '@battlescope/auth';
 import type {
   AccountRepository,
+  CharacterRepository,
   FeatureRepository,
   AuditLogRepository,
 } from '@battlescope/database';
@@ -37,6 +38,7 @@ export function registerAdminRoutes(
   sessionService: SessionService,
   authorizationService: AuthorizationService,
   accountRepository: AccountRepository,
+  characterRepository: CharacterRepository,
   featureRepository: FeatureRepository,
   auditLogRepository: AuditLogRepository,
 ): void {
@@ -552,6 +554,101 @@ export function registerAdminRoutes(
           deletedBy: request.account.id,
         },
       });
+
+      return reply.status(204).send();
+    },
+  );
+
+  // Set primary character for account (SuperAdmin only)
+  appWithTypes.post(
+    '/admin/accounts/:id/primary-character',
+    {
+      preHandler: [authMiddleware, requireSuperAdmin],
+      schema: {
+        tags: ['Admin'],
+        description:
+          'Set primary character for an account (SuperAdmin only - useful when user cannot log in)',
+        params: AccountIdParamSchema,
+        body: z.object({
+          characterId: z.string().uuid(),
+        }),
+        response: {
+          204: z.null(),
+          400: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id: accountId } = request.params;
+      const { characterId } = request.body;
+
+      request.log.info(
+        { accountId, characterId, adminId: request.account.id },
+        'SuperAdmin changing primary character for account',
+      );
+
+      // Verify account exists
+      const account = await accountRepository.getById(accountId);
+      if (!account) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Account not found',
+        });
+      }
+
+      // Verify character exists and belongs to account
+      const character = await characterRepository.getById(characterId);
+      if (!character) {
+        return reply.status(404).send({
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Character not found',
+        });
+      }
+
+      if (character.accountId !== accountId) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Character does not belong to this account',
+        });
+      }
+
+      // Set primary character
+      await accountRepository.setPrimaryCharacter(accountId, characterId);
+
+      // Audit log
+      await auditLogRepository.create({
+        actorAccountId: request.account.id,
+        action: 'account.primary_character_changed_by_admin',
+        targetType: 'account',
+        targetId: accountId,
+        metadata: {
+          characterId,
+          characterName: character.eveCharacterName,
+          adminId: request.account.id,
+        },
+      });
+
+      request.log.info(
+        {
+          accountId,
+          characterId,
+          characterName: character.eveCharacterName,
+          adminId: request.account.id,
+        },
+        'Primary character changed by SuperAdmin',
+      );
 
       return reply.status(204).send();
     },

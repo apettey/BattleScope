@@ -12,6 +12,10 @@ import type { EsiClient } from '@battlescope/esi-client';
 
 const AuthLoginQuerySchema = z.object({
   redirectUri: z.string().url().optional(),
+  add_character: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true'),
 });
 
 const AuthCallbackQuerySchema = z.object({
@@ -50,9 +54,38 @@ export function registerAuthRoutes(
       },
     },
     async (request, reply) => {
-      const { redirectUri } = request.query;
+      const { redirectUri, add_character } = request.query;
 
-      const { url } = eveSSOService.generateAuthorizationUrl(redirectUri ?? frontendUrl);
+      // If adding character, get current user's account ID from session
+      let existingAccountId: string | undefined;
+      if (add_character) {
+        try {
+          // Check if user is authenticated
+          const sessionToken = request.cookies.battlescope_session;
+          if (sessionToken) {
+            const session = await sessionService.validateSession(sessionToken);
+            if (session) {
+              existingAccountId = session.accountId;
+              request.log.info(
+                { accountId: existingAccountId },
+                'Adding character to existing account',
+              );
+            }
+          }
+        } catch (error) {
+          request.log.warn('Failed to get session for add_character flow');
+        }
+
+        if (!existingAccountId) {
+          // User is not logged in but trying to add character - redirect to error
+          return reply.redirect(302, `${frontendUrl}?error=not_authenticated`);
+        }
+      }
+
+      const { url } = eveSSOService.generateAuthorizationUrl(redirectUri ?? frontendUrl, {
+        isAddingCharacter: add_character,
+        existingAccountId,
+      });
 
       return reply.redirect(302, url);
     },
@@ -77,7 +110,7 @@ export function registerAuthRoutes(
         // Exchange code for tokens and verify character
         request.log.info('Exchanging code for token');
         const result = await eveSSOService.exchangeCodeForToken(code, state);
-        const { character, accessToken, refreshToken, expiresIn } = result;
+        const { character, accessToken, refreshToken, expiresIn, oauthState } = result;
         request.log.info(
           {
             characterId: character.CharacterID,
@@ -122,7 +155,104 @@ export function registerAuthRoutes(
           request.log.info('Character has no alliance');
         }
 
-        // Check org gating
+        // Handle add_character flow differently
+        if (oauthState.isAddingCharacter && oauthState.existingAccountId) {
+          request.log.info(
+            {
+              accountId: oauthState.existingAccountId,
+              characterId: character.CharacterID,
+            },
+            'Adding character to existing account',
+          );
+
+          // Check if character already exists on a different account
+          const existingCharacter = await characterRepository.getByEveCharacterId(
+            BigInt(character.CharacterID),
+          );
+
+          if (existingCharacter && existingCharacter.accountId !== oauthState.existingAccountId) {
+            request.log.warn(
+              {
+                characterId: character.CharacterID,
+                existingAccountId: existingCharacter.accountId,
+                requestedAccountId: oauthState.existingAccountId,
+              },
+              'Character already exists on different account',
+            );
+            return reply.redirect(302, `${frontendUrl}?error=character_exists#profile`);
+          }
+
+          if (existingCharacter) {
+            // Character exists on same account - just update tokens
+            request.log.info(
+              { characterId: existingCharacter.id },
+              'Character already on account, updating tokens',
+            );
+            const expiresAt = new Date(Date.now() + expiresIn * 1000);
+            await characterRepository.update(existingCharacter.id, {
+              corpId: BigInt(characterInfo.corporation_id),
+              corpName: corpInfo.name,
+              allianceId: characterInfo.alliance_id ? BigInt(characterInfo.alliance_id) : null,
+              allianceName: allianceInfo?.name ?? null,
+              portraitUrl: esiClient.getCharacterPortraitUrl(character.CharacterID, 128),
+              esiAccessToken: encryptionService.encryptToBuffer(accessToken),
+              esiRefreshToken: refreshToken ? encryptionService.encryptToBuffer(refreshToken) : null,
+              esiTokenExpiresAt: expiresAt,
+              scopes: character.Scopes.split(' '),
+              lastVerifiedAt: new Date(),
+            });
+          } else {
+            // Add new character to existing account (skip org gating for alts)
+            request.log.info(
+              { accountId: oauthState.existingAccountId },
+              'Creating new alt character',
+            );
+            const expiresAt = new Date(Date.now() + expiresIn * 1000);
+            const newCharacter = await characterRepository.create({
+              accountId: oauthState.existingAccountId,
+              eveCharacterId: BigInt(character.CharacterID),
+              eveCharacterName: character.CharacterName,
+              corpId: BigInt(characterInfo.corporation_id),
+              corpName: corpInfo.name,
+              allianceId: characterInfo.alliance_id ? BigInt(characterInfo.alliance_id) : null,
+              allianceName: allianceInfo?.name ?? null,
+              portraitUrl: esiClient.getCharacterPortraitUrl(character.CharacterID, 128),
+              esiAccessToken: encryptionService.encryptToBuffer(accessToken),
+              esiRefreshToken: refreshToken ? encryptionService.encryptToBuffer(refreshToken) : null,
+              esiTokenExpiresAt: expiresAt,
+              scopes: character.Scopes.split(' '),
+            });
+
+            // Audit log
+            await auditLogRepository.create({
+              actorAccountId: oauthState.existingAccountId,
+              action: 'character.added',
+              targetType: 'character',
+              targetId: newCharacter.id,
+              metadata: {
+                characterId: character.CharacterID,
+                characterName: character.CharacterName,
+                corpId: characterInfo.corporation_id,
+                corpName: corpInfo.name,
+                allianceId: characterInfo.alliance_id,
+                allianceName: allianceInfo?.name,
+              },
+            });
+
+            request.log.info(
+              {
+                characterId: newCharacter.id,
+                characterName: character.CharacterName,
+              },
+              'Alt character added successfully',
+            );
+          }
+
+          // Redirect back to profile (don't create new session)
+          return reply.redirect(302, `${frontendUrl}?character_added=true#profile`);
+        }
+
+        // Check org gating (only for primary character login)
         request.log.info(
           {
             corpId: characterInfo.corporation_id,

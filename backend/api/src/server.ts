@@ -38,6 +38,7 @@ import { registerRulesRoutes } from './routes/rules.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerProfileRoutes } from './routes/profile.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
@@ -151,6 +152,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
       tags: [
         { name: 'Auth', description: 'EVE Online SSO authentication' },
         { name: 'Me', description: 'Current user profile and character management' },
+        { name: 'Profile', description: 'User self-service account management' },
         { name: 'Admin', description: 'User and role management (Admin only)' },
         { name: 'Battles', description: 'Battle reconstruction and querying' },
         { name: 'Killmails', description: 'Killmail feed and streaming' },
@@ -305,11 +307,20 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
       characterRepository,
       featureRepository,
     );
+    registerProfileRoutes(
+      app,
+      sessionService,
+      accountRepository,
+      characterRepository,
+      featureRepository,
+      auditLogRepository,
+    );
     registerAdminRoutes(
       app,
       sessionService,
       authorizationService,
       accountRepository,
+      characterRepository,
       featureRepository,
       auditLogRepository,
     );

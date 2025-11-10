@@ -7,7 +7,7 @@ import { RulesView } from '../rules/RulesView.js';
 import { AllianceView } from '../entities/AllianceView.js';
 import { CorporationView } from '../entities/CorporationView.js';
 import { CharacterView } from '../entities/CharacterView.js';
-import { ProfileView } from '../auth/components/ProfileView.js';
+import { EnhancedProfileView } from '../auth/components/EnhancedProfileView.js';
 import { AdminView } from '../auth/components/AdminView.js';
 import { UserMenu } from '../auth/components/UserMenu.js';
 import { useAuth } from '../auth/AuthContext.js';
@@ -32,6 +32,7 @@ const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element; adminOn
   { id: 'recent', label: 'Recent Kills', render: () => <RecentKillsView /> },
   { id: 'rules', label: 'Rules', render: () => <RulesView /> },
   { id: 'battles', label: 'Battles', render: () => <BattlesView /> },
+  { id: 'profile', label: 'Profile', render: () => <EnhancedProfileView /> },
   { id: 'admin', label: 'Admin', render: () => <AdminView />, adminOnly: true },
 ];
 
@@ -140,14 +141,6 @@ export const App: FC = () => {
         case 'character':
           return <CharacterView characterId={route.entityId} />;
       }
-    }
-
-    // Handle special auth routes
-    if (route.tabId === 'profile') {
-      return <ProfileView />;
-    }
-    if (route.tabId === 'admin') {
-      return <AdminView />;
     }
 
     const tab = tabs.find((t) => t.id === route.tabId) ?? tabs[0];

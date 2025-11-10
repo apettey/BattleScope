@@ -25,6 +25,8 @@ export interface OAuthState {
   codeVerifier: string;
   redirectUri?: string;
   timestamp: number;
+  isAddingCharacter?: boolean;
+  existingAccountId?: string;
 }
 
 export interface TokenExchangeResult {
@@ -32,6 +34,7 @@ export interface TokenExchangeResult {
   refreshToken?: string;
   expiresIn: number;
   character: EVESSOCharacter;
+  oauthState: OAuthState;
 }
 
 /**
@@ -59,9 +62,13 @@ export class EVESSOService {
    * Generate authorization URL for EVE SSO login
    *
    * @param redirectUri - Optional redirect URI after login
+   * @param metadata - Optional metadata for the OAuth flow
    * @returns Authorization URL and state for CSRF protection
    */
-  generateAuthorizationUrl(redirectUri?: string): { url: string; state: string } {
+  generateAuthorizationUrl(
+    redirectUri?: string,
+    metadata?: { isAddingCharacter?: boolean; existingAccountId?: string },
+  ): { url: string; state: string } {
     return tracer.startActiveSpan('eve-sso.generate-auth-url', (span) => {
       try {
         const state = this.generateState();
@@ -74,6 +81,8 @@ export class EVESSOService {
           codeVerifier,
           redirectUri,
           timestamp: Date.now(),
+          isAddingCharacter: metadata?.isAddingCharacter,
+          existingAccountId: metadata?.existingAccountId,
         });
 
         // Clean up old states (older than 10 minutes)
@@ -138,6 +147,7 @@ export class EVESSOService {
           refreshToken: tokenResponse.refresh_token,
           expiresIn: tokenResponse.expires_in,
           character,
+          oauthState: stateData,
         };
       } catch (error) {
         span.recordException(error as Error);

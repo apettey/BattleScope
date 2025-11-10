@@ -46,6 +46,8 @@ export function registerProfileRoutes(
               id: z.string().uuid(),
               displayName: z.string(),
               email: z.string().email().nullable(),
+              isBlocked: z.boolean(),
+              isSuperAdmin: z.boolean(),
               lastLoginAt: z.string().datetime().nullable(),
               createdAt: z.string().datetime(),
             }),
@@ -59,6 +61,7 @@ export function registerProfileRoutes(
                 corpName: z.string(),
                 allianceId: z.string().nullable(),
                 allianceName: z.string().nullable(),
+                isPrimary: z.boolean(),
                 tokenStatus: z.enum(['valid', 'expiring', 'expired']),
               })
               .nullable(),
@@ -111,19 +114,27 @@ export function registerProfileRoutes(
       },
     },
     async (request, reply) => {
+      request.log.info({ accountId: request.account.id }, 'Fetching profile for user');
+
       const accountDetail = await accountRepository.getDetailWithCharactersGrouped(
         request.account.id,
       );
 
       if (!accountDetail) {
-        return reply.status(404).send({
-          statusCode: 404,
-          error: 'Not Found',
-          message: 'Account not found',
-        });
+        request.log.error({ accountId: request.account.id }, 'Account not found for authenticated user');
+        throw new Error('Account not found - this should never happen for authenticated users');
       }
 
       const featureRoles = await featureRepository.getAccountFeatureRoles(request.account.id);
+
+      request.log.info(
+        {
+          accountId: request.account.id,
+          characterCount: accountDetail.stats.totalCharacters,
+          featureRoleCount: featureRoles.length,
+        },
+        'Profile fetched successfully',
+      );
 
       // Calculate unique alliances and corps
       const uniqueAlliances = new Set<string>();
@@ -143,6 +154,8 @@ export function registerProfileRoutes(
           id: accountDetail.account.id,
           displayName: accountDetail.account.displayName,
           email: accountDetail.account.email,
+          isBlocked: accountDetail.account.isBlocked,
+          isSuperAdmin: accountDetail.account.isSuperAdmin,
           lastLoginAt: accountDetail.account.lastLoginAt?.toISOString() ?? null,
           createdAt: accountDetail.account.createdAt.toISOString(),
         },
@@ -156,6 +169,7 @@ export function registerProfileRoutes(
               corpName: accountDetail.primaryCharacter.corpName,
               allianceId: accountDetail.primaryCharacter.allianceId,
               allianceName: accountDetail.primaryCharacter.allianceName,
+              isPrimary: accountDetail.primaryCharacter.isPrimary,
               tokenStatus: accountDetail.primaryCharacter.tokenStatus,
             }
           : null,
@@ -215,9 +229,18 @@ export function registerProfileRoutes(
     async (request, reply) => {
       const { characterId } = request.body;
 
+      request.log.info(
+        { accountId: request.account.id, characterId },
+        'Setting primary character',
+      );
+
       // Verify character belongs to user
       const character = await characterRepository.getById(characterId);
       if (!character || character.accountId !== request.account.id) {
+        request.log.warn(
+          { accountId: request.account.id, characterId },
+          'Attempted to set primary character that does not belong to account',
+        );
         return reply.status(400).send({
           statusCode: 400,
           error: 'Bad Request',
@@ -238,6 +261,11 @@ export function registerProfileRoutes(
           characterName: character.eveCharacterName,
         },
       });
+
+      request.log.info(
+        { accountId: request.account.id, characterId, characterName: character.eveCharacterName },
+        'Primary character changed successfully',
+      );
 
       return reply.status(204).send();
     },
@@ -270,9 +298,15 @@ export function registerProfileRoutes(
     async (request, reply) => {
       const { characterId } = request.params;
 
+      request.log.info(
+        { accountId: request.account.id, characterId },
+        'Attempting to remove character',
+      );
+
       // Verify character belongs to user
       const character = await characterRepository.getById(characterId);
       if (!character) {
+        request.log.warn({ accountId: request.account.id, characterId }, 'Character not found');
         return reply.status(404).send({
           statusCode: 404,
           error: 'Not Found',
@@ -281,6 +315,10 @@ export function registerProfileRoutes(
       }
 
       if (character.accountId !== request.account.id) {
+        request.log.warn(
+          { accountId: request.account.id, characterId },
+          'Attempted to remove character from another account',
+        );
         return reply.status(400).send({
           statusCode: 400,
           error: 'Bad Request',
@@ -291,6 +329,10 @@ export function registerProfileRoutes(
       // Check if this is the only character
       const allCharacters = await characterRepository.getByAccountId(request.account.id);
       if (allCharacters.length <= 1) {
+        request.log.warn(
+          { accountId: request.account.id, characterId },
+          'Attempted to remove only character',
+        );
         return reply.status(400).send({
           statusCode: 400,
           error: 'Bad Request',
@@ -305,6 +347,8 @@ export function registerProfileRoutes(
       // Delete the character
       await characterRepository.delete(characterId);
 
+      let newPrimaryCharacterId: string | undefined;
+
       // If was primary, set oldest remaining character as new primary
       if (isPrimary) {
         const remainingCharacters = await characterRepository.getByAccountId(request.account.id);
@@ -314,6 +358,7 @@ export function registerProfileRoutes(
             (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
           )[0];
           await accountRepository.setPrimaryCharacter(request.account.id, oldestCharacter.id);
+          newPrimaryCharacterId = oldestCharacter.id;
         }
       }
 
@@ -326,8 +371,20 @@ export function registerProfileRoutes(
         metadata: {
           characterName: character.eveCharacterName,
           wasPrimary: isPrimary,
+          newPrimaryCharacterId,
         },
       });
+
+      request.log.info(
+        {
+          accountId: request.account.id,
+          characterId,
+          characterName: character.eveCharacterName,
+          wasPrimary: isPrimary,
+          newPrimaryCharacterId,
+        },
+        'Character removed successfully',
+      );
 
       return reply.status(204).send();
     },

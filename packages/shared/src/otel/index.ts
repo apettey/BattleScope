@@ -6,6 +6,7 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 
 type AwaitableNodeSdk = Promise<NodeSDK | undefined>;
 
@@ -90,6 +91,14 @@ const createSdk = (
     }),
     // @ts-expect-error - MetricReader type mismatch due to pnpm dependency hoisting
     metricReader,
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        // Disable instrumentations that might cause issues or are not needed
+        '@opentelemetry/instrumentation-fs': {
+          enabled: false,
+        },
+      }),
+    ],
   });
 };
 

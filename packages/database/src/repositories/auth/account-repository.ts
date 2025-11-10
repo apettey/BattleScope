@@ -130,6 +130,17 @@ export class AccountRepository {
   }
 
   /**
+   * Set primary character for an account
+   */
+  async setPrimaryCharacter(accountId: string, characterId: string): Promise<void> {
+    await this.db
+      .updateTable('accounts')
+      .set({ primaryCharacterId: characterId })
+      .where('id', '=', accountId)
+      .execute();
+  }
+
+  /**
    * Block an account
    */
   async block(id: string): Promise<void> {
