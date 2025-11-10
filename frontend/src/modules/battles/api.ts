@@ -48,7 +48,7 @@ export const BattleSummarySchema = z.object({
   id: z.string().uuid(),
   systemId: z.string(),
   systemName: z.string().nullable(),
-  spaceType: z.string(),
+  securityType: z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']),
   startTime: z.string(),
   endTime: z.string(),
   totalKills: z.string(),
@@ -87,6 +87,13 @@ export type BattlesListResponse = z.infer<typeof BattlesListResponseSchema>;
 export interface FetchBattlesOptions {
   limit?: number;
   cursor?: string | null;
+  securityType?: 'highsec' | 'lowsec' | 'nullsec' | 'wormhole' | 'pochven';
+  systemId?: string;
+  allianceId?: string;
+  corpId?: string;
+  characterId?: string;
+  since?: Date;
+  until?: Date;
   signal?: AbortSignal;
   baseUrl?: string;
   fetchFn?: typeof fetch;
@@ -95,12 +102,32 @@ export interface FetchBattlesOptions {
 export const fetchBattles = async (
   options: FetchBattlesOptions = {},
 ): Promise<BattlesListResponse> => {
-  const { limit, cursor, signal, baseUrl, fetchFn } = options;
+  const {
+    limit,
+    cursor,
+    securityType,
+    systemId,
+    allianceId,
+    corpId,
+    characterId,
+    since,
+    until,
+    signal,
+    baseUrl,
+    fetchFn,
+  } = options;
   const url = buildUrl(
     '/battles',
     {
       limit: limit ? String(limit) : undefined,
       cursor,
+      securityType,
+      systemId,
+      allianceId,
+      corpId,
+      characterId,
+      since: since ? since.toISOString() : undefined,
+      until: until ? until.toISOString() : undefined,
     },
     baseUrl,
   );

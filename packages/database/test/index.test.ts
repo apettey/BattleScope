@@ -23,7 +23,7 @@ describe('BattleRepository', () => {
     const battle = await repository.createBattle({
       id: battleId,
       systemId: 31000123n,
-      spaceType: 'jspace',
+      securityType: 'wormhole',
       startTime: new Date('2024-05-01T12:00:00Z'),
       endTime: new Date('2024-05-01T12:15:00Z'),
       totalKills: 4n,

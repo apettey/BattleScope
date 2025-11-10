@@ -32,7 +32,7 @@ const baseItem = {
   systemId: '30000123',
   systemName: 'Jita',
   occurredAt: '2024-05-01T10:00:00.000Z',
-  spaceType: 'kspace' as const,
+  securityType: 'highsec' as const,
   victimAllianceId: '99001234',
   victimAllianceName: 'Test Alliance',
   victimCorpId: '123456',
@@ -81,7 +81,7 @@ describe('RecentKillsView', () => {
         killmailId: '2',
         systemId: '31000123',
         systemName: 'J115422',
-        spaceType: 'jspace',
+        securityType: 'wormhole',
         occurredAt: '2024-05-01T10:01:00.000Z',
       });
     });
@@ -89,7 +89,7 @@ describe('RecentKillsView', () => {
     expect(await screen.findByText(/J115422/)).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('checkbox', { name: /Known Space/ }));
+    await user.click(screen.getByRole('checkbox', { name: /High Sec/ }));
 
     expect(await screen.findByText(/J115422/)).toBeInTheDocument();
     expect(screen.queryByText(/Jita/)).not.toBeInTheDocument();

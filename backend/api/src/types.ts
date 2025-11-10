@@ -8,7 +8,7 @@ import type {
   DashboardSummary,
   KillmailEnrichmentStatusSchema,
 } from '@battlescope/database';
-import type { SpaceType, SecurityType } from '@battlescope/shared';
+import type { SecurityType } from '@battlescope/shared';
 import type { z } from 'zod';
 
 type EnrichmentStatus = z.infer<typeof KillmailEnrichmentStatusSchema>;
@@ -67,7 +67,7 @@ export interface BattleSummaryResponse {
   id: string;
   systemId: string;
   systemName: string | null;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   startTime: string;
   endTime: string;
   totalKills: string;
@@ -154,7 +154,7 @@ export const toBattleSummaryResponse = (
   id: battle.id,
   systemId: battle.systemId.toString(),
   systemName: resolveName(lookup, battle.systemId),
-  spaceType: battle.spaceType,
+  securityType: battle.securityType,
   startTime: formatDate(battle.startTime),
   endTime: formatDate(battle.endTime),
   totalKills: battle.totalKills.toString(),
@@ -221,7 +221,7 @@ export interface KillmailFeedItemResponse {
   systemId: string;
   systemName: string | null;
   occurredAt: string;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   victimAllianceId: string | null;
   victimAllianceName: string | null;
   victimCorpId: string | null;
@@ -248,7 +248,7 @@ export const toKillmailFeedItemResponse = (
   systemId: item.systemId.toString(),
   systemName: resolveName(lookup, item.systemId),
   occurredAt: formatDate(item.occurredAt),
-  spaceType: item.spaceType,
+  securityType: item.securityType,
   victimAllianceId: formatBigInt(item.victimAllianceId),
   victimAllianceName: resolveName(lookup, item.victimAllianceId),
   victimCorpId: formatBigInt(item.victimCorpId),

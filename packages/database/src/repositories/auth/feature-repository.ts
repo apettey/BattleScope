@@ -309,4 +309,65 @@ export class FeatureRepository {
       });
     }
   }
+
+  /**
+   * Get a single feature setting value
+   */
+  async getFeatureSetting(
+    featureKey: string,
+    key: string,
+  ): Promise<{ value: unknown; updatedAt: Date; updatedBy: string | null } | null> {
+    const feature = await this.getFeatureByKey(featureKey);
+
+    if (!feature) {
+      return null;
+    }
+
+    const result = await this.db
+      .selectFrom('feature_settings')
+      .selectAll()
+      .where('featureId', '=', feature.id)
+      .where('key', '=', key)
+      .executeTakeFirst();
+
+    return result
+      ? {
+          value: result.value,
+          updatedAt: result.updatedAt,
+          updatedBy: result.updatedBy,
+        }
+      : null;
+  }
+
+  /**
+   * Set a single feature setting (alias for updateFeatureSetting)
+   */
+  async setFeatureSetting(
+    featureKey: string,
+    key: string,
+    value: Record<string, unknown> | unknown,
+    updatedBy: string | null | undefined,
+  ): Promise<void> {
+    const feature = await this.getFeatureByKey(featureKey);
+
+    if (!feature) {
+      throw new Error(`Feature not found: ${featureKey}`);
+    }
+
+    await this.db
+      .insertInto('feature_settings')
+      .values({
+        featureId: feature.id,
+        key,
+        value: value as Record<string, unknown>,
+        updatedBy: updatedBy ?? null,
+      })
+      .onConflict((oc) =>
+        oc.columns(['featureId', 'key']).doUpdateSet({
+          value: value as Record<string, unknown>,
+          updatedBy: updatedBy ?? null,
+        }),
+      )
+      .execute();
+  }
 }

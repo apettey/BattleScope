@@ -77,7 +77,7 @@ const buildFilters = (
   }
 
   return {
-    spaceType: query.spaceType,
+    securityType: query.securityType,
     systemId,
     allianceId,
     corpId,

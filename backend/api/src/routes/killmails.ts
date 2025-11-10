@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { trace } from '@opentelemetry/api';
-import type { KillmailRepository, RulesetRepository, SpaceType } from '@battlescope/database';
+import type { KillmailRepository, RulesetRepository, SecurityType } from '@battlescope/database';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from '../cors.js';
 import type { NameEnricher } from '../services/name-enricher.js';
 import { RulesetFilter } from '../services/ruleset-filter.js';
@@ -32,10 +32,10 @@ const sendEvent = (reply: FastifyReply, event: string, payload: unknown) => {
   reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
 };
 
-const normalizeSpaceTypes = (
-  spaceTypes: readonly SpaceType[] | undefined,
-): readonly SpaceType[] | undefined =>
-  spaceTypes && spaceTypes.length > 0 ? spaceTypes : undefined;
+const normalizeSecurityTypes = (
+  securityTypes: readonly SecurityType[] | undefined,
+): readonly SecurityType[] | undefined =>
+  securityTypes && securityTypes.length > 0 ? securityTypes : undefined;
 
 export const registerKillmailRoutes = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,7 +61,7 @@ export const registerKillmailRoutes = (
       const query = RecentQuerySchema.parse(request.query);
       const limit = query.limit ?? DEFAULT_LIMIT;
       const trackedOnly = query.trackedOnly ?? false;
-      const spaceTypes = normalizeSpaceTypes(query.spaceType);
+      const securityTypes = normalizeSecurityTypes(query.securityType);
 
       const [ruleset, rawItems] = await Promise.all([
         rulesetRepository.getActiveRuleset(),
@@ -81,7 +81,7 @@ export const registerKillmailRoutes = (
       const filtered = RulesetFilter.filterAll(rawItems, {
         ruleset,
         enforceTracked: trackedOnly,
-        spaceTypes,
+        securityTypes,
       });
       const items = filtered.slice(0, limit);
 
@@ -98,7 +98,7 @@ export const registerKillmailRoutes = (
     const query = StreamQuerySchema.parse(request.query);
     const limit = query.limit ?? DEFAULT_LIMIT;
     const pollIntervalMs = query.pollIntervalMs ?? DEFAULT_STREAM_INTERVAL;
-    const spaceTypes = normalizeSpaceTypes(query.spaceType);
+    const securityTypes = normalizeSecurityTypes(query.securityType);
     const trackedOnly = query.trackedOnly ?? false;
 
     const [ruleset, rawInitialItems] = await Promise.all([
@@ -115,7 +115,7 @@ export const registerKillmailRoutes = (
     const filteredInitialItems = RulesetFilter.filterAll(rawInitialItems, {
       ruleset,
       enforceTracked: trackedOnly,
-      spaceTypes,
+      securityTypes,
     });
     const initialItems = filteredInitialItems.slice(0, limit);
 
@@ -152,7 +152,7 @@ export const registerKillmailRoutes = (
         const filtered = RulesetFilter.filterAll(rawUpdates, {
           ruleset,
           enforceTracked: trackedOnly,
-          spaceTypes,
+          securityTypes,
         });
         const updates = filtered.slice(0, limit);
 

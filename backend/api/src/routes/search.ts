@@ -53,13 +53,12 @@ const EntityAutocompleteResponseSchema = z.object({
 });
 
 // System autocomplete schemas
-const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
-const SecurityLevelSchema = z.enum(['highsec', 'lowsec', 'nullsec']);
+const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
 
 const SystemAutocompleteQuerySchema = z.object({
   q: z.string().min(2),
-  space_type: z
-    .union([SpaceTypeSchema, z.array(SpaceTypeSchema)])
+  security_type: z
+    .union([SecurityTypeSchema, z.array(SecurityTypeSchema)])
     .optional()
     .transform((value) => {
       if (!value) return undefined;
@@ -75,8 +74,7 @@ const SystemSearchResultSchema = z.object({
   regionName: z.string(),
   constellationId: z.string(),
   constellationName: z.string(),
-  spaceType: SpaceTypeSchema,
-  securityLevel: SecurityLevelSchema.nullable(),
+  securityType: SecurityTypeSchema,
   securityStatus: z.number(),
   battleCount: z.number().int(),
   lastBattleAt: z.string().datetime().nullable(),
@@ -99,8 +97,7 @@ const BattleSearchResultSchema = z.object({
   systemId: z.string(),
   systemName: z.string(),
   regionName: z.string(),
-  spaceType: SpaceTypeSchema,
-  securityLevel: SecurityLevelSchema.nullable(),
+  securityType: SecurityTypeSchema,
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   duration: z.number().int(),
@@ -131,8 +128,7 @@ const GlobalSearchResponseSchema = z.object({
 
 // Battle search schemas
 const BattleFiltersSchema = z.object({
-  spaceType: z.array(SpaceTypeSchema).optional(),
-  securityLevel: z.array(SecurityLevelSchema).optional(),
+  securityType: z.array(SecurityTypeSchema).optional(),
   startTime: z
     .object({
       after: z.string().datetime().optional(),
@@ -194,8 +190,7 @@ const BattleSearchResponseSchema = z.object({
   query: z.string().optional(),
   facets: z
     .object({
-      spaceType: z.record(z.number()).optional(),
-      securityLevel: z.record(z.number()).optional(),
+      securityType: z.record(z.number()).optional(),
     })
     .optional(),
 });
@@ -278,11 +273,11 @@ export function registerSearchRoutes(app: FastifyInstance, searchService: Search
       const span = tracer.startSpan('api.search.systems');
 
       try {
-        const { q, space_type, limit } = request.query;
+        const { q, security_type, limit } = request.query;
 
         const result = await searchService.autocompleteSystems({
           q,
-          spaceType: space_type,
+          securityType: security_type,
           limit,
         });
 

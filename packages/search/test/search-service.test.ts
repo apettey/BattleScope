@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SearchService, createSearchService } from '../src/search-service.js';
 import type { TypesenseClient } from '../src/typesense-client.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 describe('SearchService', () => {
   let mockClient: Partial<TypesenseClient>;
@@ -180,8 +180,7 @@ describe('SearchService', () => {
               regionName: 'The Forge',
               constellationId: '20000020',
               constellationName: 'Kimotoro',
-              spaceType: 'kspace',
-              securityLevel: 'highsec',
+              securityType: 'nullsec',
               securityStatus: 0.946,
               battleCount: 500,
               lastBattleAt: '2024-01-01T00:00:00Z',
@@ -198,8 +197,8 @@ describe('SearchService', () => {
 
       expect(result.systems).toHaveLength(1);
       expect(result.systems[0].name).toBe('Jita');
-      expect(result.systems[0].spaceType).toBe('kspace');
-      expect(result.systems[0].securityLevel).toBe('highsec');
+      expect(result.systems[0].securityType).toBe('nullsec');
+      expect(result.systems[0].securityType).toBe('highsec');
       expect(result.query).toBe('jita');
       expect(result.processingTimeMs).toBeGreaterThanOrEqual(0);
 
@@ -222,14 +221,14 @@ describe('SearchService', () => {
 
       await service.autocompleteSystems({
         q: 'test',
-        spaceType: ['jspace'],
+        securityType: ['wormhole'],
         limit: 10,
       });
 
       expect(mockClient.search).toHaveBeenCalledWith(
         'systems',
         expect.objectContaining({
-          filter_by: '(spaceType:=jspace)',
+          filter_by: '(securityType:=jspace)',
         }),
         'autocomplete_systems',
       );
@@ -240,13 +239,13 @@ describe('SearchService', () => {
 
       await service.autocompleteSystems({
         q: 'test',
-        spaceType: ['kspace', 'jspace'],
+        securityType: ['nullsec', 'wormhole'],
       });
 
       expect(mockClient.search).toHaveBeenCalledWith(
         'systems',
         expect.objectContaining({
-          filter_by: '(spaceType:=kspace || spaceType:=jspace)',
+          filter_by: '(securityType:=kspace || securityType:=jspace)',
         }),
         'autocomplete_systems',
       );
@@ -263,8 +262,7 @@ describe('SearchService', () => {
               regionName: 'Test',
               constellationId: '1',
               constellationName: 'Test',
-              spaceType: 'kspace',
-              securityLevel: null,
+              securityType: 'nullsec',
               securityStatus: 0.0,
               battleCount: 0,
               lastBattleAt: null,
@@ -293,8 +291,7 @@ describe('SearchService', () => {
               systemId: '1',
               systemName: 'M-OEE8',
               regionName: 'Delve',
-              spaceType: 'kspace',
-              securityLevel: 'nullsec',
+              securityType: 'nullsec',
               startTime: 1704067200,
               endTime: 1704070800,
               duration: 3600,
@@ -310,10 +307,10 @@ describe('SearchService', () => {
         found: 1,
         facet_counts: [
           {
-            field_name: 'spaceType',
+            field_name: 'securityType',
             counts: [
-              { value: 'kspace', count: 10 },
-              { value: 'jspace', count: 5 },
+              { value: 'nullsec', count: 10 },
+              { value: 'wormhole', count: 5 },
             ],
           },
         ],
@@ -331,7 +328,7 @@ describe('SearchService', () => {
       expect(result.limit).toBe(20);
       expect(result.offset).toBe(0);
       expect(result.facets).toBeDefined();
-      expect(result.facets.spaceType).toEqual({ kspace: 10, jspace: 5 });
+      expect(result.facets?.securityType).toEqual({ kspace: 10, jspace: 5 });
 
       expect(mockClient.search).toHaveBeenCalledWith(
         'battles',
@@ -341,7 +338,7 @@ describe('SearchService', () => {
           per_page: 20,
           page: 1,
           sort_by: 'startTime:desc',
-          facet_by: 'spaceType,securityLevel',
+          facet_by: 'securityType,securityType',
         }),
         'search_battles',
       );
@@ -352,14 +349,14 @@ describe('SearchService', () => {
 
       await service.searchBattles({
         filters: {
-          spaceType: ['kspace'],
+          securityType: ['nullsec'],
         },
       });
 
       expect(mockClient.search).toHaveBeenCalledWith(
         'battles',
         expect.objectContaining({
-          filter_by: '(spaceType:=kspace)',
+          filter_by: '(securityType:=kspace)',
         }),
         'search_battles',
       );
@@ -484,8 +481,7 @@ describe('SearchService', () => {
       await service.searchBattles({
         query: 'pandemic',
         filters: {
-          spaceType: ['kspace'],
-          securityLevel: ['nullsec'],
+          securityType: ['nullsec'],
           totalKills: { min: 10 },
         },
       });
@@ -494,8 +490,7 @@ describe('SearchService', () => {
       const params = call[1];
 
       expect(params.q).toBe('pandemic');
-      expect(params.filter_by).toContain('spaceType:=kspace');
-      expect(params.filter_by).toContain('securityLevel:=nullsec');
+      expect(params.filter_by).toContain('securityType:=kspace');
       expect(params.filter_by).toContain('totalKills:>=10');
       expect(params.filter_by).toMatch(/&&/); // Filters joined with &&
     });
@@ -511,8 +506,7 @@ describe('SearchService', () => {
               systemId: '1',
               systemName: 'M-OEE8',
               regionName: 'Delve',
-              spaceType: 'kspace',
-              securityLevel: 'nullsec',
+              securityType: 'nullsec',
               startTime: 1704067200,
               endTime: 1704070800,
               duration: 3600,
@@ -554,8 +548,7 @@ describe('SearchService', () => {
               regionName: 'Delve',
               constellationId: '1',
               constellationName: 'Test',
-              spaceType: 'kspace',
-              securityLevel: 'nullsec',
+              securityType: 'nullsec',
               securityStatus: -0.5,
               battleCount: 200,
               lastBattleAt: '2024-01-01T00:00:00Z',

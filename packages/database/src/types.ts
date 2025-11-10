@@ -1,16 +1,17 @@
 import { z } from 'zod';
-import type { SpaceType } from '@battlescope/shared';
-
-export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
+import type { SecurityType } from '@battlescope/shared';
 
 const nonNegativeBigint = z.coerce
   .bigint()
   .refine((value) => value >= 0n, { message: 'Expected non-negative bigint' });
 
+export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
+export type { SecurityType };
+
 export const BattleInsertSchema = z.object({
   id: z.string().uuid(),
   systemId: nonNegativeBigint,
-  spaceType: SpaceTypeSchema,
+  securityType: SecurityTypeSchema,
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
   totalKills: nonNegativeBigint,
@@ -114,11 +115,6 @@ export interface KillmailEventRecord {
   battleId: string | null;
 }
 
-export type { SpaceType };
-
-export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
-export type SecurityType = z.infer<typeof SecurityTypeSchema>;
-
 export const KillmailEnrichmentStatusSchema = z.enum([
   'pending',
   'processing',
@@ -174,7 +170,7 @@ export const KillmailFeedItemSchema = z.object({
   killmailId: nonNegativeBigint,
   systemId: nonNegativeBigint,
   occurredAt: z.coerce.date(),
-  spaceType: SpaceTypeSchema,
+  securityType: SecurityTypeSchema,
   victimAllianceId: nonNegativeBigint.nullable(),
   victimCorpId: nonNegativeBigint.nullable(),
   victimCharacterId: nonNegativeBigint.nullable(),

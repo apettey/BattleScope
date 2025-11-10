@@ -3,7 +3,6 @@ import type { FC } from 'react';
 import { BattlesView } from '../battles/components/BattlesView.js';
 import { HomeView } from '../home/HomeView.js';
 import { RecentKillsView } from '../killfeed/RecentKillsView.js';
-import { RulesView } from '../rules/RulesView.js';
 import { AllianceView } from '../entities/AllianceView.js';
 import { CorporationView } from '../entities/CorporationView.js';
 import { CharacterView } from '../entities/CharacterView.js';
@@ -13,7 +12,7 @@ import { UserMenu } from '../auth/components/UserMenu.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { resolveBaseUrl } from '../api/http.js';
 
-type TabId = 'home' | 'recent' | 'rules' | 'battles' | 'profile' | 'admin';
+type TabId = 'home' | 'recent' | 'battles' | 'profile' | 'admin';
 type EntityType = 'alliance' | 'corporation' | 'character';
 
 type RouteState =
@@ -30,7 +29,6 @@ type RouteState =
 const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element; adminOnly?: boolean }> = [
   { id: 'home', label: 'Home', render: () => <HomeView /> },
   { id: 'recent', label: 'Recent Kills', render: () => <RecentKillsView /> },
-  { id: 'rules', label: 'Rules', render: () => <RulesView /> },
   { id: 'battles', label: 'Battles', render: () => <BattlesView /> },
   { id: 'profile', label: 'Profile', render: () => <EnhancedProfileView /> },
   { id: 'admin', label: 'Admin', render: () => <AdminView />, adminOnly: true },

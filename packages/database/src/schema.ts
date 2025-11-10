@@ -1,10 +1,10 @@
 import type { ColumnType } from 'kysely';
-import type { SpaceType } from '@battlescope/shared';
+import type { SecurityType } from './types.js';
 
 export interface BattlesTable {
   id: string;
   systemId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   startTime: ColumnType<Date, Date, Date>;
   endTime: ColumnType<Date, Date, Date>;
   totalKills: ColumnType<bigint, string | number | bigint, string | number | bigint>;

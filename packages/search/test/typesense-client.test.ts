@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TypesenseClient, createTypesenseClient } from '../src/typesense-client.js';
 import type { TypesenseConfig } from '../src/types.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 // Mock Typesense module
 vi.mock('typesense', () => {

@@ -30,8 +30,7 @@ export const BATTLES_COLLECTION_SCHEMA: CollectionCreateSchema = {
     { name: 'systemId', type: 'string' },
     { name: 'systemName', type: 'string' },
     { name: 'regionName', type: 'string' },
-    { name: 'spaceType', type: 'string', facet: true },
-    { name: 'securityLevel', type: 'string', facet: true, optional: true },
+    { name: 'securityType', type: 'string', facet: true },
     { name: 'startTime', type: 'int64' }, // Unix timestamp
     { name: 'endTime', type: 'int64' },
     { name: 'duration', type: 'int32' }, // seconds
@@ -81,8 +80,7 @@ export const SYSTEMS_COLLECTION_SCHEMA: CollectionCreateSchema = {
     { name: 'regionName', type: 'string' },
     { name: 'constellationId', type: 'string' },
     { name: 'constellationName', type: 'string' },
-    { name: 'spaceType', type: 'string', facet: true },
-    { name: 'securityLevel', type: 'string', facet: true, optional: true },
+    { name: 'securityType', type: 'string', facet: true },
     { name: 'securityStatus', type: 'float' }, // -1.0 to 1.0
     { name: 'battleCount', type: 'int32' },
     { name: 'lastBattleAt', type: 'int64', optional: true }, // Unix timestamp

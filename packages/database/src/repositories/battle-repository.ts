@@ -1,5 +1,4 @@
 import { sql } from 'kysely';
-import type { SpaceType } from '@battlescope/shared';
 import type { DatabaseClient } from '../client.js';
 import type {
   BattleInsert,
@@ -7,6 +6,7 @@ import type {
   BattleParticipantInsert,
   BattleRecord,
   BattleWithDetails,
+  SecurityType,
 } from '../types.js';
 import {
   BattleInsertSchema,
@@ -23,7 +23,7 @@ import {
 } from './utils.js';
 
 export interface BattleFilters {
-  spaceType?: SpaceType;
+  securityType?: SecurityType;
   systemId?: bigint;
   allianceId?: bigint;
   corpId?: bigint;
@@ -48,7 +48,7 @@ export class BattleRepository {
       .values({
         id: battle.id,
         systemId: serializeBigIntRequired(battle.systemId),
-        spaceType: battle.spaceType,
+        securityType: battle.securityType,
         startTime: battle.startTime,
         endTime: battle.endTime,
         totalKills: serializeBigIntRequired(battle.totalKills),
@@ -255,8 +255,8 @@ export class BattleRepository {
   ): Promise<BattleRecord[]> {
     let query = this.db.selectFrom('battles').selectAll();
 
-    if (filters.spaceType) {
-      query = query.where('spaceType', '=', filters.spaceType);
+    if (filters.securityType) {
+      query = query.where('securityType', '=', filters.securityType);
     }
 
     if (filters.systemId !== undefined) {
@@ -736,5 +736,43 @@ export class BattleRepository {
         battleCount: Number(system.battleCount),
       })),
     };
+  }
+
+  /**
+   * Count battles created since a given date
+   */
+  async countCreatedSince(since: Date): Promise<number> {
+    const result = await this.db
+      .selectFrom('battles')
+      .select((eb) => eb.fn.count<string>('id').as('count'))
+      .where('createdAt', '>=', since)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Count battles in a time range (by start time)
+   */
+  async countInTimeRange(startTime: Date, endTime: Date): Promise<number> {
+    const result = await this.db
+      .selectFrom('battles')
+      .select((eb) => eb.fn.count<string>('id').as('count'))
+      .where('startTime', '>=', startTime)
+      .where('startTime', '<=', endTime)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Delete battles in a time range (for reclustering)
+   */
+  async deleteInTimeRange(startTime: Date, endTime: Date): Promise<void> {
+    await this.db
+      .deleteFrom('battles')
+      .where('startTime', '>=', startTime)
+      .where('startTime', '<=', endTime)
+      .execute();
   }
 }

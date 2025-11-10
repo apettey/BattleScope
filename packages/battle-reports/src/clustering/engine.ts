@@ -3,7 +3,7 @@ import type {
   BattleKillmailInsert,
   KillmailEventRecord,
 } from '@battlescope/database';
-import { buildZKillRelatedUrl, deriveSpaceType } from '@battlescope/shared';
+import { buildZKillRelatedUrl, deriveSecurityType } from '@battlescope/shared';
 import { randomUUID } from 'crypto';
 
 export interface ClusteringParameters {
@@ -54,7 +54,7 @@ const toBattlePlan = (systemId: bigint, killmails: KillmailEventRecord[]): Battl
   const battle: BattleInsert = {
     id: battleId,
     systemId,
-    spaceType: deriveSpaceType(systemId),
+    securityType: deriveSecurityType(systemId),
     startTime,
     endTime,
     totalKills: BigInt(sorted.length),

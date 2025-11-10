@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { SpaceType } from '@battlescope/shared';
+import type { SecurityType } from '@battlescope/shared';
 import {
   createKillmailStream,
   fetchRecentKillmails,
@@ -11,19 +11,23 @@ import { EntityList } from '../common/components/EntityList.js';
 import { useApiCall } from '../api/useApiCall.js';
 
 const MAX_ITEMS = 50;
-const SPACE_TYPES: SpaceType[] = ['kspace', 'jspace', 'pochven'];
+const SECURITY_TYPES: SecurityType[] = ['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven'];
 
 type ConnectionStatus = 'connecting' | 'open' | 'closed';
 
-const spaceTypeLabels: Record<SpaceType, string> = {
-  kspace: '🌌 Known Space',
-  jspace: '🕳️ Wormhole Space',
+const securityTypeLabels: Record<SecurityType, string> = {
+  highsec: '🛡️ High Sec',
+  lowsec: '⚠️ Low Sec',
+  nullsec: '💀 Null Sec',
+  wormhole: '🕳️ Wormhole',
   pochven: '⚡ Pochven',
 };
 
-const spaceTypeColors: Record<SpaceType, string> = {
-  kspace: '#3b82f6',
-  jspace: '#8b5cf6',
+const securityTypeColors: Record<SecurityType, string> = {
+  highsec: '#10b981',
+  lowsec: '#f59e0b',
+  nullsec: '#ef4444',
+  wormhole: '#8b5cf6',
   pochven: '#ec4899',
 };
 
@@ -57,7 +61,9 @@ export const RecentKillsView = () => {
   const [items, setItems] = useState<KillmailFeedItem[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [error, setError] = useState<string | null>(null);
-  const [activeFilters, setActiveFilters] = useState<Set<SpaceType>>(() => new Set(SPACE_TYPES));
+  const [activeFilters, setActiveFilters] = useState<Set<SecurityType>>(
+    () => new Set(SECURITY_TYPES),
+  );
   const streamCancelRef = useRef<(() => void) | null>(null);
 
   const applySnapshot = useCallback((snapshot: KillmailFeedItem[]) => {
@@ -129,26 +135,28 @@ export const RecentKillsView = () => {
     };
   }, [applySnapshot, applyUpdate, handleError, wrapApiCall]);
 
-  const toggleFilter = useCallback((spaceType: SpaceType) => {
+  const toggleFilter = useCallback((securityType: SecurityType) => {
     setActiveFilters((current) => {
       const next = new Set(current);
-      if (next.has(spaceType)) {
-        next.delete(spaceType);
+      if (next.has(securityType)) {
+        next.delete(securityType);
       } else {
-        next.add(spaceType);
+        next.add(securityType);
       }
-      return next.size === 0 ? new Set([spaceType]) : next;
+      return next.size === 0 ? new Set([securityType]) : next;
     });
   }, []);
 
   const grouped = useMemo(() => {
-    const bucket: Record<SpaceType, KillmailFeedItem[]> = {
-      kspace: [],
-      jspace: [],
+    const bucket: Record<SecurityType, KillmailFeedItem[]> = {
+      highsec: [],
+      lowsec: [],
+      nullsec: [],
+      wormhole: [],
       pochven: [],
     };
     items.forEach((item) => {
-      bucket[item.spaceType].push(item);
+      bucket[item.securityType].push(item);
     });
     return bucket;
   }, [items]);
@@ -160,11 +168,11 @@ export const RecentKillsView = () => {
           Recent Killmails
         </h2>
         <p style={{ marginBottom: '1rem', color: '#64748b' }}>
-          Live stream of killmail activity grouped by space type. Toggle the filters to focus on
+          Live stream of killmail activity grouped by security type. Toggle the filters to focus on
           specific operational domains.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          {SPACE_TYPES.map((type) => {
+          {SECURITY_TYPES.map((type) => {
             const isActive = activeFilters.has(type);
             return (
               <label
@@ -174,13 +182,13 @@ export const RecentKillsView = () => {
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.5rem 1rem',
-                  background: isActive ? spaceTypeColors[type] : '#f1f5f9',
+                  background: isActive ? securityTypeColors[type] : '#f1f5f9',
                   color: isActive ? '#fff' : '#475569',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   fontWeight: 500,
-                  border: `2px solid ${isActive ? spaceTypeColors[type] : '#e2e8f0'}`,
+                  border: `2px solid ${isActive ? securityTypeColors[type] : '#e2e8f0'}`,
                 }}
               >
                 <input
@@ -189,7 +197,7 @@ export const RecentKillsView = () => {
                   onChange={() => toggleFilter(type)}
                   style={{ cursor: 'pointer' }}
                 />
-                {spaceTypeLabels[type]}
+                {securityTypeLabels[type]}
               </label>
             );
           })}
@@ -243,23 +251,23 @@ export const RecentKillsView = () => {
           gap: '1.5rem',
         }}
       >
-        {SPACE_TYPES.filter((type) => activeFilters.has(type)).map((spaceType) => {
-          const entries = grouped[spaceType];
+        {SECURITY_TYPES.filter((type) => activeFilters.has(type)).map((securityType) => {
+          const entries = grouped[securityType];
           return (
             <section
-              key={spaceType}
+              key={securityType}
               style={{
                 display: 'grid',
                 gap: '1rem',
                 alignContent: 'start',
               }}
-              aria-label={`${spaceTypeLabels[spaceType]} kills`}
+              aria-label={`${securityTypeLabels[securityType]} kills`}
             >
               <h3
                 style={{
                   marginBottom: 0,
                   fontSize: '1.125rem',
-                  color: spaceTypeColors[spaceType],
+                  color: securityTypeColors[securityType],
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
@@ -269,11 +277,11 @@ export const RecentKillsView = () => {
                   style={{
                     width: '4px',
                     height: '24px',
-                    background: spaceTypeColors[spaceType],
+                    background: securityTypeColors[securityType],
                     borderRadius: '2px',
                   }}
                 />
-                {spaceTypeLabels[spaceType]}
+                {securityTypeLabels[securityType]}
               </h3>
               {entries.length === 0 ? (
                 <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>

@@ -1,5 +1,3 @@
-import type { SpaceType as SpaceTypeInternal } from './space-type.js';
-
 export const projectName = 'BattleScope';
 export const ENRICHMENT_QUEUE_NAME = 'killmail-enrichment';
 export interface EnrichmentJobPayload {
@@ -14,9 +12,10 @@ export const assertEnv = (key: string, defaultValue?: string): string => {
   return value;
 };
 
-export { deriveSpaceType, type SpaceType } from './space-type.js';
+export { deriveSpaceType } from './space-type.js';
 
-type SpaceType = SpaceTypeInternal;
+// Security type for EVE Online space categorization
+export type SecurityType = 'highsec' | 'lowsec' | 'nullsec' | 'wormhole' | 'pochven';
 
 const pad = (value: number) => value.toString().padStart(2, '0');
 
@@ -67,7 +66,7 @@ export interface KillmailFeedItemDto {
   killmailId: string;
   systemId: string;
   occurredAt: string;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   victimAllianceId: string | null;
   victimCorpId: string | null;
   victimCharacterId: string | null;
@@ -92,5 +91,4 @@ export interface DashboardSummaryDto {
 
 export { startTelemetry, stopTelemetry } from './otel/index.js';
 export { SystemSecurityResolver, deriveSecurityType, type SystemInfo } from './system-security.js';
-export type { SecurityType } from '@battlescope/database';
 export { createLoggerConfig } from './logger.js';

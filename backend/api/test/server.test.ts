@@ -55,7 +55,7 @@ const createBattle = async (
   await battleRepository.createBattle({
     id: battleId,
     systemId: killmail.systemId,
-    spaceType: 'jspace',
+    securityType: 'wormhole',
     startTime: killmail.occurredAt,
     endTime: new Date(killmail.occurredAt.getTime() + 5 * 60 * 1000),
     totalKills: 1n,
@@ -169,7 +169,7 @@ describe('API routes', () => {
     await battleRepository.createBattle({
       id: secondBattleId,
       systemId: 30000111n,
-      spaceType: 'kspace',
+      securityType: 'nullsec',
       startTime: new Date('2024-05-02T15:00:00Z'),
       endTime: new Date('2024-05-02T15:10:00Z'),
       totalKills: 1n,
@@ -367,12 +367,15 @@ describe('API routes', () => {
     expect(body.count).toBeGreaterThan(0);
     expect(body.items[0]).toMatchObject({
       killmailId: '2001',
-      spaceType: 'kspace',
+      securityType: 'nullsec',
     });
     expect(body.items[0].systemName).toBe(`Name ${body.items[0].systemId}`);
     expect(body.items[0].attackerAllianceNames).toContain('Name 99004444');
 
-    const filtered = await app.inject({ method: 'GET', url: '/killmails/recent?spaceType=jspace' });
+    const filtered = await app.inject({
+      method: 'GET',
+      url: '/killmails/recent?securityType=wormhole',
+    });
     const filteredBody = filtered.json();
     expect(filteredBody.items).toHaveLength(1);
     expect(filteredBody.items[0].killmailId).toBe('1001');

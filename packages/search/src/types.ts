@@ -41,8 +41,7 @@ export interface EntityAutocompleteResponse {
 // System Search Types
 // ============================================================================
 
-export type SpaceType = 'kspace' | 'jspace' | 'pochven';
-export type SecurityLevel = 'highsec' | 'lowsec' | 'nullsec';
+export type SecurityType = 'highsec' | 'lowsec' | 'nullsec' | 'wormhole' | 'pochven';
 
 export interface SystemSearchResult {
   id: string;
@@ -51,8 +50,7 @@ export interface SystemSearchResult {
   regionName: string;
   constellationId: string;
   constellationName: string;
-  spaceType: SpaceType;
-  securityLevel: SecurityLevel | null;
+  securityType: SecurityType;
   securityStatus: number; // -1.0 to 1.0
   battleCount: number;
   lastBattleAt: string | null; // ISO 8601
@@ -60,7 +58,7 @@ export interface SystemSearchResult {
 
 export interface SystemAutocompleteRequest {
   q: string;
-  spaceType?: SpaceType[];
+  securityType?: SecurityType[];
   limit?: number;
 }
 
@@ -79,8 +77,7 @@ export interface BattleSearchResult {
   systemId: string;
   systemName: string;
   regionName: string;
-  spaceType: SpaceType;
-  securityLevel: SecurityLevel | null;
+  securityType: SecurityType;
   startTime: string; // ISO 8601
   endTime: string; // ISO 8601
   duration: number; // seconds
@@ -93,8 +90,7 @@ export interface BattleSearchResult {
 }
 
 export interface BattleSearchFilters {
-  spaceType?: SpaceType[];
-  securityLevel?: SecurityLevel[];
+  securityType?: SecurityType[];
   startTime?: {
     after?: string; // ISO 8601
     before?: string; // ISO 8601
@@ -141,8 +137,7 @@ export interface BattleSearchResponse {
   processingTimeMs: number;
   query?: string;
   facets?: {
-    spaceType?: Record<string, number>;
-    securityLevel?: Record<string, number>;
+    securityType?: Record<string, number>;
   };
 }
 
@@ -176,8 +171,7 @@ export interface BattleDocument {
   systemId: string;
   systemName: string;
   regionName: string;
-  spaceType: string;
-  securityLevel: string | null;
+  securityType: string;
   startTime: number; // Unix timestamp
   endTime: number;
   duration: number;
@@ -209,8 +203,7 @@ export interface SystemDocument {
   regionName: string;
   constellationId: string;
   constellationName: string;
-  spaceType: string;
-  securityLevel: string | null;
+  securityType: string;
   securityStatus: number;
   battleCount: number;
   lastBattleAt: number | null; // Unix timestamp

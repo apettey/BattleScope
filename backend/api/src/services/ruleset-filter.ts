@@ -1,9 +1,9 @@
-import type { KillmailFeedItem, RulesetRecord, SpaceType } from '@battlescope/database';
+import type { KillmailFeedItem, RulesetRecord, SecurityType } from '@battlescope/database';
 
 export interface FilterOptions {
   ruleset: RulesetRecord;
   enforceTracked: boolean;
-  spaceTypes?: readonly SpaceType[];
+  securityTypes?: readonly SecurityType[];
 }
 
 /**
@@ -19,16 +19,16 @@ export class RulesetFilter {
   }
 
   /**
-   * Check if a killmail matches space type filter
+   * Check if a killmail matches security type filter
    */
-  private static matchesSpaceType(
+  private static matchesSecurityType(
     item: KillmailFeedItem,
-    spaceTypes?: readonly SpaceType[],
+    securityTypes?: readonly SecurityType[],
   ): boolean {
-    if (!spaceTypes || spaceTypes.length === 0) {
+    if (!securityTypes || securityTypes.length === 0) {
       return true;
     }
-    return spaceTypes.includes(item.spaceType);
+    return securityTypes.includes(item.securityType);
   }
 
   /**
@@ -76,11 +76,11 @@ export class RulesetFilter {
   }
 
   /**
-   * Filter an array of killmails based on all criteria (space type + ruleset)
+   * Filter an array of killmails based on all criteria (security type + ruleset)
    */
   static filterAll(items: KillmailFeedItem[], options: FilterOptions): KillmailFeedItem[] {
     return items.filter((item) => {
-      if (!this.matchesSpaceType(item, options.spaceTypes)) {
+      if (!this.matchesSecurityType(item, options.securityTypes)) {
         return false;
       }
       return this.matches(item, options.ruleset, options.enforceTracked);

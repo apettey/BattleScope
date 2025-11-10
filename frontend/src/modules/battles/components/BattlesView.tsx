@@ -10,6 +10,7 @@ import {
 import { EntityLink } from '../../common/components/EntityLink.js';
 import { EntityList } from '../../common/components/EntityList.js';
 import { useApiCall } from '../../api/useApiCall.js';
+import { BattleFilters, type BattleFilterValues } from './BattleFilters.js';
 
 interface FetchError {
   message: string;
@@ -22,15 +23,19 @@ const toError = (error: unknown): FetchError => {
   return { message: String(error) };
 };
 
-const spaceTypeLabels: Record<string, string> = {
-  kspace: '🌌 K-Space',
-  jspace: '🕳️ J-Space',
+const securityTypeLabels: Record<string, string> = {
+  highsec: '🛡️ High Sec',
+  lowsec: '⚠️ Low Sec',
+  nullsec: '💀 Null Sec',
+  wormhole: '🕳️ Wormhole',
   pochven: '⚡ Pochven',
 };
 
-const spaceTypeColors: Record<string, string> = {
-  kspace: '#3b82f6',
-  jspace: '#8b5cf6',
+const securityTypeColors: Record<string, string> = {
+  highsec: '#10b981',
+  lowsec: '#f59e0b',
+  nullsec: '#ef4444',
+  wormhole: '#8b5cf6',
   pochven: '#ec4899',
 };
 
@@ -47,7 +52,12 @@ export const BattlesView = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<FetchError | null>(null);
 
+  const [filterValues, setFilterValues] = useState<BattleFilterValues>({});
+  const [appliedFilters, setAppliedFilters] = useState<BattleFilterValues>({});
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
+
   const detailAbortRef = useRef<AbortController | null>(null);
+  const listAbortRef = useRef<AbortController | null>(null);
 
   const loadBattle = useCallback(
     (battleId: string) => {
@@ -82,39 +92,56 @@ export const BattlesView = () => {
     [wrapApiCall],
   );
 
-  useEffect(() => {
+  const loadBattleList = useCallback(async () => {
+    listAbortRef.current?.abort();
     const controller = new AbortController();
+    listAbortRef.current = controller;
+
     setListLoading(true);
     setListError(null);
 
-    wrapApiCall(() => fetchBattles({ limit: 10, signal: controller.signal }))
-      .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        setBattles(response.items);
-        setNextCursor(response.nextCursor ?? null);
-        if (response.items.length > 0) {
-          loadBattle(response.items[0].id);
-        }
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
+    try {
+      const response = await wrapApiCall(() =>
+        fetchBattles({
+          limit: 10,
+          signal: controller.signal,
+          securityType: appliedFilters.securityType,
+          allianceId: appliedFilters.allianceId,
+          corpId: appliedFilters.corpId,
+          characterId: appliedFilters.characterId,
+          since: appliedFilters.since,
+          until: appliedFilters.until,
+        }),
+      );
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setBattles(response.items);
+      setNextCursor(response.nextCursor ?? null);
+      if (response.items.length > 0) {
+        loadBattle(response.items[0].id);
+      }
+    } catch (error: unknown) {
+      if (!controller.signal.aborted) {
         setListError(toError(error));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setListLoading(false);
-        }
-      });
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setListLoading(false);
+      }
+    }
+  }, [appliedFilters, loadBattle, wrapApiCall]);
+
+  useEffect(() => {
+    void loadBattleList();
 
     return () => {
-      controller.abort();
+      listAbortRef.current?.abort();
       detailAbortRef.current?.abort();
     };
-  }, [loadBattle, wrapApiCall]);
+  }, [loadBattleList]);
 
   const handleSelect = useCallback(
     (battleId: string) => {
@@ -126,6 +153,13 @@ export const BattlesView = () => {
     [loadBattle, selectedBattleId],
   );
 
+  const handleApplyFilters = useCallback(() => {
+    setIsApplyingFilters(true);
+    setAppliedFilters(filterValues);
+    // loadBattleList will be triggered by the appliedFilters dependency
+    setTimeout(() => setIsApplyingFilters(false), 500);
+  }, [filterValues]);
+
   const handleLoadMore = useCallback(() => {
     if (!nextCursor || loadingMore) {
       return;
@@ -133,7 +167,17 @@ export const BattlesView = () => {
     setLoadingMore(true);
     setListError(null);
 
-    wrapApiCall(() => fetchBattles({ cursor: nextCursor }))
+    wrapApiCall(() =>
+      fetchBattles({
+        cursor: nextCursor,
+        securityType: appliedFilters.securityType,
+        allianceId: appliedFilters.allianceId,
+        corpId: appliedFilters.corpId,
+        characterId: appliedFilters.characterId,
+        since: appliedFilters.since,
+        until: appliedFilters.until,
+      }),
+    )
       .then((response: { items: BattleSummary[]; nextCursor?: string | null }) => {
         setNextCursor(response.nextCursor ?? null);
         setBattles((current) => {
@@ -153,7 +197,7 @@ export const BattlesView = () => {
       .finally(() => {
         setLoadingMore(false);
       });
-  }, [loadingMore, nextCursor, wrapApiCall]);
+  }, [loadingMore, nextCursor, appliedFilters, wrapApiCall]);
 
   const selectedSummary = useMemo(
     () => battles.find((battle) => battle.id === selectedBattleId) ?? null,
@@ -164,11 +208,12 @@ export const BattlesView = () => {
     <section aria-labelledby="battles-heading" style={{ display: 'grid', gap: '1.5rem' }}>
       <header>
         <h2 id="battles-heading" style={{ marginBottom: '0.5rem' }}>
-          Recent Battles
+          Battle Reports
         </h2>
         <p style={{ color: '#64748b', marginBottom: '1rem' }}>
-          Browse and analyze recent battle reports. Select a battle to view detailed information
-          about participants and killmails.
+          Browse and analyze battle reports. Use filters to search by alliance, corporation,
+          character, space type, and date range. Select a battle to view detailed information about
+          participants and killmails.
         </p>
         {listLoading && (
           <p role="status" style={{ color: '#64748b' }}>
@@ -190,6 +235,13 @@ export const BattlesView = () => {
         )}
       </header>
 
+      <BattleFilters
+        values={filterValues}
+        onChange={setFilterValues}
+        onApply={handleApplyFilters}
+        isApplying={isApplyingFilters}
+      />
+
       <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
         <aside style={{ display: 'grid', gap: '1rem', alignContent: 'start' }}>
           <h3 style={{ fontSize: '1rem', color: '#0f172a', marginBottom: 0 }}>Battle Feed</h3>
@@ -199,7 +251,7 @@ export const BattlesView = () => {
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
             {battles.map((battle) => {
               const isSelected = battle.id === selectedBattleId;
-              const spaceColor = spaceTypeColors[battle.spaceType] || '#64748b';
+              const securityColor = securityTypeColors[battle.securityType] || '#64748b';
               return (
                 <li key={battle.id}>
                   <button
@@ -211,8 +263,8 @@ export const BattlesView = () => {
                       textAlign: 'left',
                       padding: '1rem',
                       borderRadius: '0.75rem',
-                      border: isSelected ? `2px solid ${spaceColor}` : '1px solid #e2e8f0',
-                      background: isSelected ? `${spaceColor}10` : '#fff',
+                      border: isSelected ? `2px solid ${securityColor}` : '1px solid #e2e8f0',
+                      background: isSelected ? `${securityColor}10` : '#fff',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                       boxShadow: isSelected
@@ -229,9 +281,11 @@ export const BattlesView = () => {
                       }}
                     >
                       <span style={{ fontSize: '1.25rem' }}>
-                        {battle.spaceType === 'kspace' && '🌌'}
-                        {battle.spaceType === 'jspace' && '🕳️'}
-                        {battle.spaceType === 'pochven' && '⚡'}
+                        {battle.securityType === 'highsec' && '🛡️'}
+                        {battle.securityType === 'lowsec' && '⚠️'}
+                        {battle.securityType === 'nullsec' && '💀'}
+                        {battle.securityType === 'wormhole' && '🕳️'}
+                        {battle.securityType === 'pochven' && '⚡'}
                       </span>
                       <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>
                         {battle.systemName || `System #${battle.systemId}`}
@@ -318,17 +372,20 @@ export const BattlesView = () => {
                   }}
                 >
                   <span style={{ fontSize: '1.5rem' }}>
-                    {selectedSummary.spaceType === 'kspace' && '🌌'}
-                    {selectedSummary.spaceType === 'jspace' && '🕳️'}
-                    {selectedSummary.spaceType === 'pochven' && '⚡'}
+                    {selectedSummary.securityType === 'highsec' && '🛡️'}
+                    {selectedSummary.securityType === 'lowsec' && '⚠️'}
+                    {selectedSummary.securityType === 'nullsec' && '💀'}
+                    {selectedSummary.securityType === 'wormhole' && '🕳️'}
+                    {selectedSummary.securityType === 'pochven' && '⚡'}
                   </span>
                   Battle in {selectedSummary.systemName || `System #${selectedSummary.systemId}`}
                 </h3>
                 <dl style={{ display: 'grid', gap: '0.75rem', margin: 0 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}>
-                    <dt style={{ color: '#64748b', fontWeight: 500 }}>Space Type:</dt>
+                    <dt style={{ color: '#64748b', fontWeight: 500 }}>Security Type:</dt>
                     <dd style={{ margin: 0, color: '#0f172a' }}>
-                      {spaceTypeLabels[selectedSummary.spaceType] || selectedSummary.spaceType}
+                      {securityTypeLabels[selectedSummary.securityType] ||
+                        selectedSummary.securityType}
                     </dd>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}>

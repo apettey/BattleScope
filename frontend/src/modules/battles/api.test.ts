@@ -5,7 +5,7 @@ const sampleSummary = {
   id: '5f2e5e02-0d75-4a47-8618-6c526d5e62c8',
   systemId: '31000123',
   systemName: 'J115422',
-  spaceType: 'jspace',
+  securityType: 'wormhole' as const,
   startTime: '2024-05-01T10:00:00.000Z',
   endTime: '2024-05-01T10:05:00.000Z',
   totalKills: '6',

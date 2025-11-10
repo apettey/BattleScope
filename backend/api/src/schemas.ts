@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 // Common schemas
-export const SpaceTypeSchema = z.enum(['kspace', 'jspace', 'pochven']);
 export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
 
 export const ErrorResponseSchema = z.object({
@@ -13,7 +12,7 @@ export const BattleSummarySchema = z.object({
   id: z.string().uuid(),
   systemId: z.string(),
   systemName: z.string().nullable(),
-  spaceType: SpaceTypeSchema,
+  securityType: SecurityTypeSchema,
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   totalKills: z.string(),
@@ -79,7 +78,7 @@ export const BattleListResponseSchema = z.object({
 export const BattleListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   cursor: z.string().optional(),
-  spaceType: SpaceTypeSchema.optional(),
+  securityType: SecurityTypeSchema.optional(),
   systemId: z.string().regex(/^\d+$/).optional(),
   allianceId: z.string().regex(/^\d+$/).optional(),
   corpId: z.string().regex(/^\d+$/).optional(),
@@ -102,7 +101,7 @@ export const KillmailFeedItemSchema = z.object({
   systemId: z.string(),
   systemName: z.string().nullable(),
   occurredAt: z.string().datetime(),
-  spaceType: SpaceTypeSchema,
+  securityType: SecurityTypeSchema,
   victimAllianceId: z.string().nullable(),
   victimAllianceName: z.string().nullable(),
   victimCorpId: z.string().nullable(),
@@ -128,8 +127,8 @@ export const KillmailFeedResponseSchema = z.object({
 
 export const KillmailRecentQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(25),
-  spaceType: z
-    .union([SpaceTypeSchema, z.array(SpaceTypeSchema)])
+  securityType: z
+    .union([SecurityTypeSchema, z.array(SecurityTypeSchema)])
     .optional()
     .transform((value) => {
       if (!value) return undefined;
@@ -348,7 +347,7 @@ export const CharacterBattleListResponseSchema = z.object({
 });
 
 // Type exports
-export type SpaceType = z.infer<typeof SpaceTypeSchema>;
+export type SecurityType = z.infer<typeof SecurityTypeSchema>;
 export type BattleSummary = z.infer<typeof BattleSummarySchema>;
 export type BattleDetail = z.infer<typeof BattleDetailSchema>;
 export type BattleListResponse = z.infer<typeof BattleListResponseSchema>;

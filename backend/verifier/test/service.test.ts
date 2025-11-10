@@ -4,6 +4,7 @@ import type { Redis } from 'ioredis';
 import type { Database } from '@battlescope/database';
 import type { EsiClient } from '@battlescope/esi-client';
 import type { EncryptionService } from '@battlescope/auth';
+import type { Logger } from 'pino';
 import { CharacterVerifierService } from '../src/service.js';
 import type { Config } from '../src/config.js';
 
@@ -13,7 +14,7 @@ describe('CharacterVerifierService', () => {
   let mockRedis: Partial<Redis>;
   let mockEsiClient: Partial<EsiClient>;
   let mockEncryptionService: Partial<EncryptionService>;
-  let mockLogger: unknown;
+  let mockLogger: Partial<Logger>;
   let mockConfig: Config;
 
   beforeEach(() => {
@@ -44,10 +45,10 @@ describe('CharacterVerifierService', () => {
     };
 
     mockLogger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
+      info: vi.fn() as any,
+      warn: vi.fn() as any,
+      error: vi.fn() as any,
+      debug: vi.fn() as any,
     };
 
     mockConfig = {
@@ -67,7 +68,7 @@ describe('CharacterVerifierService', () => {
       mockEsiClient as EsiClient,
       mockEncryptionService as EncryptionService,
       mockConfig,
-      mockLogger,
+      mockLogger as Logger,
     );
   });
 

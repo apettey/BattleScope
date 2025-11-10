@@ -1,7 +1,9 @@
-import type { SecurityType } from '@battlescope/database';
 import type { Redis } from 'ioredis';
 import { pino } from 'pino';
-import { deriveSpaceType, type SpaceType } from './space-type.js';
+import { deriveSpaceType } from './space-type.js';
+
+// Security type for EVE Online space categorization
+export type SecurityType = 'highsec' | 'lowsec' | 'nullsec' | 'wormhole' | 'pochven';
 
 const logger = pino({ name: 'system-security', level: process.env.LOG_LEVEL ?? 'info' });
 
@@ -12,22 +14,26 @@ export interface SystemInfo {
   systemId: bigint;
   securityStatus: number;
   securityType: SecurityType;
-  spaceType: SpaceType;
 }
 
 /**
  * Derives security type from security status and space type
+ * For K-space systems without security status, defaults to nullsec (most conservative)
  */
-export function deriveSecurityType(systemId: bigint, securityStatus?: number): SecurityType {
+export function deriveSecurityType(
+  systemId: bigint | number,
+  securityStatus?: number,
+): SecurityType {
   const spaceType = deriveSpaceType(systemId);
 
   // Wormhole and Pochven systems don't have traditional security status
   if (spaceType === 'jspace') return 'wormhole';
   if (spaceType === 'pochven') return 'pochven';
 
-  // K-space systems require security status
+  // K-space systems use security status if available
   if (securityStatus === undefined) {
-    throw new Error(`Security status required for k-space system ${systemId}`);
+    // Default to nullsec as most conservative option for unknown K-space systems
+    return 'nullsec';
   }
 
   if (securityStatus >= 0.5) return 'highsec';

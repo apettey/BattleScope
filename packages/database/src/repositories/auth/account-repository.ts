@@ -1,5 +1,5 @@
-import type { Kysely } from 'kysely';
-import type { Database, AccountsTable } from '../../schema.js';
+import type { Kysely, Selectable } from 'kysely';
+import type { Database, AccountsTable, CharactersTable } from '../../schema.js';
 
 export interface AccountRecord {
   id: string;
@@ -379,9 +379,12 @@ export class AccountRepository {
   /**
    * Map character database result to CharacterDetail
    */
-  private mapCharacterToDetail(char: unknown, isPrimary: boolean): CharacterDetail {
+  private mapCharacterToDetail(
+    char: Selectable<CharactersTable>,
+    isPrimary: boolean,
+  ): CharacterDetail {
     const now = new Date();
-    const expiresAt = new Date(char.esiTokenExpiresAt);
+    const expiresAt = char.esiTokenExpiresAt ? new Date(char.esiTokenExpiresAt) : new Date(0);
     const daysUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
     let tokenStatus: 'valid' | 'expiring' | 'expired';
@@ -406,9 +409,9 @@ export class AccountRepository {
       allianceName: char.allianceName,
       isPrimary,
       scopes: char.scopes,
-      tokenExpiresAt: char.esiTokenExpiresAt,
+      tokenExpiresAt: char.esiTokenExpiresAt ?? new Date(0),
       tokenStatus,
-      lastVerifiedAt: char.lastVerifiedAt,
+      lastVerifiedAt: char.lastVerifiedAt ?? new Date(0),
       createdAt: char.createdAt,
     };
   }

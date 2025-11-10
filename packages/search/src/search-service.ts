@@ -21,8 +21,7 @@ import type {
   BattleDocument,
   BattleSearchResult,
   GlobalSearchResponse,
-  SpaceType,
-  SecurityLevel,
+  SecurityType,
 } from './types.js';
 
 const tracer = trace.getTracer('battlescope.search.service');
@@ -150,7 +149,7 @@ export class SearchService {
     const span = tracer.startSpan('search.autocomplete_systems', {
       attributes: {
         'search.query': request.q,
-        'search.space_types': request.spaceType?.join(',') ?? 'all',
+        'search.security_types': request.securityType?.join(',') ?? 'all',
         'search.limit': request.limit ?? 10,
       },
     });
@@ -160,8 +159,8 @@ export class SearchService {
     try {
       // Build filter for space types
       let filterBy = '';
-      if (request.spaceType && request.spaceType.length > 0) {
-        const typeFilters = request.spaceType.map((t) => `spaceType:=${t}`).join(' || ');
+      if (request.securityType && request.securityType.length > 0) {
+        const typeFilters = request.securityType.map((t) => `securityType:=${t}`).join(' || ');
         filterBy = `(${typeFilters})`;
       }
 
@@ -194,8 +193,7 @@ export class SearchService {
           regionName: doc.regionName,
           constellationId: doc.constellationId,
           constellationName: doc.constellationName,
-          spaceType: doc.spaceType as SpaceType,
-          securityLevel: doc.securityLevel as SecurityLevel | null,
+          securityType: doc.securityType as SecurityType,
           securityStatus: doc.securityStatus,
           battleCount: doc.battleCount,
           lastBattleAt: doc.lastBattleAt ? new Date(doc.lastBattleAt).toISOString() : null,
@@ -244,15 +242,9 @@ export class SearchService {
         const { filters } = request;
 
         // Space type filter
-        if (filters.spaceType && filters.spaceType.length > 0) {
-          const typeFilters = filters.spaceType.map((t) => `spaceType:=${t}`).join(' || ');
+        if (filters.securityType && filters.securityType.length > 0) {
+          const typeFilters = filters.securityType.map((t) => `securityType:=${t}`).join(' || ');
           filterExpressions.push(`(${typeFilters})`);
-        }
-
-        // Security level filter
-        if (filters.securityLevel && filters.securityLevel.length > 0) {
-          const secFilters = filters.securityLevel.map((s) => `securityLevel:=${s}`).join(' || ');
-          filterExpressions.push(`(${secFilters})`);
         }
 
         // Time range filters
@@ -323,7 +315,7 @@ export class SearchService {
       }
 
       // Enable faceting
-      searchParams.facet_by = 'spaceType,securityLevel';
+      searchParams.facet_by = 'securityType';
 
       const result = await this.client.search<BattleDocument>(
         'battles',
@@ -339,8 +331,7 @@ export class SearchService {
           systemId: doc.systemId,
           systemName: doc.systemName,
           regionName: doc.regionName,
-          spaceType: doc.spaceType as SpaceType,
-          securityLevel: doc.securityLevel as SecurityLevel | null,
+          securityType: doc.securityType as SecurityType,
           startTime: new Date(doc.startTime * 1000).toISOString(),
           endTime: new Date(doc.endTime * 1000).toISOString(),
           duration: doc.duration,
@@ -454,8 +445,7 @@ export class SearchService {
             systemId: doc.systemId,
             systemName: doc.systemName,
             regionName: doc.regionName,
-            spaceType: doc.spaceType as SpaceType,
-            securityLevel: doc.securityLevel as SecurityLevel | null,
+            securityType: doc.securityType as SecurityType,
             startTime: new Date(doc.startTime * 1000).toISOString(),
             endTime: new Date(doc.endTime * 1000).toISOString(),
             duration: doc.duration,
@@ -512,8 +502,7 @@ export class SearchService {
             regionName: doc.regionName,
             constellationId: doc.constellationId,
             constellationName: doc.constellationName,
-            spaceType: doc.spaceType as SpaceType,
-            securityLevel: doc.securityLevel as SecurityLevel | null,
+            securityType: doc.securityType as SecurityType,
             securityStatus: doc.securityStatus,
             battleCount: doc.battleCount,
             lastBattleAt: doc.lastBattleAt ? new Date(doc.lastBattleAt).toISOString() : null,

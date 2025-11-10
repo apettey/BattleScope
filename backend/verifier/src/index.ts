@@ -1,6 +1,7 @@
+import type { Kysely } from 'kysely';
 import { Redis } from 'ioredis';
 import { pino } from 'pino';
-import { createDb } from '@battlescope/database';
+import { createDb, type Database } from '@battlescope/database';
 import { EsiClient } from '@battlescope/esi-client';
 import { createEncryptionService } from '@battlescope/auth';
 import { CharacterVerifierService } from './service.js';
@@ -73,7 +74,7 @@ async function main() {
   }
 }
 
-async function cleanup(db: unknown, redis: Redis) {
+async function cleanup(db: Kysely<Database>, redis: Redis) {
   try {
     await db.destroy();
     await redis.quit();

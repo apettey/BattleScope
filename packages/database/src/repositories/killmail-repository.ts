@@ -1,4 +1,4 @@
-import { deriveSpaceType } from '@battlescope/shared';
+import { deriveSecurityType } from '@battlescope/shared';
 import type { DatabaseClient } from '../client.js';
 import type { KillmailEventInsert, KillmailEventRecord, KillmailFeedItem } from '../types.js';
 import { KillmailEventSchema } from '../types.js';
@@ -160,7 +160,7 @@ export class KillmailRepository {
       killmailId,
       systemId,
       occurredAt: row.occurredAt,
-      spaceType: deriveSpaceType(systemId),
+      securityType: deriveSecurityType(systemId),
       victimAllianceId,
       victimCorpId,
       victimCharacterId,
@@ -241,5 +241,86 @@ export class KillmailRepository {
       .execute();
 
     return rows.map((row) => this.toFeedItem(row));
+  }
+
+  /**
+   * Count killmails since a given date
+   */
+  async countSince(since: Date): Promise<number> {
+    const result = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => eb.fn.count<string>('killmailId').as('count'))
+      .where('occurredAt', '>=', since)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Count unprocessed killmails
+   */
+  async countUnprocessed(): Promise<number> {
+    const result = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => eb.fn.count<string>('killmailId').as('count'))
+      .where('processedAt', 'is', null)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Get recently processed killmails
+   */
+  async getRecentProcessed(limit: number): Promise<KillmailEventRecord[]> {
+    const rows = await this.db
+      .selectFrom('killmail_events')
+      .selectAll()
+      .where('processedAt', 'is not', null)
+      .orderBy('processedAt', 'desc')
+      .limit(limit)
+      .execute();
+
+    return rows.map((row) => ({
+      ...row,
+      killmailId: toBigInt(row.killmailId) ?? 0n,
+      systemId: toBigInt(row.systemId) ?? 0n,
+      victimAllianceId: toBigInt(row.victimAllianceId),
+      victimCorpId: toBigInt(row.victimCorpId),
+      victimCharacterId: toBigInt(row.victimCharacterId),
+      attackerAllianceIds: row.attackerAllianceIds ? toBigIntArray(row.attackerAllianceIds) : [],
+      attackerCorpIds: row.attackerCorpIds ? toBigIntArray(row.attackerCorpIds) : [],
+      attackerCharacterIds: row.attackerCharacterIds ? toBigIntArray(row.attackerCharacterIds) : [],
+      iskValue: toBigInt(row.iskValue),
+    }));
+  }
+
+  /**
+   * Count killmails in a time range
+   */
+  async countInTimeRange(startTime: Date, endTime: Date): Promise<number> {
+    const result = await this.db
+      .selectFrom('killmail_events')
+      .select((eb) => eb.fn.count<string>('killmailId').as('count'))
+      .where('occurredAt', '>=', startTime)
+      .where('occurredAt', '<=', endTime)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * Reset processedAt for killmails in a time range (for reclustering)
+   */
+  async resetProcessedInTimeRange(startTime: Date, endTime: Date): Promise<void> {
+    await this.db
+      .updateTable('killmail_events')
+      .set({
+        processedAt: null,
+        battleId: null,
+      })
+      .where('occurredAt', '>=', startTime)
+      .where('occurredAt', '<=', endTime)
+      .execute();
   }
 }

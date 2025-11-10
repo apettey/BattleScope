@@ -281,6 +281,9 @@ importers:
 
   frontend:
     dependencies:
+      '@battlescope/search':
+        specifier: workspace:*
+        version: link:../packages/search
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../packages/shared

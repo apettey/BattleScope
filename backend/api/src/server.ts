@@ -34,7 +34,6 @@ import { createAuthMiddleware } from '@battlescope/auth';
 import { registerBattleRoutes } from './routes/battles.js';
 import { registerKillmailRoutes } from './routes/killmails.js';
 import { registerDashboardRoutes } from './routes/dashboard.js';
-import { registerRulesRoutes } from './routes/rules.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerAdminRoutes } from './routes/admin.js';
@@ -101,7 +100,6 @@ export const buildServer = ({
   sessionService,
   authorizationService,
   encryptionService,
-  redis,
   searchService,
 }: BuildServerOptions) => {
   const app = Fastify({ logger: createLoggerConfig() }).withTypeProvider<ZodTypeProvider>();
@@ -161,7 +159,6 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         { name: 'Battles', description: 'Battle reconstruction and querying' },
         { name: 'Killmails', description: 'Killmail feed and streaming' },
         { name: 'Dashboard', description: 'Statistical summaries' },
-        { name: 'Rules', description: 'Ingestion ruleset configuration' },
         {
           name: 'Search',
           description: 'Typesense-powered search for battles, entities, and systems',
@@ -346,7 +343,6 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     nameEnricher,
   );
   registerDashboardRoutes(app, dashboardRepository, nameEnricher);
-  registerRulesRoutes(app, rulesetRepository, nameEnricher, redis);
 
   // Register search routes
   registerSearchRoutes(app, searchService);

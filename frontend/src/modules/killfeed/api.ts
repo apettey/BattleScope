@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SpaceType } from '@battlescope/shared';
+import type { SecurityType } from '@battlescope/shared';
 import { buildUrl, defaultFetch, fetchJson } from '../api/http.js';
 
 const KillmailFeedItemSchema = z.object({
@@ -7,7 +7,7 @@ const KillmailFeedItemSchema = z.object({
   systemId: z.string(),
   systemName: z.string().nullable(),
   occurredAt: z.string(),
-  spaceType: z.enum(['kspace', 'jspace', 'pochven']),
+  securityType: z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']),
   victimAllianceId: z.string().nullable(),
   victimAllianceName: z.string().nullable(),
   victimCorpId: z.string().nullable(),
@@ -36,7 +36,7 @@ export type KillmailFeedResponse = z.infer<typeof KillmailFeedResponseSchema>;
 
 export interface FetchRecentKillmailsOptions {
   limit?: number;
-  spaceTypes?: readonly SpaceType[];
+  securityTypes?: readonly SecurityType[];
   trackedOnly?: boolean;
   baseUrl?: string;
   fetchFn?: typeof fetch;
@@ -46,13 +46,13 @@ export interface FetchRecentKillmailsOptions {
 export const fetchRecentKillmails = async (
   options: FetchRecentKillmailsOptions = {},
 ): Promise<KillmailFeedResponse> => {
-  const { limit, spaceTypes, trackedOnly, baseUrl, fetchFn, signal } = options;
+  const { limit, securityTypes, trackedOnly, baseUrl, fetchFn, signal } = options;
   const url = buildUrl(
     '/killmails/recent',
     {
       limit: limit ? String(limit) : undefined,
       trackedOnly: trackedOnly ? 'true' : undefined,
-      spaceType: spaceTypes && spaceTypes.length > 0 ? spaceTypes : undefined,
+      securityType: securityTypes && securityTypes.length > 0 ? securityTypes : undefined,
     },
     baseUrl,
   );
@@ -63,7 +63,7 @@ export const fetchRecentKillmails = async (
 
 export interface KillmailStreamOptions {
   limit?: number;
-  spaceTypes?: readonly SpaceType[];
+  securityTypes?: readonly SecurityType[];
   trackedOnly?: boolean;
   pollIntervalMs?: number;
   baseUrl?: string;
@@ -76,7 +76,7 @@ export interface KillmailStreamOptions {
 export const createKillmailStream = (options: KillmailStreamOptions) => {
   const {
     limit,
-    spaceTypes,
+    securityTypes,
     trackedOnly,
     pollIntervalMs,
     baseUrl,
@@ -88,7 +88,7 @@ export const createKillmailStream = (options: KillmailStreamOptions) => {
   const params: Record<string, string | readonly string[] | null | undefined> = {
     limit: limit ? String(limit) : undefined,
     trackedOnly: trackedOnly ? 'true' : undefined,
-    spaceType: spaceTypes && spaceTypes.length > 0 ? spaceTypes : undefined,
+    securityType: securityTypes && securityTypes.length > 0 ? securityTypes : undefined,
   };
   const url = buildUrl('/killmails/stream', params, baseUrl);
 
@@ -137,7 +137,7 @@ export const createKillmailStream = (options: KillmailStreamOptions) => {
     try {
       const response = await fetchRecentKillmails({
         limit,
-        spaceTypes,
+        securityTypes,
         trackedOnly,
         baseUrl,
         fetchFn,

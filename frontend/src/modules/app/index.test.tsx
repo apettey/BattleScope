@@ -24,29 +24,6 @@ vi.mock('../killfeed/api', () => ({
   formatParticipantCount: (count: number) => `${count} pilots`,
 }));
 
-vi.mock('../rules/api', () => ({
-  fetchCurrentRuleset: vi.fn().mockResolvedValue({
-    id: '00000000-0000-0000-0000-000000000001',
-    minPilots: 1,
-    trackedAllianceIds: [],
-    trackedCorpIds: [],
-    ignoreUnlisted: false,
-    updatedBy: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }),
-  updateRuleset: vi.fn().mockResolvedValue({
-    id: '00000000-0000-0000-0000-000000000001',
-    minPilots: 1,
-    trackedAllianceIds: [],
-    trackedCorpIds: [],
-    ignoreUnlisted: false,
-    updatedBy: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }),
-}));
-
 vi.mock('../auth/api', () => ({
   fetchMe: vi.fn().mockResolvedValue({
     accountId: 'test-account-id',
