@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: battlescope
+data:
+  # Redis memory configuration
+  # maxmemory: Maximum memory Redis can use (in MB)
+  # Set to ~80% of container memory limit to leave headroom
+  maxmemory: "200"
+
+  # maxmemory-policy: How Redis should evict keys when maxmemory is reached
+  # Options:
+  #   - allkeys-lru: Evict any key using LRU (good for cache)
+  #   - volatile-lru: Evict keys with TTL using LRU
+  #   - allkeys-lfu: Evict any key using LFU (least frequently used)
+  #   - volatile-lfu: Evict keys with TTL using LFU
+  #   - allkeys-random: Evict random keys
+  #   - volatile-random: Evict random keys with TTL
+  #   - volatile-ttl: Evict keys with shortest TTL
+  #   - noeviction: Return errors when memory limit is reached
+  maxmemory-policy: "allkeys-lru"

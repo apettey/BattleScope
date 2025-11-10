@@ -26,6 +26,23 @@ data:
         static_configs:
           - targets: ['jaeger:14269']
 
+      # Scrape Loki metrics
+      - job_name: 'loki'
+        static_configs:
+          - targets: ['loki:3100']
+
+      # Scrape Redis metrics from redis-exporter sidecar
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis:9121']
+        scrape_interval: 30s
+
+      # Scrape PostgreSQL metrics from postgres-exporter sidecar
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres:9187']
+        scrape_interval: 30s
+
       # Note: BattleScope backend services (api, ingest, enrichment, clusterer)
       # push metrics via OTLP to the OTEL Collector, which forwards them to
       # Prometheus using the remote write API. They do not expose /metrics endpoints.

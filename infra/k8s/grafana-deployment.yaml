@@ -33,6 +33,24 @@ spec:
           volumeMounts:
             - name: grafana-datasources
               mountPath: /etc/grafana/provisioning/datasources
+            - name: grafana-dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+            - name: grafana-dashboard-otel
+              mountPath: /etc/grafana/dashboards/otel-collector.json
+              subPath: otel-collector.json
+            - name: grafana-dashboard-jaeger
+              mountPath: /etc/grafana/dashboards/jaeger.json
+              subPath: jaeger.json
+            - name: grafana-dashboard-loki
+              mountPath: /etc/grafana/dashboards/loki.json
+              subPath: loki.json
+            - name: grafana-dashboard-redis
+              mountPath: /etc/grafana/dashboards/redis.json
+              subPath: redis.json
+            - name: grafana-dashboard-postgres
+              mountPath: /etc/grafana/dashboards/postgres.json
+              subPath: postgres.json
             - name: grafana-storage
               mountPath: /var/lib/grafana
           resources:
@@ -58,6 +76,24 @@ spec:
         - name: grafana-datasources
           configMap:
             name: grafana-datasources
+        - name: grafana-dashboards-provider
+          configMap:
+            name: grafana-dashboards-provider
+        - name: grafana-dashboard-otel
+          configMap:
+            name: grafana-dashboard-otel-collector
+        - name: grafana-dashboard-jaeger
+          configMap:
+            name: grafana-dashboard-jaeger
+        - name: grafana-dashboard-loki
+          configMap:
+            name: grafana-dashboard-loki
+        - name: grafana-dashboard-redis
+          configMap:
+            name: grafana-dashboard-redis
+        - name: grafana-dashboard-postgres
+          configMap:
+            name: grafana-dashboard-postgres
         - name: grafana-storage
           emptyDir: {}
 ---

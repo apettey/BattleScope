@@ -13,6 +13,9 @@ spec:
     - name: redis
       port: 6379
       targetPort: 6379
+    - name: metrics
+      port: 9121
+      targetPort: 9121
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -29,19 +32,36 @@ spec:
     metadata:
       labels:
         app: redis
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: redis
           image: redis:7-alpine
           imagePullPolicy: IfNotPresent
-          envFrom:
-            - secretRef:
-                name: redis-secret
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+            - name: REDIS_MAXMEMORY
+              valueFrom:
+                configMapKeyRef:
+                  name: redis-config
+                  key: maxmemory
+            - name: REDIS_MAXMEMORY_POLICY
+              valueFrom:
+                configMapKeyRef:
+                  name: redis-config
+                  key: maxmemory-policy
           command:
             - sh
             - -c
             - |
-              redis-server --save 60 1000 --appendonly yes --requirepass "$REDIS_PASSWORD"
+              redis-server --save 60 1000 --appendonly yes --requirepass "$REDIS_PASSWORD" --maxmemory "${REDIS_MAXMEMORY}mb" --maxmemory-policy "$REDIS_MAXMEMORY_POLICY"
           ports:
             - name: redis
               containerPort: 6379
@@ -75,6 +95,27 @@ spec:
             limits:
               cpu: 250m
               memory: 256Mi
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.55.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_ADDR
+              value: "localhost:6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: metrics
+              containerPort: 9121
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
   volumeClaimTemplates:
     - metadata:
         name: redis-data
