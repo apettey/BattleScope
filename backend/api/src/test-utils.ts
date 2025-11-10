@@ -204,7 +204,7 @@ export const createMockSearchService = (): SearchService => {
           latencyMs: 0,
           collections: { battles: true, entities: true, systems: true },
         }),
-      }) as any,
+      }) as unknown,
   } as unknown as SearchService;
 };
 

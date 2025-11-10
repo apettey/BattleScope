@@ -13,7 +13,7 @@ describe('CharacterVerifierService', () => {
   let mockRedis: Partial<Redis>;
   let mockEsiClient: Partial<EsiClient>;
   let mockEncryptionService: Partial<EncryptionService>;
-  let mockLogger: any;
+  let mockLogger: unknown;
   let mockConfig: Config;
 
   beforeEach(() => {

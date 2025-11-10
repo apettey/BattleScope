@@ -73,7 +73,7 @@ async function main() {
   }
 }
 
-async function cleanup(db: any, redis: Redis) {
+async function cleanup(db: unknown, redis: Redis) {
   try {
     await db.destroy();
     await redis.quit();
@@ -93,4 +93,4 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-main();
+void main();

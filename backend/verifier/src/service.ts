@@ -7,8 +7,8 @@ import {
   AuthConfigRepository,
   AuditLogRepository,
 } from '@battlescope/database';
-import { type EsiClient, EsiHttpError } from '@battlescope/esi-client';
-import { EncryptionService } from '@battlescope/auth';
+import type { type EsiClient, EsiHttpError } from '@battlescope/esi-client';
+import type { EncryptionService } from '@battlescope/auth';
 import type { CharacterVerificationResult, VerificationStats, CharacterToVerify } from './types.js';
 import {
   verificationJobDuration,
@@ -248,9 +248,10 @@ export class CharacterVerifierService {
       }
 
       // 2. Decrypt tokens
-      let accessToken: string;
+      // Unused but kept for potential future use
+      // let _accessToken: string;
       try {
-        accessToken = this.encryptionService.decryptFromBuffer(character.esiAccessToken);
+        _accessToken = this.encryptionService.decryptFromBuffer(character.esiAccessToken);
       } catch (error) {
         this.logger.error({ error, characterId: character.id }, 'Failed to decrypt access token');
 

@@ -6,7 +6,7 @@
  */
 
 import Typesense from 'typesense';
-import { trace, metrics, type Span, type Counter, type Histogram } from '@opentelemetry/api';
+import { trace, metrics, type Counter, type Histogram } from '@opentelemetry/api';
 import type { Logger } from 'pino';
 import type { TypesenseConfig, SearchHealthStatus } from './types.js';
 

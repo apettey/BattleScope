@@ -102,8 +102,6 @@ describe('AccountRepository - getDetailWithCharactersGrouped', () => {
   let repository: AccountRepository;
   let accountId: string;
   let char1Id: string;
-  let char2Id: string;
-  let char3Id: string;
 
   beforeAll(async () => {
     testDb = await createTestDatabase();
@@ -168,7 +166,7 @@ describe('AccountRepository - getDetailWithCharactersGrouped', () => {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    char2Id = char2.id as unknown as string;
+    void char2; // Suppress unused variable warning
 
     // Character 3: No alliance - NPC corp
     const char3 = await testDb!.db
@@ -189,7 +187,7 @@ describe('AccountRepository - getDetailWithCharactersGrouped', () => {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    char3Id = char3.id as unknown as string;
+    void char3; // Suppress unused variable warning
   });
 
   it('should return null for non-existent account', async () => {

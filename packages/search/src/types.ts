@@ -248,3 +248,47 @@ export interface SearchHealthStatus {
   };
   error?: string;
 }
+
+// Typesense API types
+export interface TypesenseSearchParams {
+  q: string;
+  query_by: string;
+  filter_by?: string;
+  sort_by?: string;
+  facet_by?: string;
+  per_page?: number;
+  page?: number;
+  num_typos?: number;
+  prefix?: boolean;
+}
+
+export interface TypesenseSearchHit<T> {
+  document: T;
+  text_match?: number;
+  highlights?: unknown[];
+}
+
+export interface TypesenseFacetCount {
+  value: string;
+  count: number;
+}
+
+export interface TypesenseFacet {
+  field_name: string;
+  counts: TypesenseFacetCount[];
+}
+
+export interface TypesenseSearchResponse<T> {
+  hits?: TypesenseSearchHit<T>[];
+  found?: number;
+  facet_counts?: TypesenseFacet[];
+}
+
+export interface TypesenseImportResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface TypesenseDeleteResponse {
+  num_deleted?: number;
+}

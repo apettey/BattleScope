@@ -379,7 +379,7 @@ export class AccountRepository {
   /**
    * Map character database result to CharacterDetail
    */
-  private mapCharacterToDetail(char: any, isPrimary: boolean): CharacterDetail {
+  private mapCharacterToDetail(char: unknown, isPrimary: boolean): CharacterDetail {
     const now = new Date();
     const expiresAt = new Date(char.esiTokenExpiresAt);
     const daysUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);

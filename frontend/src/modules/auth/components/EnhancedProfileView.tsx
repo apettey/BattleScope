@@ -860,7 +860,7 @@ export const EnhancedProfileView: FC = () => {
                       key={char.id}
                       character={char}
                       isOnlyCharacter={isOnlyCharacter}
-                      onSetPrimary={(id) => setCharacterToSetPrimary(char)}
+                      onSetPrimary={() => setCharacterToSetPrimary(char)}
                       onRemove={() => setCharacterToRemove(char)}
                       onRefreshToken={handleRefreshToken}
                     />
