@@ -103,7 +103,8 @@ export function registerAdminRoutes(
       preHandler: [authMiddleware, requireAdmin],
       schema: {
         tags: ['Admin'],
-        description: 'Get detailed account view with all characters grouped by corporation and alliance',
+        description:
+          'Get detailed account view with all characters grouped by corporation and alliance',
         params: AccountIdParamSchema,
         response: {
           200: z.object({
@@ -182,7 +183,9 @@ export function registerAdminRoutes(
       },
     },
     async (request, reply) => {
-      const accountDetail = await accountRepository.getDetailWithCharactersGrouped(request.params.id);
+      const accountDetail = await accountRepository.getDetailWithCharactersGrouped(
+        request.params.id,
+      );
       if (!accountDetail) {
         return reply.status(404).send({
           statusCode: 404,

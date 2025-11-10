@@ -39,7 +39,9 @@ export class SearchService {
   /**
    * Autocomplete search for entities (alliances, corporations, characters)
    */
-  async autocompleteEntities(request: EntityAutocompleteRequest): Promise<EntityAutocompleteResponse> {
+  async autocompleteEntities(
+    request: EntityAutocompleteRequest,
+  ): Promise<EntityAutocompleteResponse> {
     const span = tracer.startSpan('search.autocomplete_entities', {
       attributes: {
         'search.query': request.q,
@@ -54,7 +56,7 @@ export class SearchService {
       // Build filter for entity types
       let filterBy = '';
       if (request.type && request.type.length > 0) {
-        const typeFilters = request.type.map(t => `type:=${t}`).join(' || ');
+        const typeFilters = request.type.map((t) => `type:=${t}`).join(' || ');
         filterBy = `(${typeFilters})`;
       }
 
@@ -130,7 +132,10 @@ export class SearchService {
     } catch (error) {
       this.logger.error({ err: error, request }, 'Entity autocomplete failed');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Autocomplete failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Autocomplete failed',
+      });
       span.end();
       throw error;
     }
@@ -139,7 +144,9 @@ export class SearchService {
   /**
    * Autocomplete search for systems
    */
-  async autocompleteSystems(request: SystemAutocompleteRequest): Promise<SystemAutocompleteResponse> {
+  async autocompleteSystems(
+    request: SystemAutocompleteRequest,
+  ): Promise<SystemAutocompleteResponse> {
     const span = tracer.startSpan('search.autocomplete_systems', {
       attributes: {
         'search.query': request.q,
@@ -154,7 +161,7 @@ export class SearchService {
       // Build filter for space types
       let filterBy = '';
       if (request.spaceType && request.spaceType.length > 0) {
-        const typeFilters = request.spaceType.map(t => `spaceType:=${t}`).join(' || ');
+        const typeFilters = request.spaceType.map((t) => `spaceType:=${t}`).join(' || ');
         filterBy = `(${typeFilters})`;
       }
 
@@ -207,7 +214,10 @@ export class SearchService {
     } catch (error) {
       this.logger.error({ err: error, request }, 'System autocomplete failed');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Autocomplete failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Autocomplete failed',
+      });
       span.end();
       throw error;
     }
@@ -235,13 +245,13 @@ export class SearchService {
 
         // Space type filter
         if (filters.spaceType && filters.spaceType.length > 0) {
-          const typeFilters = filters.spaceType.map(t => `spaceType:=${t}`).join(' || ');
+          const typeFilters = filters.spaceType.map((t) => `spaceType:=${t}`).join(' || ');
           filterExpressions.push(`(${typeFilters})`);
         }
 
         // Security level filter
         if (filters.securityLevel && filters.securityLevel.length > 0) {
-          const secFilters = filters.securityLevel.map(s => `securityLevel:=${s}`).join(' || ');
+          const secFilters = filters.securityLevel.map((s) => `securityLevel:=${s}`).join(' || ');
           filterExpressions.push(`(${secFilters})`);
         }
 
@@ -286,7 +296,7 @@ export class SearchService {
 
         // System IDs filter
         if (filters.systemIds && filters.systemIds.length > 0) {
-          const systemFilters = filters.systemIds.map(id => `systemId:=${id}`).join(' || ');
+          const systemFilters = filters.systemIds.map((id) => `systemId:=${id}`).join(' || ');
           filterExpressions.push(`(${systemFilters})`);
         }
       }
@@ -372,7 +382,10 @@ export class SearchService {
     } catch (error) {
       this.logger.error({ err: error, request }, 'Battle search failed');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Search failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Search failed',
+      });
       span.end();
       throw error;
     }
@@ -433,25 +446,27 @@ export class SearchService {
       ]);
 
       // Transform battles
-      const battles: BattleSearchResult[] = ((battlesResult.hits ?? []) as any[]).map((hit: any) => {
-        const doc = hit.document as BattleDocument;
-        return {
-          id: doc.id,
-          systemId: doc.systemId,
-          systemName: doc.systemName,
-          regionName: doc.regionName,
-          spaceType: doc.spaceType as SpaceType,
-          securityLevel: doc.securityLevel as SecurityLevel | null,
-          startTime: new Date(doc.startTime * 1000).toISOString(),
-          endTime: new Date(doc.endTime * 1000).toISOString(),
-          duration: doc.duration,
-          totalKills: doc.totalKills,
-          totalParticipants: doc.totalParticipants,
-          totalIskDestroyed: doc.totalIskDestroyed,
-          allianceNames: doc.allianceNames,
-          _relevanceScore: hit.text_match ? hit.text_match / 1000000 : undefined,
-        };
-      });
+      const battles: BattleSearchResult[] = ((battlesResult.hits ?? []) as any[]).map(
+        (hit: any) => {
+          const doc = hit.document as BattleDocument;
+          return {
+            id: doc.id,
+            systemId: doc.systemId,
+            systemName: doc.systemName,
+            regionName: doc.regionName,
+            spaceType: doc.spaceType as SpaceType,
+            securityLevel: doc.securityLevel as SecurityLevel | null,
+            startTime: new Date(doc.startTime * 1000).toISOString(),
+            endTime: new Date(doc.endTime * 1000).toISOString(),
+            duration: doc.duration,
+            totalKills: doc.totalKills,
+            totalParticipants: doc.totalParticipants,
+            totalIskDestroyed: doc.totalIskDestroyed,
+            allianceNames: doc.allianceNames,
+            _relevanceScore: hit.text_match ? hit.text_match / 1000000 : undefined,
+          };
+        },
+      );
 
       // Group entities by type
       const alliances: EntitySearchResult[] = [];
@@ -487,22 +502,24 @@ export class SearchService {
       }
 
       // Transform systems
-      const systems: SystemSearchResult[] = ((systemsResult.hits ?? []) as any[]).map((hit: any) => {
-        const doc = hit.document as SystemDocument;
-        return {
-          id: doc.id,
-          name: doc.name,
-          regionId: doc.regionId,
-          regionName: doc.regionName,
-          constellationId: doc.constellationId,
-          constellationName: doc.constellationName,
-          spaceType: doc.spaceType as SpaceType,
-          securityLevel: doc.securityLevel as SecurityLevel | null,
-          securityStatus: doc.securityStatus,
-          battleCount: doc.battleCount,
-          lastBattleAt: doc.lastBattleAt ? new Date(doc.lastBattleAt).toISOString() : null,
-        };
-      });
+      const systems: SystemSearchResult[] = ((systemsResult.hits ?? []) as any[]).map(
+        (hit: any) => {
+          const doc = hit.document as SystemDocument;
+          return {
+            id: doc.id,
+            name: doc.name,
+            regionId: doc.regionId,
+            regionName: doc.regionName,
+            constellationId: doc.constellationId,
+            constellationName: doc.constellationName,
+            spaceType: doc.spaceType as SpaceType,
+            securityLevel: doc.securityLevel as SecurityLevel | null,
+            securityStatus: doc.securityStatus,
+            battleCount: doc.battleCount,
+            lastBattleAt: doc.lastBattleAt ? new Date(doc.lastBattleAt).toISOString() : null,
+          };
+        },
+      );
 
       const response: GlobalSearchResponse = {
         battles,
@@ -532,7 +549,10 @@ export class SearchService {
     } catch (error) {
       this.logger.error({ err: error, query }, 'Global search failed');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Global search failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Global search failed',
+      });
       span.end();
       throw error;
     }

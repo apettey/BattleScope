@@ -105,7 +105,9 @@ const CharacterCard: FC<CharacterCardProps> = ({
         </h3>
 
         <div style={{ marginBottom: '8px', fontSize: '14px', color: '#64748b' }}>
-          <div>[{character.corpId}] {character.corpName}</div>
+          <div>
+            [{character.corpId}] {character.corpName}
+          </div>
           {character.allianceName && (
             <div>
               [{character.allianceId}] {character.allianceName}
@@ -125,8 +127,8 @@ const CharacterCard: FC<CharacterCardProps> = ({
                 character.tokenStatus === 'valid'
                   ? '#d1fae5'
                   : character.tokenStatus === 'expiring'
-                  ? '#fef3c7'
-                  : '#fee2e2',
+                    ? '#fef3c7'
+                    : '#fee2e2',
               color: getTokenStatusColor(character.tokenStatus),
             }}
           >
@@ -481,7 +483,9 @@ export const EnhancedProfileView: FC = () => {
       setCharacterToSetPrimary(null);
       await loadProfile(); // Reload to get updated data
     } catch (err) {
-      alert(`Failed to set primary character: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      alert(
+        `Failed to set primary character: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
     }
   };
 
@@ -557,7 +561,14 @@ export const EnhancedProfileView: FC = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header with Add Character button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      >
         <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
           My Profile
         </h1>
@@ -644,18 +655,58 @@ export const EnhancedProfileView: FC = () => {
       </div>
 
       {/* Statistics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>Total Characters</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>{profile.stats.totalCharacters}</div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          marginBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
+            Total Characters
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>
+            {profile.stats.totalCharacters}
+          </div>
         </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>Alliances Represented</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>{profile.stats.uniqueAlliances}</div>
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
+            Alliances Represented
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>
+            {profile.stats.uniqueAlliances}
+          </div>
         </div>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>Corporations Represented</div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>{profile.stats.uniqueCorporations}</div>
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
+            Corporations Represented
+          </div>
+          <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a' }}>
+            {profile.stats.uniqueCorporations}
+          </div>
         </div>
       </div>
 
@@ -670,7 +721,9 @@ export const EnhancedProfileView: FC = () => {
             marginBottom: '24px',
           }}
         >
-          <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>
+          <h2
+            style={{ fontSize: '20px', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}
+          >
             Feature Permissions
           </h2>
 
@@ -705,18 +758,18 @@ export const EnhancedProfileView: FC = () => {
                       role.roleKey === 'admin'
                         ? '#fee2e2'
                         : role.roleKey === 'director'
-                        ? '#ede9fe'
-                        : role.roleKey === 'fc'
-                        ? '#dbeafe'
-                        : '#f1f5f9',
+                          ? '#ede9fe'
+                          : role.roleKey === 'fc'
+                            ? '#dbeafe'
+                            : '#f1f5f9',
                     color:
                       role.roleKey === 'admin'
                         ? '#991b1b'
                         : role.roleKey === 'director'
-                        ? '#5b21b6'
-                        : role.roleKey === 'fc'
-                        ? '#1e40af'
-                        : '#475569',
+                          ? '#5b21b6'
+                          : role.roleKey === 'fc'
+                            ? '#1e40af'
+                            : '#475569',
                   }}
                 >
                   {role.roleKey.toUpperCase()}
@@ -744,10 +797,24 @@ export const EnhancedProfileView: FC = () => {
               padding: '20px',
             }}
           >
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>
+            <h3
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#0f172a',
+                marginBottom: '16px',
+              }}
+            >
               {alliance.allianceName ?? 'No Alliance'}
               {alliance.allianceName && (
-                <span style={{ fontSize: '14px', fontWeight: '400', color: '#64748b', marginLeft: '8px' }}>
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    color: '#64748b',
+                    marginLeft: '8px',
+                  }}
+                >
                   [{alliance.allianceId}]
                 </span>
               )}
@@ -755,13 +822,35 @@ export const EnhancedProfileView: FC = () => {
 
             {alliance.corporations.map((corp, corpIndex) => (
               <div key={corpIndex} style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#475569', marginBottom: '12px' }}>
+                <h4
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    marginBottom: '12px',
+                  }}
+                >
                   {corp.corpName}
-                  <span style={{ fontSize: '14px', fontWeight: '400', color: '#64748b', marginLeft: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      color: '#64748b',
+                      marginLeft: '8px',
+                    }}
+                  >
                     [{corp.corpId}]
                   </span>
-                  <span style={{ fontSize: '14px', fontWeight: '400', color: '#94a3b8', marginLeft: '8px' }}>
-                    ({corp.characters.length} {corp.characters.length === 1 ? 'character' : 'characters'})
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      color: '#94a3b8',
+                      marginLeft: '8px',
+                    }}
+                  >
+                    ({corp.characters.length}{' '}
+                    {corp.characters.length === 1 ? 'character' : 'characters'})
                   </span>
                 </h4>
 

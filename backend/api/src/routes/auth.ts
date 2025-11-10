@@ -196,7 +196,9 @@ export function registerAuthRoutes(
               allianceName: allianceInfo?.name ?? null,
               portraitUrl: esiClient.getCharacterPortraitUrl(character.CharacterID, 128),
               esiAccessToken: encryptionService.encryptToBuffer(accessToken),
-              esiRefreshToken: refreshToken ? encryptionService.encryptToBuffer(refreshToken) : null,
+              esiRefreshToken: refreshToken
+                ? encryptionService.encryptToBuffer(refreshToken)
+                : null,
               esiTokenExpiresAt: expiresAt,
               scopes: character.Scopes.split(' '),
               lastVerifiedAt: new Date(),
@@ -218,7 +220,9 @@ export function registerAuthRoutes(
               allianceName: allianceInfo?.name ?? null,
               portraitUrl: esiClient.getCharacterPortraitUrl(character.CharacterID, 128),
               esiAccessToken: encryptionService.encryptToBuffer(accessToken),
-              esiRefreshToken: refreshToken ? encryptionService.encryptToBuffer(refreshToken) : null,
+              esiRefreshToken: refreshToken
+                ? encryptionService.encryptToBuffer(refreshToken)
+                : null,
               esiTokenExpiresAt: expiresAt,
               scopes: character.Scopes.split(' '),
             });

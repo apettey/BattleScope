@@ -247,7 +247,9 @@ export class AccountRepository {
    * Get detailed account information with characters grouped by alliance and corporation
    * Used for admin View User Page
    */
-  async getDetailWithCharactersGrouped(accountId: string): Promise<AccountDetailWithCharacters | null> {
+  async getDetailWithCharactersGrouped(
+    accountId: string,
+  ): Promise<AccountDetailWithCharacters | null> {
     const account = await this.getById(accountId);
     if (!account) {
       return null;
@@ -312,7 +314,9 @@ export class AccountRepository {
       }
 
       const corpGroup = allianceGroup.corporations.get(corpKey)!;
-      corpGroup.characters.push(this.mapCharacterToDetail(char, char.id === account.primaryCharacterId));
+      corpGroup.characters.push(
+        this.mapCharacterToDetail(char, char.id === account.primaryCharacterId),
+      );
     }
 
     // Convert map to array format
@@ -393,7 +397,9 @@ export class AccountRepository {
       id: char.id,
       eveCharacterId: char.eveCharacterId.toString(),
       eveCharacterName: char.eveCharacterName,
-      portraitUrl: char.portraitUrl ?? `https://images.evetech.net/characters/${char.eveCharacterId}/portrait?size=128`,
+      portraitUrl:
+        char.portraitUrl ??
+        `https://images.evetech.net/characters/${char.eveCharacterId}/portrait?size=128`,
       corpId: char.corpId.toString(),
       corpName: char.corpName,
       allianceId: char.allianceId?.toString() ?? null,

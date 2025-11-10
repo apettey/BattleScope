@@ -10,15 +10,15 @@ spec:
     matchLabels:
       app: typesense
   podMetricsEndpoints:
-  - port: http
-    path: /metrics
-    interval: 30s
-    relabelings:
-    - sourceLabels: [__meta_kubernetes_pod_name]
-      targetLabel: pod
-    - sourceLabels: [__meta_kubernetes_pod_node_name]
-      targetLabel: node
-    - sourceLabels: [__meta_kubernetes_namespace]
-      targetLabel: namespace
-    - sourceLabels: [__meta_kubernetes_pod_label_app]
-      targetLabel: app
+    - port: http
+      path: /metrics
+      interval: 30s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_pod_label_app]
+          targetLabel: app

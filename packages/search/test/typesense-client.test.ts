@@ -22,11 +22,13 @@ describe('TypesenseClient', () => {
     logger = pino({ level: 'silent' });
 
     config = {
-      nodes: [{
-        host: 'localhost',
-        port: 8108,
-        protocol: 'http',
-      }],
+      nodes: [
+        {
+          host: 'localhost',
+          port: 8108,
+          protocol: 'http',
+        },
+      ],
       apiKey: 'test-key',
       connectionTimeoutSeconds: 5,
       numRetries: 3,
@@ -66,10 +68,7 @@ describe('TypesenseClient', () => {
   describe('search', () => {
     it('should execute search and return results', async () => {
       const mockSearchResults = {
-        hits: [
-          { document: { id: '1', name: 'Test' } },
-          { document: { id: '2', name: 'Another' } },
-        ],
+        hits: [{ document: { id: '1', name: 'Test' } }, { document: { id: '2', name: 'Another' } }],
         found: 2,
       };
 
@@ -108,9 +107,9 @@ describe('TypesenseClient', () => {
       const client = new TypesenseClient(config, logger);
       const searchParams = { q: 'test', query_by: 'name' };
 
-      await expect(
-        client.search('entities', searchParams, 'test_search')
-      ).rejects.toThrow('Search failed');
+      await expect(client.search('entities', searchParams, 'test_search')).rejects.toThrow(
+        'Search failed',
+      );
     });
   });
 
@@ -152,9 +151,9 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.upsertDocument('entities', mockDocument)
-      ).rejects.toThrow('Upsert failed');
+      await expect(client.upsertDocument('entities', mockDocument)).rejects.toThrow(
+        'Upsert failed',
+      );
     });
   });
 
@@ -165,10 +164,7 @@ describe('TypesenseClient', () => {
         { id: '2', name: 'Test 2' },
       ];
 
-      const mockImportResults = [
-        { success: true },
-        { success: true },
-      ];
+      const mockImportResults = [{ success: true }, { success: true }];
 
       const mockDocsApi = {
         import: vi.fn().mockResolvedValue(mockImportResults),
@@ -193,10 +189,7 @@ describe('TypesenseClient', () => {
         { id: '2', name: 'Test 2' },
       ];
 
-      const mockImportResults = [
-        { success: true },
-        { success: false, error: 'Validation failed' },
-      ];
+      const mockImportResults = [{ success: true }, { success: false, error: 'Validation failed' }];
 
       const mockDocsApi = {
         import: vi.fn().mockResolvedValue(mockImportResults),
@@ -232,9 +225,9 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.importDocuments('entities', mockDocuments)
-      ).rejects.toThrow('Import failed');
+      await expect(client.importDocuments('entities', mockDocuments)).rejects.toThrow(
+        'Import failed',
+      );
     });
   });
 
@@ -273,9 +266,7 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.deleteDocument('entities', '123')
-      ).rejects.toThrow('Delete failed');
+      await expect(client.deleteDocument('entities', '123')).rejects.toThrow('Delete failed');
     });
   });
 
@@ -315,9 +306,9 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.deleteDocumentsByQuery('entities', 'invalid:filter')
-      ).rejects.toThrow('Query delete failed');
+      await expect(client.deleteDocumentsByQuery('entities', 'invalid:filter')).rejects.toThrow(
+        'Query delete failed',
+      );
     });
   });
 
@@ -325,11 +316,7 @@ describe('TypesenseClient', () => {
     it('should return healthy status when all checks pass', async () => {
       mockClient.health.retrieve.mockResolvedValue({ ok: true });
 
-      const mockCollections = [
-        { name: 'battles' },
-        { name: 'entities' },
-        { name: 'systems' },
-      ];
+      const mockCollections = [{ name: 'battles' }, { name: 'entities' }, { name: 'systems' }];
 
       mockClient.collections.mockReturnValue({
         retrieve: vi.fn().mockResolvedValue(mockCollections),
@@ -409,9 +396,9 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.createCollection(mockSchema)
-      ).rejects.toThrow('Collection already exists');
+      await expect(client.createCollection(mockSchema)).rejects.toThrow(
+        'Collection already exists',
+      );
     });
   });
 
@@ -441,9 +428,7 @@ describe('TypesenseClient', () => {
 
       const client = new TypesenseClient(config, logger);
 
-      await expect(
-        client.dropCollection('nonexistent')
-      ).rejects.toThrow('Collection not found');
+      await expect(client.dropCollection('nonexistent')).rejects.toThrow('Collection not found');
     });
   });
 

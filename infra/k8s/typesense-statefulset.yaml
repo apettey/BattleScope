@@ -7,12 +7,12 @@ metadata:
     app: typesense
 spec:
   ports:
-  - port: 8108
-    name: http
-    targetPort: 8108
-  - port: 8107
-    name: peering
-    targetPort: 8107
+    - port: 8108
+      name: http
+      targetPort: 8108
+    - port: 8107
+      name: peering
+      targetPort: 8107
   clusterIP: None
   selector:
     app: typesense
@@ -27,9 +27,9 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 8108
-    name: http
-    targetPort: 8108
+    - port: 8108
+      name: http
+      targetPort: 8108
   selector:
     app: typesense
 ---
@@ -52,69 +52,69 @@ spec:
         app: typesense
       annotations:
         # Prometheus scraping
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8108"
-        prometheus.io/path: "/metrics"
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '8108'
+        prometheus.io/path: '/metrics'
     spec:
       containers:
-      - name: typesense
-        image: typesense/typesense:26.0
-        args:
-        - "--data-dir=/data"
-        - "--api-key=$(TYPESENSE_API_KEY)"
-        - "--peering-address=$(POD_IP):8107"
-        - "--nodes=$(TYPESENSE_NODES)"
-        - "--enable-cors=true"
-        - "--log-level=info"
-        env:
-        - name: TYPESENSE_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: typesense-secret
-              key: api-key
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        - name: TYPESENSE_NODES
-          value: "typesense-0.typesense.battlescope.svc.cluster.local:8107,typesense-1.typesense.battlescope.svc.cluster.local:8107,typesense-2.typesense.battlescope.svc.cluster.local:8107"
-        ports:
-        - containerPort: 8108
-          name: http
-        - containerPort: 8107
-          name: peering
-        volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: typesense
+          image: typesense/typesense:26.0
+          args:
+            - '--data-dir=/data'
+            - '--api-key=$(TYPESENSE_API_KEY)'
+            - '--peering-address=$(POD_IP):8107'
+            - '--nodes=$(TYPESENSE_NODES)'
+            - '--enable-cors=true'
+            - '--log-level=info'
+          env:
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: typesense-secret
+                  key: api-key
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: TYPESENSE_NODES
+              value: 'typesense-0.typesense.battlescope.svc.cluster.local:8107,typesense-1.typesense.battlescope.svc.cluster.local:8107,typesense-2.typesense.battlescope.svc.cluster.local:8107'
+          ports:
+            - containerPort: 8108
+              name: http
+            - containerPort: 8107
+              name: peering
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '500m'
+            limits:
+              memory: '2Gi'
+              cpu: '2000m'
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8108
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8108
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        storageClassName: fast-ssd
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "2000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8108
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8108
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      storageClassName: fast-ssd
-      resources:
-        requests:
-          storage: 20Gi
+            storage: 20Gi

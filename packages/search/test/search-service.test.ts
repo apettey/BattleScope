@@ -153,9 +153,7 @@ describe('SearchService', () => {
       const mockError = new Error('Search failed');
       (mockClient.search as any).mockRejectedValue(mockError);
 
-      await expect(
-        service.autocompleteEntities({ q: 'test' })
-      ).rejects.toThrow('Search failed');
+      await expect(service.autocompleteEntities({ q: 'test' })).rejects.toThrow('Search failed');
     });
 
     it('should handle empty results', async () => {

@@ -98,7 +98,11 @@ const AccountListItem: React.FC<{
  */
 const CharacterCard: React.FC<{ character: DetailedCharacter }> = ({ character }) => {
   const tokenColor =
-    character.tokenStatus === 'valid' ? '#10b981' : character.tokenStatus === 'expiring' ? '#f59e0b' : '#dc2626';
+    character.tokenStatus === 'valid'
+      ? '#10b981'
+      : character.tokenStatus === 'expiring'
+        ? '#f59e0b'
+        : '#dc2626';
   const tokenText =
     character.tokenStatus === 'valid'
       ? 'Valid'
@@ -108,9 +112,13 @@ const CharacterCard: React.FC<{ character: DetailedCharacter }> = ({ character }
 
   const expiryDate = new Date(character.tokenExpiresAt);
   const now = new Date();
-  const daysUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilExpiry = Math.floor(
+    (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
   const expiryText =
-    daysUntilExpiry > 0 ? `Expires in ${daysUntilExpiry} days` : `Expired ${Math.abs(daysUntilExpiry)} days ago`;
+    daysUntilExpiry > 0
+      ? `Expires in ${daysUntilExpiry} days`
+      : `Expired ${Math.abs(daysUntilExpiry)} days ago`;
 
   return (
     <div
@@ -171,7 +179,9 @@ const CharacterCard: React.FC<{ character: DetailedCharacter }> = ({ character }
             {tokenText}
           </span>
           <span style={{ fontSize: '11px', color: '#94a3b8' }}>{expiryText}</span>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{character.scopes.length} scopes</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+            {character.scopes.length} scopes
+          </span>
         </div>
       </div>
     </div>
@@ -376,7 +386,9 @@ const ViewUserPage: React.FC<{
             />
           )}
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}
+            >
               <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
                 {detail.account.displayName}
               </h2>
@@ -412,18 +424,31 @@ const ViewUserPage: React.FC<{
             {detail.primaryCharacter && (
               <div style={{ fontSize: '16px', color: '#64748b', marginBottom: '8px' }}>
                 {detail.primaryCharacter.eveCharacterName} • {detail.primaryCharacter.corpName}
-                {detail.primaryCharacter.allianceName && ` • ${detail.primaryCharacter.allianceName}`}
+                {detail.primaryCharacter.allianceName &&
+                  ` • ${detail.primaryCharacter.allianceName}`}
               </div>
             )}
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
               <div>
-                Account ID: <code style={{ fontSize: '12px', padding: '2px 6px', backgroundColor: '#f1f5f9', borderRadius: '4px' }}>{detail.account.id}</code>
+                Account ID:{' '}
+                <code
+                  style={{
+                    fontSize: '12px',
+                    padding: '2px 6px',
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {detail.account.id}
+                </code>
               </div>
               <div>Email: {detail.account.email ?? 'None'}</div>
               <div>
-                Created: {new Date(detail.account.createdAt).toLocaleDateString()} •
-                Last Login: {detail.account.lastLoginAt ? new Date(detail.account.lastLoginAt).toLocaleDateString() : 'Never'} •
-                {detail.stats.totalCharacters} characters
+                Created: {new Date(detail.account.createdAt).toLocaleDateString()} • Last Login:{' '}
+                {detail.account.lastLoginAt
+                  ? new Date(detail.account.lastLoginAt).toLocaleDateString()
+                  : 'Never'}{' '}
+                •{detail.stats.totalCharacters} characters
               </div>
             </div>
 
@@ -571,8 +596,13 @@ const ViewUserPage: React.FC<{
                     style={{
                       backgroundColor: 'white',
                       border: '1px solid #e2e8f0',
-                      borderRadius: allianceGroup.allianceName ? (corpIdx === allianceGroup.corporations.length - 1 ? '0 0 8px 8px' : '0') : '8px',
-                      marginTop: allianceGroup.allianceName && corpIdx === 0 ? 0 : corpIdx === 0 ? 0 : '1px',
+                      borderRadius: allianceGroup.allianceName
+                        ? corpIdx === allianceGroup.corporations.length - 1
+                          ? '0 0 8px 8px'
+                          : '0'
+                        : '8px',
+                      marginTop:
+                        allianceGroup.allianceName && corpIdx === 0 ? 0 : corpIdx === 0 ? 0 : '1px',
                     }}
                   >
                     {/* Corporation Header */}

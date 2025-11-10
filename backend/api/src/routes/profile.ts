@@ -121,7 +121,10 @@ export function registerProfileRoutes(
       );
 
       if (!accountDetail) {
-        request.log.error({ accountId: request.account.id }, 'Account not found for authenticated user');
+        request.log.error(
+          { accountId: request.account.id },
+          'Account not found for authenticated user',
+        );
         throw new Error('Account not found - this should never happen for authenticated users');
       }
 
@@ -229,10 +232,7 @@ export function registerProfileRoutes(
     async (request, reply) => {
       const { characterId } = request.body;
 
-      request.log.info(
-        { accountId: request.account.id, characterId },
-        'Setting primary character',
-      );
+      request.log.info({ accountId: request.account.id, characterId }, 'Setting primary character');
 
       // Verify character belongs to user
       const character = await characterRepository.getById(characterId);

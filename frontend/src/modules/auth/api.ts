@@ -375,10 +375,7 @@ export const demoteFromSuperAdmin = async (
 /**
  * Delete account (soft delete, SuperAdmin only)
  */
-export const deleteAccount = async (
-  accountId: string,
-  options: ApiOptions = {},
-): Promise<void> => {
+export const deleteAccount = async (accountId: string, options: ApiOptions = {}): Promise<void> => {
   const baseUrl = options.baseUrl ?? resolveBaseUrl();
   const url = buildUrl(`${baseUrl}/admin/accounts/${accountId}`, {}, baseUrl);
 

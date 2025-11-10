@@ -49,7 +49,10 @@ export class TypesenseClient {
       description: 'Search request latency in milliseconds',
     });
 
-    this.logger.info({ nodes: config.nodes.map(n => `${n.protocol}://${n.host}:${n.port}`) }, 'Typesense client initialized');
+    this.logger.info(
+      { nodes: config.nodes.map((n) => `${n.protocol}://${n.host}:${n.port}`) },
+      'Typesense client initialized',
+    );
   }
 
   /**
@@ -101,13 +104,16 @@ export class TypesenseClient {
         'search.latency_ms': latency,
       });
 
-      this.logger.debug({
-        collection,
-        operation,
-        hits: result.hits?.length ?? 0,
-        found: result.found ?? 0,
-        latencyMs: latency,
-      }, 'Search completed successfully');
+      this.logger.debug(
+        {
+          collection,
+          operation,
+          hits: result.hits?.length ?? 0,
+          found: result.found ?? 0,
+          latencyMs: latency,
+        },
+        'Search completed successfully',
+      );
 
       span.end();
       return result;
@@ -120,16 +126,22 @@ export class TypesenseClient {
         error: error instanceof Error ? error.message : 'unknown',
       });
 
-      this.logger.error({
-        err: error,
-        collection,
-        operation,
-        query: searchParams.q,
-        latencyMs: latency,
-      }, 'Search operation failed');
+      this.logger.error(
+        {
+          err: error,
+          collection,
+          operation,
+          query: searchParams.q,
+          latencyMs: latency,
+        },
+        'Search operation failed',
+      );
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Search failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Search failed',
+      });
       span.end();
 
       throw error;
@@ -139,10 +151,7 @@ export class TypesenseClient {
   /**
    * Index a single document with observability
    */
-  async upsertDocument<T extends Record<string, any>>(
-    collection: string,
-    document: T,
-  ): Promise<T> {
+  async upsertDocument<T extends Record<string, any>>(collection: string, document: T): Promise<T> {
     const span = tracer.startSpan('search.upsert', {
       attributes: {
         'search.collection': collection,
@@ -172,7 +181,10 @@ export class TypesenseClient {
       this.logger.error({ err: error, collection }, 'Failed to upsert document');
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Upsert failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Upsert failed',
+      });
       span.end();
 
       throw error;
@@ -196,9 +208,15 @@ export class TypesenseClient {
     });
 
     try {
-      this.logger.info({ collection, count: documents.length, action: options?.action }, 'Importing documents');
+      this.logger.info(
+        { collection, count: documents.length, action: options?.action },
+        'Importing documents',
+      );
 
-      const result = await this.client.collections<T>(collection).documents().import(documents, options);
+      const result = await this.client
+        .collections<T>(collection)
+        .documents()
+        .import(documents, options);
 
       // Count successes and failures
       const successes = result.filter((r: any) => r.success === true).length;
@@ -215,12 +233,15 @@ export class TypesenseClient {
         'search.failed': failures,
       });
 
-      this.logger.info({
-        collection,
-        total: documents.length,
-        successes,
-        failures,
-      }, 'Document import completed');
+      this.logger.info(
+        {
+          collection,
+          total: documents.length,
+          successes,
+          failures,
+        },
+        'Document import completed',
+      );
 
       span.end();
       return result;
@@ -231,10 +252,16 @@ export class TypesenseClient {
         error: error instanceof Error ? error.message : 'unknown',
       });
 
-      this.logger.error({ err: error, collection, count: documents.length }, 'Failed to import documents');
+      this.logger.error(
+        { err: error, collection, count: documents.length },
+        'Failed to import documents',
+      );
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Import failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Import failed',
+      });
       span.end();
 
       throw error;
@@ -273,7 +300,10 @@ export class TypesenseClient {
       this.logger.error({ err: error, collection, id }, 'Failed to delete document');
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Delete failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Delete failed',
+      });
       span.end();
 
       throw error;
@@ -298,7 +328,8 @@ export class TypesenseClient {
         filter_by: filterBy,
       });
 
-      const deleted = typeof result === 'object' && 'num_deleted' in result ? result.num_deleted : 0;
+      const deleted =
+        typeof result === 'object' && 'num_deleted' in result ? result.num_deleted : 0;
 
       this.requestCounter.add(1, {
         collection,
@@ -318,10 +349,16 @@ export class TypesenseClient {
         error: error instanceof Error ? error.message : 'unknown',
       });
 
-      this.logger.error({ err: error, collection, filter: filterBy }, 'Failed to delete documents by query');
+      this.logger.error(
+        { err: error, collection, filter: filterBy },
+        'Failed to delete documents by query',
+      );
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Delete by query failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Delete by query failed',
+      });
       span.end();
 
       throw error;
@@ -371,7 +408,10 @@ export class TypesenseClient {
       this.logger.error({ err: error }, 'Health check failed');
 
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Health check failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Health check failed',
+      });
       span.end();
 
       return status;
@@ -396,7 +436,10 @@ export class TypesenseClient {
     } catch (error) {
       this.logger.error({ err: error, collection: schema.name }, 'Failed to create collection');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Create collection failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Create collection failed',
+      });
       span.end();
       throw error;
     }
@@ -420,7 +463,10 @@ export class TypesenseClient {
     } catch (error) {
       this.logger.error({ err: error, collection: name }, 'Failed to drop collection');
       span.recordException(error as Error);
-      span.setStatus({ code: 2, message: error instanceof Error ? error.message : 'Drop collection failed' });
+      span.setStatus({
+        code: 2,
+        message: error instanceof Error ? error.message : 'Drop collection failed',
+      });
       span.end();
       throw error;
     }

@@ -12,3 +12,5 @@ build
 **/src/**/*.js.map
 **/src/**/*.d.ts
 **/src/**/*.d.ts.map
+# Generated Grafana dashboards (multi-document YAML)
+infra/k8s/grafana-dashboards.yaml

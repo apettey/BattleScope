@@ -104,10 +104,12 @@ The Typesense pods are configured with the following environment variables:
 ### Resource Limits
 
 **Requests:**
+
 - CPU: 500m
 - Memory: 512Mi
 
 **Limits:**
+
 - CPU: 2000m (2 cores)
 - Memory: 2Gi
 
@@ -132,12 +134,14 @@ Typesense exposes metrics at `/metrics` on port 8108. The following metrics are 
 - And more...
 
 **Access Metrics:**
+
 ```bash
 kubectl port-forward -n battlescope typesense-0 8108:8108
 curl http://localhost:8108/metrics
 ```
 
 **Prometheus Query Examples:**
+
 ```promql
 # Request rate
 rate(typesense_requests_total[5m])
@@ -154,11 +158,13 @@ typesense_memory_usage_bytes
 Typesense logs are written to stdout in plain text format and automatically collected by Promtail/Loki.
 
 **View Logs in Grafana:**
+
 ```logql
 {namespace="battlescope", app="typesense"}
 ```
 
 **Filter by log level:**
+
 ```logql
 {namespace="battlescope", app="typesense"} |= "ERROR"
 ```
@@ -173,11 +179,13 @@ Application-level tracing is handled by the `@battlescope/search` package using 
 - Exports traces to Jaeger
 
 **View Traces:**
+
 1. Open Jaeger UI
 2. Select service: `battlescope.search.service`
 3. Search for traces
 
 **Example Traces:**
+
 - `search.autocomplete_entities`
 - `search.autocomplete_systems`
 - `search.global_search`
@@ -225,11 +233,11 @@ To increase resources for individual pods:
 ```yaml
 resources:
   requests:
-    memory: "1Gi"    # Increase memory
-    cpu: "1000m"     # Increase CPU
+    memory: '1Gi' # Increase memory
+    cpu: '1000m' # Increase CPU
   limits:
-    memory: "4Gi"
-    cpu: "4000m"
+    memory: '4Gi'
+    cpu: '4000m'
 ```
 
 ### Horizontal Scaling
@@ -326,11 +334,13 @@ kubectl exec -n battlescope typesense-0 -- \
 **IMPORTANT**: The default API key in `typesense-secret.yaml` is for development only. In production:
 
 1. Generate a strong random key:
+
    ```bash
    openssl rand -base64 32
    ```
 
 2. Create secret with the generated key:
+
    ```bash
    kubectl create secret generic typesense-secret \
      --from-literal=api-key='YOUR_STRONG_KEY' \
@@ -354,15 +364,15 @@ spec:
     matchLabels:
       app: typesense
   policyTypes:
-  - Ingress
+    - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: api  # Only allow API pods
-    ports:
-    - protocol: TCP
-      port: 8108
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api # Only allow API pods
+      ports:
+        - protocol: TCP
+          port: 8108
 ```
 
 ## Useful Commands

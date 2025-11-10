@@ -197,13 +197,14 @@ export const createMockSearchService = (): SearchService => {
       query: '',
       totalResults: { battles: 0, entities: 0, systems: 0 },
     }),
-    getClient: () => ({
-      checkHealth: async () => ({
-        healthy: true,
-        latencyMs: 0,
-        collections: { battles: true, entities: true, systems: true },
-      }),
-    }) as any,
+    getClient: () =>
+      ({
+        checkHealth: async () => ({
+          healthy: true,
+          latencyMs: 0,
+          collections: { battles: true, entities: true, systems: true },
+        }),
+      }) as any,
   } as unknown as SearchService;
 };
 

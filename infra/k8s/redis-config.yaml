@@ -7,7 +7,7 @@ data:
   # Redis memory configuration
   # maxmemory: Maximum memory Redis can use (in MB)
   # Set to ~80% of container memory limit to leave headroom
-  maxmemory: "200"
+  maxmemory: '200'
 
   # maxmemory-policy: How Redis should evict keys when maxmemory is reached
   # Options:
@@ -19,4 +19,4 @@ data:
   #   - volatile-random: Evict random keys with TTL
   #   - volatile-ttl: Evict keys with shortest TTL
   #   - noeviction: Return errors when memory limit is reached
-  maxmemory-policy: "allkeys-lru"
+  maxmemory-policy: 'allkeys-lru'

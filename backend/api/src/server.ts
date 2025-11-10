@@ -162,7 +162,10 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         { name: 'Killmails', description: 'Killmail feed and streaming' },
         { name: 'Dashboard', description: 'Statistical summaries' },
         { name: 'Rules', description: 'Ingestion ruleset configuration' },
-        { name: 'Search', description: 'Typesense-powered search for battles, entities, and systems' },
+        {
+          name: 'Search',
+          description: 'Typesense-powered search for battles, entities, and systems',
+        },
       ],
     },
     transform: jsonSchemaTransform,
@@ -241,7 +244,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
         method: request.method,
         statusCode,
       },
-      'Request error'
+      'Request error',
     );
 
     return reply.status(statusCode).send({ message: error.message });

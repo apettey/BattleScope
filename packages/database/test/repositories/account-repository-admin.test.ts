@@ -193,7 +193,9 @@ describe('AccountRepository - getDetailWithCharactersGrouped', () => {
   });
 
   it('should return null for non-existent account', async () => {
-    const result = await repository.getDetailWithCharactersGrouped('00000000-0000-0000-0000-000000000000');
+    const result = await repository.getDetailWithCharactersGrouped(
+      '00000000-0000-0000-0000-000000000000',
+    );
     expect(result).toBeNull();
   });
 
@@ -223,7 +225,9 @@ describe('AccountRepository - getDetailWithCharactersGrouped', () => {
     expect(result!.charactersGrouped).toHaveLength(2);
 
     // Find Goonswarm alliance group
-    const goonswarm = result!.charactersGrouped.find((a) => a.allianceName === 'Goonswarm Federation');
+    const goonswarm = result!.charactersGrouped.find(
+      (a) => a.allianceName === 'Goonswarm Federation',
+    );
     expect(goonswarm).toBeDefined();
     expect(goonswarm!.corporations).toHaveLength(2); // Amok. and Karmafleet
 

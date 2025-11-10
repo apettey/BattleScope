@@ -33,9 +33,9 @@ spec:
       labels:
         app: postgres
       annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9187"
-        prometheus.io/path: "/metrics"
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9187'
+        prometheus.io/path: '/metrics'
     spec:
       containers:
         - name: postgres
@@ -97,7 +97,7 @@ spec:
                   name: postgres-secret
                   key: POSTGRES_DB
             - name: DATA_SOURCE_NAME
-              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)?sslmode=disable"
+              value: 'postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)?sslmode=disable'
           ports:
             - name: metrics
               containerPort: 9187

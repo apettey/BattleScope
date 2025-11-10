@@ -6,63 +6,63 @@ metadata:
   labels:
     app: search-entity-sync
 spec:
-  schedule: "0 3 * * *"  # Daily at 3:00 AM UTC
-  concurrencyPolicy: Forbid  # Don't run multiple instances
+  schedule: '0 3 * * *' # Daily at 3:00 AM UTC
+  concurrencyPolicy: Forbid # Don't run multiple instances
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: 86400  # Clean up after 24 hours
+      ttlSecondsAfterFinished: 86400 # Clean up after 24 hours
       template:
         metadata:
           labels:
             app: search-entity-sync
           annotations:
             # Prometheus scraping for job metrics
-            prometheus.io/scrape: "true"
-            prometheus.io/port: "8080"
-            prometheus.io/path: "/metrics"
+            prometheus.io/scrape: 'true'
+            prometheus.io/port: '8080'
+            prometheus.io/path: '/metrics'
         spec:
           restartPolicy: OnFailure
           containers:
-          - name: entity-sync
-            image: battlescope/search-sync:latest  # Build from backend/search-sync
-            imagePullPolicy: Always
-            env:
-            # Database connection
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: url
-            # Typesense connection
-            - name: TYPESENSE_HOST
-              value: "typesense-lb.battlescope.svc.cluster.local"
-            - name: TYPESENSE_PORT
-              value: "8108"
-            - name: TYPESENSE_PROTOCOL
-              value: "http"
-            - name: TYPESENSE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: typesense-secret
-                  key: api-key
-            # OpenTelemetry configuration
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://jaeger-collector.observability.svc.cluster.local:4318"
-            - name: OTEL_SERVICE_NAME
-              value: "battlescope.search.entity-sync"
-            - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.namespace=battlescope,service.version=1.0.0"
-            # Logging
-            - name: LOG_LEVEL
-              value: "info"
-            resources:
-              requests:
-                memory: "256Mi"
-                cpu: "250m"
-              limits:
-                memory: "1Gi"
-                cpu: "1000m"
+            - name: entity-sync
+              image: battlescope/search-sync:latest # Build from backend/search-sync
+              imagePullPolicy: Always
+              env:
+                # Database connection
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: url
+                # Typesense connection
+                - name: TYPESENSE_HOST
+                  value: 'typesense-lb.battlescope.svc.cluster.local'
+                - name: TYPESENSE_PORT
+                  value: '8108'
+                - name: TYPESENSE_PROTOCOL
+                  value: 'http'
+                - name: TYPESENSE_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: typesense-secret
+                      key: api-key
+                # OpenTelemetry configuration
+                - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                  value: 'http://jaeger-collector.observability.svc.cluster.local:4318'
+                - name: OTEL_SERVICE_NAME
+                  value: 'battlescope.search.entity-sync'
+                - name: OTEL_RESOURCE_ATTRIBUTES
+                  value: 'service.namespace=battlescope,service.version=1.0.0'
+                # Logging
+                - name: LOG_LEVEL
+                  value: 'info'
+              resources:
+                requests:
+                  memory: '256Mi'
+                  cpu: '250m'
+                limits:
+                  memory: '1Gi'
+                  cpu: '1000m'
           # Cleanup old completed jobs
           ttlSecondsAfterFinished: 86400
