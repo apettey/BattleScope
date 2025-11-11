@@ -29,6 +29,25 @@ export class EntitySyncer {
     this.logger.info('Starting entity sync to Typesense');
 
     try {
+      // First check if there's any data in the database
+      const battleCount = await this.db
+        .selectFrom('battles')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .executeTakeFirst();
+
+      const participantCount = await this.db
+        .selectFrom('battle_participants')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .executeTakeFirst();
+
+      this.logger.info(
+        {
+          battles: Number(battleCount?.count ?? 0),
+          participants: Number(participantCount?.count ?? 0),
+        },
+        'Database statistics',
+      );
+
       await this.syncAlliances();
       await this.syncCorporations();
       await this.syncCharacters();

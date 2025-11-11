@@ -1,6 +1,7 @@
 import type {
   BattleInsert,
   BattleKillmailInsert,
+  BattleParticipantInsert,
   KillmailEventRecord,
 } from '@battlescope/database';
 import { buildZKillRelatedUrl, deriveSecurityType } from '@battlescope/shared';
@@ -16,6 +17,7 @@ export interface BattlePlan {
   battle: BattleInsert;
   killmailInserts: BattleKillmailInsert[];
   killmailIds: bigint[];
+  participantInserts: BattleParticipantInsert[];
 }
 
 export interface ClusterResult {
@@ -44,6 +46,56 @@ const getAllianceIds = (killmail: KillmailEventRecord): bigint[] => {
 
 const sumIsk = (killmails: KillmailEventRecord[]): bigint =>
   killmails.reduce((total, killmail) => total + (killmail.iskValue ?? 0n), 0n);
+
+const extractParticipants = (
+  battleId: string,
+  killmails: KillmailEventRecord[],
+): BattleParticipantInsert[] => {
+  // Use a Map to deduplicate participants by characterId + shipTypeId
+  // Key format: "characterId:shipTypeId"
+  const participantMap = new Map<string, BattleParticipantInsert>();
+
+  for (const killmail of killmails) {
+    // Add victim as participant
+    if (killmail.victimCharacterId) {
+      const key = `${killmail.victimCharacterId}:${killmail.victimCharacterId}`; // Victims don't have shipTypeId in events
+      if (!participantMap.has(key)) {
+        participantMap.set(key, {
+          battleId,
+          characterId: killmail.victimCharacterId,
+          allianceId: killmail.victimAllianceId,
+          corpId: killmail.victimCorpId,
+          shipTypeId: null, // We don't have ship type for victims in the killmail_events table
+          sideId: null,
+          isVictim: true,
+        });
+      }
+    }
+
+    // Add attackers as participants
+    const attackerCount = killmail.attackerCharacterIds?.length ?? 0;
+    for (let i = 0; i < attackerCount; i++) {
+      const characterId = killmail.attackerCharacterIds[i];
+      const corpId = killmail.attackerCorpIds?.[i] ?? null;
+      const allianceId = killmail.attackerAllianceIds?.[i] ?? null;
+
+      const key = `${characterId}:${characterId}`; // Attackers also don't have shipTypeId in events
+      if (!participantMap.has(key)) {
+        participantMap.set(key, {
+          battleId,
+          characterId,
+          allianceId,
+          corpId,
+          shipTypeId: null,
+          sideId: null,
+          isVictim: false,
+        });
+      }
+    }
+  }
+
+  return Array.from(participantMap.values());
+};
 
 const toBattlePlan = (systemId: bigint, killmails: KillmailEventRecord[]): BattlePlan => {
   const sorted = [...killmails].sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());

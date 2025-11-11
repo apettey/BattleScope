@@ -80,6 +80,17 @@ jobs:
             dockerfile: ./frontend/Dockerfile
             context: .
             build_args: ''
+          - name: verifier
+            dockerfile: ./Dockerfile
+            context: .
+            build_args: |
+              SERVICE_SCOPE=@battlescope/verifier
+              BUILD_TARGET=packages/verifier
+              EXPOSE_PORT=3000
+          - name: search-sync
+            dockerfile: ./backend/search-sync/Dockerfile
+            context: .
+            build_args: ''
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

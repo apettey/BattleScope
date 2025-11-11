@@ -128,6 +128,10 @@ k8s-build-push:
 			--build-arg BUILD_TARGET=packages/verifier \
 			-t docker.io/petdog/battlescope-verifier:latest \
 			-f Dockerfile .
+	@echo "Building search-sync..."
+	docker buildx build --platform linux/arm64 --push \
+		-t docker.io/petdog/battlescope-search-sync:latest \
+		-f backend/search-sync/Dockerfile .
 	@echo "All images built and pushed successfully!"
 
 k8s-redeploy:
