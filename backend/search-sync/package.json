@@ -1,0 +1,23 @@
+{
+  "name": "@battlescope/search-sync",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/search": "workspace:*",
+    "@battlescope/shared": "workspace:*",
+    "pino": "^9.5.0",
+    "typesense": "^1.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

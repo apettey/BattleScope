@@ -42,7 +42,7 @@ metadata:
     app: typesense
 spec:
   serviceName: typesense
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: typesense
@@ -62,8 +62,6 @@ spec:
           args:
             - '--data-dir=/data'
             - '--api-key=$(TYPESENSE_API_KEY)'
-            - '--peering-address=$(POD_IP):8107'
-            - '--nodes=$(TYPESENSE_NODES)'
             - '--enable-cors=true'
             - '--log-level=info'
           env:
@@ -72,12 +70,6 @@ spec:
                 secretKeyRef:
                   name: typesense-secret
                   key: api-key
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: TYPESENSE_NODES
-              value: 'typesense-0.typesense.battlescope.svc.cluster.local:8107,typesense-1.typesense.battlescope.svc.cluster.local:8107,typesense-2.typesense.battlescope.svc.cluster.local:8107'
           ports:
             - containerPort: 8108
               name: http
@@ -114,7 +106,7 @@ spec:
         name: data
       spec:
         accessModes: ['ReadWriteOnce']
-        storageClassName: fast-ssd
+        storageClassName: microk8s-hostpath
         resources:
           requests:
             storage: 20Gi

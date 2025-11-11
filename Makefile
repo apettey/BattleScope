@@ -126,7 +126,7 @@ k8s-build-push:
 		docker buildx build --platform linux/arm64 --push \
 			--build-arg SERVICE_SCOPE=@battlescope/verifier \
 			--build-arg BUILD_TARGET=packages/verifier \
-			-t docker.io/petdog/verifier:latest \
+			-t docker.io/petdog/battlescope-verifier:latest \
 			-f Dockerfile .
 	@echo "All images built and pushed successfully!"
 

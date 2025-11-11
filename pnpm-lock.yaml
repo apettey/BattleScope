@@ -233,6 +233,34 @@ importers:
         specifier: ^4.7.0
         version: 4.20.6
 
+  backend/search-sync:
+    dependencies:
+      '@battlescope/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@battlescope/search':
+        specifier: workspace:*
+        version: link:../../packages/search
+      '@battlescope/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      pino:
+        specifier: ^9.5.0
+        version: 9.14.0
+      typesense:
+        specifier: ^1.8.2
+        version: 1.8.2(@babel/runtime@7.28.4)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.6
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   backend/verifier:
     dependencies:
       '@battlescope/auth':
@@ -3285,6 +3313,12 @@ packages:
     resolution: {integrity: sha512-FE5u0ezmi6y9OZEzlJfg37mqqf6ZDSF2V/NLjUyGrR9uTZ7Sb9F7bLNZ03S4XVUNRWGA7Ck4c1kK+YnuWjl+DA==}
     dependencies:
       undici-types: 6.21.0
+
+  /@types/node@22.19.0:
+    resolution: {integrity: sha512-xpr/lmLPQEj+TUnHmR+Ab91/glhJvsqcjB+yY0Ix9GO70H6Lb4FHH5GeqdOE5btAx7eIMwuHkp4H2MSkLcqWbA==}
+    dependencies:
+      undici-types: 6.21.0
+    dev: true
 
   /@types/oracledb@6.5.2:
     resolution: {integrity: sha512-kK1eBS/Adeyis+3OlBDMeQQuasIDLUYXsi2T15ccNJ0iyUpQ4xDF7svFu3+bGVrI0CMBUclPciz+lsQR3JX3TQ==}

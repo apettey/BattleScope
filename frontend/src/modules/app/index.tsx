@@ -8,11 +8,12 @@ import { CorporationView } from '../entities/CorporationView.js';
 import { CharacterView } from '../entities/CharacterView.js';
 import { EnhancedProfileView } from '../auth/components/EnhancedProfileView.js';
 import { AdminView } from '../auth/components/AdminView.js';
+import { BattleReportsConfigView } from '../auth/components/BattleReportsConfigView.js';
 import { UserMenu } from '../auth/components/UserMenu.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { resolveBaseUrl } from '../api/http.js';
 
-type TabId = 'home' | 'recent' | 'battles' | 'profile' | 'admin';
+type TabId = 'home' | 'recent' | 'battles' | 'profile' | 'admin' | 'battle-reports-admin';
 type EntityType = 'alliance' | 'corporation' | 'character';
 
 type RouteState =
@@ -29,9 +30,10 @@ type RouteState =
 const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element; adminOnly?: boolean }> = [
   { id: 'home', label: 'Home', render: () => <HomeView /> },
   { id: 'recent', label: 'Recent Kills', render: () => <RecentKillsView /> },
-  { id: 'battles', label: 'Battles', render: () => <BattlesView /> },
+  { id: 'battles', label: 'Battle Reports', render: () => <BattlesView /> },
   { id: 'profile', label: 'Profile', render: () => <EnhancedProfileView /> },
   { id: 'admin', label: 'Admin', render: () => <AdminView />, adminOnly: true },
+  { id: 'battle-reports-admin', label: 'Battle Reports Admin', render: () => <BattleReportsConfigView />, adminOnly: true },
 ];
 
 const isValidTab = (value: string): value is TabId => tabs.some((tab) => tab.id === value);

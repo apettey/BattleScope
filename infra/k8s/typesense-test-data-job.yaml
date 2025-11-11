@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: typesense-test-data
+  namespace: battlescope
+  labels:
+    app: typesense-test-data
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: typesense-test-data
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: test-data-loader
+          image: curlimages/curl:latest
+          env:
+            - name: TYPESENSE_HOST
+              value: 'typesense-lb.battlescope.svc.cluster.local'
+            - name: TYPESENSE_PORT
+              value: '8108'
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: typesense-secret
+                  key: api-key
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+
+              TIMESTAMP=$(date +%s)
+              BASE_URL="http://${TYPESENSE_HOST}:${TYPESENSE_PORT}"
+
+              echo "Adding Goonswarm Federation alliance..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"1354830081\",\"type\":\"alliance\",\"name\":\"Goonswarm Federation\",\"ticker\":\"CONDI\",\"battleCount\":1500,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":95000}"
+
+              echo "Adding Test Alliance Please Ignore..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"498125261\",\"type\":\"alliance\",\"name\":\"Test Alliance Please Ignore\",\"ticker\":\"TEST\",\"battleCount\":1200,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":85000}"
+
+              echo "Adding Pandemic Horde..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"99003581\",\"type\":\"alliance\",\"name\":\"Pandemic Horde\",\"ticker\":\"REKTD\",\"battleCount\":1800,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":98000}"
+
+              echo "Adding Pandemic Horde Inc. corporation..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"98615601\",\"type\":\"corporation\",\"name\":\"Pandemic Horde Inc.\",\"ticker\":\"PH-ON\",\"allianceId\":\"99003581\",\"allianceName\":\"Pandemic Horde\",\"battleCount\":950,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":75000}"
+
+              echo "Adding KarmaFleet corporation..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"98370861\",\"type\":\"corporation\",\"name\":\"KarmaFleet\",\"ticker\":\"KARMA\",\"allianceId\":\"1354830081\",\"allianceName\":\"Goonswarm Federation\",\"battleCount\":1100,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":82000}"
+
+              echo "Adding Dreddit corporation..."
+              curl -X POST "${BASE_URL}/collections/entities/documents" \
+                -H "X-TYPESENSE-API-KEY: ${TYPESENSE_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"1018389948\",\"type\":\"corporation\",\"name\":\"Dreddit\",\"ticker\":\"DREDD\",\"allianceId\":\"498125261\",\"allianceName\":\"Test Alliance Please Ignore\",\"battleCount\":800,\"lastSeenAt\":${TIMESTAMP},\"activityScore\":68000}"
+
+              echo "Test data added successfully!"

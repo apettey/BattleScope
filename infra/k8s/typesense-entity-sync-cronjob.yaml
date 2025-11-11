@@ -26,15 +26,15 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: entity-sync
-              image: battlescope/search-sync:latest # Build from backend/search-sync
+              image: petdog/battlescope-search-sync:latest # Build from backend/search-sync
               imagePullPolicy: Always
               env:
                 # Database connection
                 - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
-                      name: postgres-secret
-                      key: url
+                      name: battlescope-secrets
+                      key: DATABASE_URL
                 # Typesense connection
                 - name: TYPESENSE_HOST
                   value: 'typesense-lb.battlescope.svc.cluster.local'
@@ -64,5 +64,3 @@ spec:
                 limits:
                   memory: '1Gi'
                   cpu: '1000m'
-          # Cleanup old completed jobs
-          ttlSecondsAfterFinished: 86400

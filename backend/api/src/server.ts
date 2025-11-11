@@ -37,6 +37,7 @@ import { registerDashboardRoutes } from './routes/dashboard.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerMeRoutes } from './routes/me.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerAdminBattleReportsRoutes } from './routes/admin-battle-reports.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerSearchRoutes } from './routes/search.js';
 import type { ApiConfig } from './config.js';
@@ -328,6 +329,14 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
       characterRepository,
       featureRepository,
       auditLogRepository,
+    );
+    registerAdminBattleReportsRoutes(
+      app,
+      sessionService,
+      featureRepository,
+      rulesetRepository,
+      killmailRepository,
+      battleRepository,
     );
   } else {
     app.log.warn('Auth routes not registered - authentication services not configured');

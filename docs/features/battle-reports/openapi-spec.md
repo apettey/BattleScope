@@ -1,7 +1,7 @@
 # Battle Reports OpenAPI Specification
 
 **Feature Key**: `battle-reports`
-**Last Updated**: 2025-11-10
+**Last Updated**: 2025-11-11
 
 ---
 
@@ -38,8 +38,7 @@ GET /battles
 **Query Parameters**:
 
 **Space & Location Filters**:
-- `space_type` (array[string], optional): Filter by space type (`kspace`, `jspace`, `pochven`)
-- `security_level` (array[string], optional): Filter by K-Space security (`highsec`, `lowsec`, `nullsec`)
+- `securityType` (array[string], optional): Filter by security type (`highsec`, `lowsec`, `nullsec`, `wormhole`, `pochven`)
 - `system_id` (array[bigint], optional): Filter by specific solar system IDs
 - `system_name` (string, optional): Filter by system name (partial match, case-insensitive)
 - `region_id` (array[bigint], optional): Filter by region IDs
@@ -84,8 +83,7 @@ GET /battles
       "systemName": "string",
       "regionId": "string",
       "regionName": "string",
-      "spaceType": "kspace" | "jspace" | "pochven",
-      "securityLevel": "highsec" | "lowsec" | "nullsec" | null,
+      "securityType": "highsec" | "lowsec" | "nullsec" | "wormhole" | "pochven",
       "startTime": "ISO 8601 timestamp",
       "endTime": "ISO 8601 timestamp",
       "duration": "number (seconds)",
@@ -112,7 +110,7 @@ GET /battles
 ```
 
 **Notes**:
-- Multiple values for array parameters can be provided via repeated query params (e.g., `?space_type=kspace&space_type=jspace`)
+- Multiple values for array parameters can be provided via repeated query params (e.g., `?securityType=nullsec&securityType=wormhole`)
 - Name-based filters use partial, case-insensitive matching
 - For precise entity filtering, use ID-based filters
 - Battles are included if ANY participant matches the entity filter
@@ -247,7 +245,7 @@ GET /search/systems
 
 **Query Parameters**:
 - `q` (string, required): Search query (minimum 2 characters)
-- `space_type` (array[string], optional): Filter by space type
+- `securityType` (array[string], optional): Filter by security type
 - `limit` (integer, optional): Number of results (default 10, max 20)
 
 **Response**: `200 OK`
@@ -260,8 +258,7 @@ GET /search/systems
       "name": "string",
       "regionId": "string",
       "regionName": "string",
-      "spaceType": "kspace" | "jspace" | "pochven",
-      "securityLevel": "highsec" | "lowsec" | "nullsec" | null,
+      "securityType": "highsec" | "lowsec" | "nullsec" | "wormhole" | "pochven",
       "securityStatus": "number (-1.0 to 1.0)",
       "battleCount": "number (battles in this system)"
     }
@@ -283,7 +280,7 @@ GET /killmails/recent
 ```
 
 **Query Parameters**:
-- `space_type` (array[string], optional): Filter by space type
+- `securityType` (array[string], optional): Filter by security type
 - `tracked_only` (boolean, optional): Only show kills involving tracked entities
 - `limit` (integer, optional): Number of results (default 50, max 100)
 
@@ -297,7 +294,7 @@ GET /killmails/recent
       "systemId": "string (bigint)",
       "systemName": "string",
       "timestamp": "ISO 8601 timestamp",
-      "spaceType": "kspace" | "jspace" | "pochven",
+      "securityType": "highsec" | "lowsec" | "nullsec" | "wormhole" | "pochven",
       "victimAllianceId": "string (bigint) | null",
       "victimAllianceName": "string | null",
       "victimCorpId": "string (bigint) | null",
@@ -323,7 +320,7 @@ GET /killmails/stream
 **Protocol**: Server-Sent Events (`text/event-stream`)
 
 **Query Parameters**:
-- `space_type` (array[string], optional): Filter by space type
+- `securityType` (array[string], optional): Filter by security type
 
 **Event Types**:
 
@@ -337,69 +334,211 @@ data: { "timestamp": "ISO 8601 timestamp" }
 
 ---
 
-## Feature Configuration API
+## Admin Configuration API
 
-### Get Battle Reports Configuration
+### Get Ingestion Configuration
 
 ```yaml
-GET /admin/features/battle-reports/config
+GET /admin/config/ingest
 ```
 
-**Authorization**: SuperAdmin only
+**Authorization**: Requires `admin` role or SuperAdmin
 
 **Response**: `200 OK`
 
 ```json
 {
-  "ingestion": {
+  "ruleset": {
+    "id": "uuid",
     "minPilots": "number",
-    "trackedAlliances": ["bigint"],
-    "trackedCorporations": ["bigint"],
-    "trackedCharacters": ["bigint"],
+    "trackedAllianceIds": ["string (bigint)"],
+    "trackedCorpIds": ["string (bigint)"],
+    "trackedSystemIds": ["string (bigint)"],
+    "trackedSecurityTypes": ["highsec" | "lowsec" | "nullsec" | "wormhole" | "pochven"],
     "ignoreUnlisted": "boolean",
-    "trackedSystems": ["bigint"],
-    "spaceTypes": ["kspace" | "jspace" | "pochven"],
-    "kspaceSecurityLevels": ["highsec" | "lowsec" | "nullsec"],
-    "enrichmentThrottle": "number (milliseconds)"
+    "updatedAt": "ISO 8601 timestamp"
   },
-  "clustering": {
-    "enabled": "boolean",
-    "timeWindow": "number (minutes)",
-    "minKills": "number",
-    "maxKillGap": "number (minutes)",
-    "reclusteringInterval": "number (minutes)"
+  "service": {
+    "pollIntervalMs": "number (optional)",
+    "redisqQueueId": "string (optional)"
   }
 }
 ```
 
-### Update Battle Reports Configuration
+### Update Ingestion Configuration
 
 ```yaml
-PUT /admin/features/battle-reports/config
+PUT /admin/config/ingest
 ```
 
-**Authorization**: SuperAdmin only
+**Authorization**: Requires `admin` role or SuperAdmin
 
 **Request Body**:
 
 ```json
 {
-  "configKey": "ingestion" | "clustering",
-  "configValue": { ...config object... }
+  "ruleset": {
+    "minPilots": "number (optional)",
+    "trackedAllianceIds": ["string"] (optional),
+    "trackedCorpIds": ["string"] (optional),
+    "trackedSystemIds": ["string"] (optional),
+    "trackedSecurityTypes": ["highsec" | "lowsec" | "nullsec" | "wormhole" | "pochven"] (optional),
+    "ignoreUnlisted": "boolean (optional)"
+  },
+  "service": {
+    "pollIntervalMs": "number (optional)",
+    "redisqQueueId": "string (optional)"
+  }
 }
 ```
 
-**Response**: `204 No Content`
+**Response**: `200 OK`
+
+```json
+{
+  "success": true
+}
+```
+
+### Get Clustering Configuration
+
+```yaml
+GET /admin/config/clusterer
+```
+
+**Authorization**: Requires `admin` role or SuperAdmin
+
+**Response**: `200 OK`
+
+```json
+{
+  "windowMinutes": "number (optional)",
+  "gapMaxMinutes": "number (optional)",
+  "minKills": "number (optional)",
+  "processingDelayMinutes": "number (optional)",
+  "batchSize": "number (optional)",
+  "intervalMs": "number (optional)"
+}
+```
+
+### Update Clustering Configuration
+
+```yaml
+PUT /admin/config/clusterer
+```
+
+**Authorization**: Requires `admin` role or SuperAdmin
+
+**Request Body**:
+
+```json
+{
+  "windowMinutes": "number (optional, 5-180)",
+  "gapMaxMinutes": "number (optional, 1-60)",
+  "minKills": "number (optional, 1-100)",
+  "processingDelayMinutes": "number (optional, 0-1440)",
+  "batchSize": "number (optional, 100-10000)",
+  "intervalMs": "number (optional, 1000-300000)"
+}
+```
+
+**Response**: `200 OK`
+
+```json
+{
+  "success": true
+}
+```
+
+### Get Ingestion Statistics
+
+```yaml
+GET /admin/stats/ingest
+```
+
+**Authorization**: Requires `admin` role or SuperAdmin
+
+**Response**: `200 OK`
+
+```json
+{
+  "received24h": "number",
+  "accepted24h": "number",
+  "rejected24h": "number",
+  "acceptanceRate": "number (percentage)",
+  "unprocessedCount": "number"
+}
+```
+
+### Get Clustering Statistics
+
+```yaml
+GET /admin/stats/clusterer
+```
+
+**Authorization**: Requires `admin` role or SuperAdmin
+
+**Response**: `200 OK`
+
+```json
+{
+  "battlesCreated24h": "number",
+  "unprocessedKillmails": "number",
+  "averageLagMinutes": "number",
+  "lastProcessedAt": "ISO 8601 timestamp | null"
+}
+```
+
+### Trigger Battle Reclustering
+
+```yaml
+POST /admin/battles/recluster
+```
+
+**Authorization**: Requires `admin` role or SuperAdmin
+
+**Request Body**:
+
+```json
+{
+  "startTime": "ISO 8601 timestamp",
+  "endTime": "ISO 8601 timestamp",
+  "deleteExisting": "boolean (default false)",
+  "dryRun": "boolean (default false)",
+  "customConfig": {
+    "windowMinutes": "number (optional)",
+    "gapMaxMinutes": "number (optional)",
+    "minKills": "number (optional)"
+  }
+}
+```
+
+**Response**: `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "string",
+  "affectedKillmails": "number",
+  "affectedBattles": "number (optional)"
+}
+```
 
 ---
 
 ## Data Models
 
-### SpaceType
+### SecurityType
 
 ```typescript
-type SpaceType = 'kspace' | 'jspace' | 'pochven';
+type SecurityType = 'highsec' | 'lowsec' | 'nullsec' | 'wormhole' | 'pochven';
 ```
+
+**Notes**:
+- Replaces the previous `SpaceType` ('kspace', 'jspace', 'pochven') and `SecurityLevel` ('highsec', 'lowsec', 'nullsec') with a unified type
+- `wormhole` corresponds to the previous 'jspace'
+- K-space systems are now categorized as 'highsec', 'lowsec', or 'nullsec'
+- 'pochven' remains unchanged
 
 ### Battle
 
@@ -408,7 +547,7 @@ interface Battle {
   id: string; // UUID
   systemId: string; // bigint
   systemName: string;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   startTime: string; // ISO 8601
   endTime: string; // ISO 8601
   duration: number; // seconds
@@ -427,7 +566,7 @@ interface Killmail {
   timestamp: string; // ISO 8601
   systemId: string; // bigint as string
   systemName: string;
-  spaceType: SpaceType;
+  securityType: SecurityType;
   victimAllianceId: string | null;
   victimAllianceName: string | null;
   victimCorpId: string | null;
@@ -540,5 +679,5 @@ The external search product will be integrated at the following layers:
 - All bigint values are serialized as strings to prevent precision loss in JSON
 - Timestamps are in ISO 8601 format with timezone
 - Pagination uses cursor-based pagination for efficient large dataset traversal
-- Space type filtering supports multiple values via repeated query parameters
+- Security type filtering supports multiple values via repeated query parameters
 - Entity name searches use PostgreSQL full-text search (basic) - for advanced search, use the global search integration
