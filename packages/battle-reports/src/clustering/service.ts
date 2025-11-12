@@ -46,13 +46,87 @@ export class ClustererService {
         const { battles, ignoredKillmailIds } = this.engine.cluster(killmails);
 
         for (const plan of battles) {
-          await this.battleRepository.createBattle(plan.battle);
-          await this.battleRepository.upsertKillmails(plan.killmailInserts);
-          await this.killmailRepository.markAsProcessed(plan.killmailIds, plan.battle.id);
-          this.logger.info(
-            { battleId: plan.battle.id, kills: plan.killmailIds.length },
-            'Created battle',
-          );
+          await tracer.startActiveSpan('clusterer.createBattle', async (battleSpan) => {
+            try {
+              battleSpan.setAttribute('battle.id', plan.battle.id);
+              battleSpan.setAttribute('battle.killmails.count', plan.killmailIds.length);
+              battleSpan.setAttribute('battle.participants.count', plan.participantInserts.length);
+              battleSpan.setAttribute('battle.systemId', plan.battle.systemId.toString());
+
+              // Create battle
+              await tracer.startActiveSpan('db.createBattle', async (dbSpan) => {
+                try {
+                  await this.battleRepository.createBattle(plan.battle);
+                  dbSpan.setAttribute('db.operation', 'INSERT');
+                  dbSpan.setAttribute('db.table', 'battles');
+                } finally {
+                  dbSpan.end();
+                }
+              });
+
+              // Upsert killmails
+              await tracer.startActiveSpan('db.upsertKillmails', async (dbSpan) => {
+                try {
+                  await this.battleRepository.upsertKillmails(plan.killmailInserts);
+                  dbSpan.setAttribute('db.operation', 'UPSERT');
+                  dbSpan.setAttribute('db.table', 'battle_killmails');
+                  dbSpan.setAttribute('db.records', plan.killmailInserts.length);
+                } finally {
+                  dbSpan.end();
+                }
+              });
+
+              // Upsert participants
+              await tracer.startActiveSpan('db.upsertParticipants', async (dbSpan) => {
+                try {
+                  await this.battleRepository.upsertParticipants(plan.participantInserts);
+                  dbSpan.setAttribute('db.operation', 'UPSERT');
+                  dbSpan.setAttribute('db.table', 'battle_participants');
+                  dbSpan.setAttribute('db.records', plan.participantInserts.length);
+                } finally {
+                  dbSpan.end();
+                }
+              });
+
+              // Mark killmails as processed
+              await tracer.startActiveSpan('db.markKillmailsProcessed', async (dbSpan) => {
+                try {
+                  await this.killmailRepository.markAsProcessed(plan.killmailIds, plan.battle.id);
+                  dbSpan.setAttribute('db.operation', 'UPDATE');
+                  dbSpan.setAttribute('db.table', 'killmail_events');
+                  dbSpan.setAttribute('db.records', plan.killmailIds.length);
+                } finally {
+                  dbSpan.end();
+                }
+              });
+
+              this.logger.info(
+                {
+                  battleId: plan.battle.id,
+                  kills: plan.killmailIds.length,
+                  participants: plan.participantInserts.length,
+                  systemId: plan.battle.systemId.toString(),
+                  startTime: plan.battle.startTime.toISOString(),
+                  endTime: plan.battle.endTime.toISOString(),
+                  totalIskDestroyed: plan.battle.totalIskDestroyed.toString(),
+                },
+                'Created battle with participants',
+              );
+            } catch (error) {
+              battleSpan.recordException(error as Error);
+              battleSpan.setStatus({ code: 2, message: (error as Error).message });
+              this.logger.error(
+                {
+                  error,
+                  battleId: plan.battle.id,
+                },
+                'Failed to create battle',
+              );
+              throw error;
+            } finally {
+              battleSpan.end();
+            }
+          });
         }
 
         if (ignoredKillmailIds.length > 0) {

@@ -6,7 +6,7 @@ metadata:
   labels:
     app: search-entity-sync
 spec:
-  schedule: '0 3 * * *' # Daily at 3:00 AM UTC
+  schedule: '0 * * * *' # Hourly at the start of each hour
   concurrencyPolicy: Forbid # Don't run multiple instances
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

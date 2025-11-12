@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EntitySearchResult, EntityType } from '@battlescope/search';
+import { resolveBaseUrl } from '../../api/http.js';
 import { EntityLink } from './EntityLink.js';
 
 export interface EntityAutocompleteProps {
@@ -30,17 +31,34 @@ const fetchEntityAutocomplete = async (
   types?: EntityType[],
   signal?: AbortSignal,
 ): Promise<AutocompleteResponse> => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  const baseUrl = resolveBaseUrl();
   const params = new URLSearchParams({ q: query });
   if (types && types.length > 0) {
     params.append('type', types.join(','));
   }
 
-  const response = await fetch(`${baseUrl}/search/entities/autocomplete?${params}`, { signal });
+  const response = await fetch(`${baseUrl}/search/entities?${params}`, {
+    signal,
+    credentials: 'include',
+  });
   if (!response.ok) {
     throw new Error(`Search failed: ${response.statusText}`);
   }
   return response.json();
+};
+
+const getEntityLogoUrl = (entity: EntitySearchResult): string | null => {
+  const size = 64;
+  switch (entity.type) {
+    case 'alliance':
+      return `https://images.evetech.net/alliances/${entity.id}/logo?size=${size}`;
+    case 'corporation':
+      return `https://images.evetech.net/corporations/${entity.id}/logo?size=${size}`;
+    case 'character':
+      return `https://images.evetech.net/characters/${entity.id}/portrait?size=${size}`;
+    default:
+      return null;
+  }
 };
 
 export const EntityAutocomplete = ({
@@ -164,19 +182,6 @@ export const EntityAutocomplete = ({
     [focusedIndex, results, handleSelect],
   );
 
-  const getEntityTypeIcon = (type: EntityType): string => {
-    switch (type) {
-      case 'alliance':
-        return '🛡️';
-      case 'corporation':
-        return '🏢';
-      case 'character':
-        return '👤';
-      default:
-        return '•';
-    }
-  };
-
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       {label && (
@@ -207,7 +212,6 @@ export const EntityAutocomplete = ({
               background: '#f8fafc',
             }}
           >
-            <span style={{ fontSize: '1.125rem' }}>{getEntityTypeIcon(value.type)}</span>
             <EntityLink
               type={value.type}
               id={value.id}
@@ -308,73 +312,89 @@ export const EntityAutocomplete = ({
           }}
         >
           <ul style={{ listStyle: 'none', padding: '0.25rem', margin: 0 }}>
-            {results.map((entity, index) => (
-              <li key={`${entity.type}-${entity.id}`}>
-                <button
-                  type="button"
-                  onClick={() => handleSelect(entity)}
-                  onMouseEnter={() => setFocusedIndex(index)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '0.5rem 0.75rem',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    background: focusedIndex === index ? '#f1f5f9' : 'transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.875rem',
-                    transition: 'background-color 0.15s',
-                  }}
-                >
-                  <span style={{ fontSize: '1.125rem' }}>{getEntityTypeIcon(entity.type)}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 500,
-                        color: '#0f172a',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {entity.name}
-                      {entity.ticker && (
-                        <span style={{ color: '#64748b', marginLeft: '0.25rem' }}>
-                          [{entity.ticker}]
-                        </span>
-                      )}
-                    </div>
-                    {(entity.allianceName || entity.corpName) && (
+            {results.map((entity, index) => {
+              const logoUrl = getEntityLogoUrl(entity);
+              return (
+                <li key={`${entity.type}-${entity.id}`}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(entity)}
+                    onMouseEnter={() => setFocusedIndex(index)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '0.5rem 0.75rem',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      background: focusedIndex === index ? '#f1f5f9' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      fontSize: '0.875rem',
+                      transition: 'background-color 0.15s',
+                    }}
+                  >
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={`${entity.name} logo`}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: entity.type === 'character' ? '50%' : '4px',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          background: '#f1f5f9',
+                        }}
+                      />
+                    ) : null}
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          fontSize: '0.75rem',
-                          color: '#64748b',
+                          fontWeight: 500,
+                          color: '#0f172a',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {entity.type === 'character' && entity.corpName && (
-                          <>
-                            {entity.corpName}
-                            {entity.allianceName && ` • ${entity.allianceName}`}
-                          </>
-                        )}
-                        {entity.type === 'corporation' && entity.allianceName && (
-                          <>{entity.allianceName}</>
+                        {entity.name}
+                        {entity.ticker && (
+                          <span style={{ color: '#64748b', marginLeft: '0.25rem' }}>
+                            [{entity.ticker}]
+                          </span>
                         )}
                       </div>
-                    )}
-                  </div>
-                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
-                    {entity.battleCount} battles
-                  </span>
-                </button>
-              </li>
-            ))}
+                      {(entity.allianceName || entity.corpName) && (
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {entity.type === 'character' && entity.corpName && (
+                            <>
+                              {entity.corpName}
+                              {entity.allianceName && ` • ${entity.allianceName}`}
+                            </>
+                          )}
+                          {entity.type === 'corporation' && entity.allianceName && (
+                            <>{entity.allianceName}</>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                      {entity.battleCount} battles
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

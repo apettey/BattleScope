@@ -238,12 +238,21 @@ importers:
       '@battlescope/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@battlescope/esi-client':
+        specifier: workspace:*
+        version: link:../../packages/esi-client
       '@battlescope/search':
         specifier: workspace:*
         version: link:../../packages/search
       '@battlescope/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      kysely:
+        specifier: ^0.26.3
+        version: 0.26.3
+      pg:
+        specifier: ^8.11.3
+        version: 8.16.3
       pino:
         specifier: ^9.5.0
         version: 9.14.0
@@ -254,6 +263,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.0
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.15.6
       tsx:
         specifier: ^4.19.2
         version: 4.20.6
@@ -5958,6 +5970,11 @@ packages:
     dependencies:
       json-buffer: 3.0.1
     dev: true
+
+  /kysely@0.26.3:
+    resolution: {integrity: sha512-yWSgGi9bY13b/W06DD2OCDDHQmq1kwTGYlQ4wpZkMOJqMGCstVCFIvxCCVG4KfY1/3G0MhDAcZsip/Lw8/vJWw==}
+    engines: {node: '>=14.0.0'}
+    dev: false
 
   /kysely@0.27.6:
     resolution: {integrity: sha512-FIyV/64EkKhJmjgC0g2hygpBv5RNWVPyNCqSAD7eTCv6eFWNIi4PN1UvdSJGicN/o35bnevgis4Y0UDC0qi8jQ==}

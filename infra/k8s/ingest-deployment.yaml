@@ -4,7 +4,7 @@ metadata:
   name: ingest
   namespace: battlescope
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     matchLabels:
       app: ingest

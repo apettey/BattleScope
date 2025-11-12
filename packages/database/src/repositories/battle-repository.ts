@@ -123,9 +123,10 @@ export class BattleRepository {
         })),
       )
       .onConflict((oc) =>
-        oc.columns(['battleId', 'characterId', 'shipTypeId']).doUpdateSet((eb) => ({
+        oc.columns(['battleId', 'characterId']).doUpdateSet((eb) => ({
           allianceId: eb.ref('excluded.allianceId'),
           corpId: eb.ref('excluded.corpId'),
+          shipTypeId: eb.ref('excluded.shipTypeId'),
           sideId: eb.ref('excluded.sideId'),
           isVictim: eb.ref('excluded.isVictim'),
         })),

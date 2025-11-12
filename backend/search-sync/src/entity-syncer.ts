@@ -1,4 +1,5 @@
 import type { DatabaseClient } from '@battlescope/database';
+import { createEsiClient, type EsiClient } from '@battlescope/esi-client';
 import { calculateEntityActivityScore } from '@battlescope/search';
 import { sql } from 'kysely';
 import type Typesense from 'typesense';
@@ -19,11 +20,18 @@ interface EntityDocument {
 }
 
 export class EntitySyncer {
+  private readonly esiClient: EsiClient;
+
   constructor(
     private readonly db: DatabaseClient,
     private readonly typesenseClient: Typesense.Client,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    // Create ESI client with 30-minute cache TTL
+    this.esiClient = createEsiClient({
+      cacheTtlMs: 30 * 60 * 1000, // 30 minutes
+    });
+  }
 
   async syncAllEntities(): Promise<void> {
     this.logger.info('Starting entity sync to Typesense');
@@ -286,9 +294,61 @@ export class EntitySyncer {
   private async getEntityNames(
     ids: string[],
   ): Promise<Map<string, { name: string; ticker?: string }>> {
-    // TODO: Implement name resolution from ESI or cached names table
-    // For now, return empty map - IDs will be used as names
-    return new Map();
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    try {
+      // Convert string IDs to numbers for ESI API
+      const numericIds = ids.map((id) => Number.parseInt(id, 10)).filter((id) => !Number.isNaN(id));
+
+      this.logger.info({ count: numericIds.length }, 'Fetching entity names from ESI');
+
+      // Fetch names from ESI using the universe/names endpoint
+      const namesMap = await this.esiClient.getUniverseNames(numericIds);
+
+      // Convert the Map<number, UniverseName> to Map<string, { name, ticker? }>
+      const result = new Map<string, { name: string; ticker?: string }>();
+
+      for (const [id, nameInfo] of namesMap.entries()) {
+        const stringId = id.toString();
+
+        // For alliances and corporations, also fetch detailed info to get tickers
+        if (nameInfo.category === 'alliance') {
+          try {
+            const allianceInfo = await this.esiClient.getAllianceInfo(id);
+            result.set(stringId, {
+              name: allianceInfo.name,
+              ticker: allianceInfo.ticker,
+            });
+          } catch (error) {
+            // If detailed fetch fails, use the basic name
+            result.set(stringId, { name: nameInfo.name });
+          }
+        } else if (nameInfo.category === 'corporation') {
+          try {
+            const corpInfo = await this.esiClient.getCorporationInfo(id);
+            result.set(stringId, {
+              name: corpInfo.name,
+              ticker: corpInfo.ticker,
+            });
+          } catch (error) {
+            // If detailed fetch fails, use the basic name
+            result.set(stringId, { name: nameInfo.name });
+          }
+        } else {
+          // For characters and other entities, just use the name
+          result.set(stringId, { name: nameInfo.name });
+        }
+      }
+
+      this.logger.info({ fetched: result.size, requested: ids.length }, 'Entity names fetched');
+
+      return result;
+    } catch (error) {
+      this.logger.error({ error }, 'Failed to fetch entity names from ESI');
+      return new Map();
+    }
   }
 
   private async importDocuments(documents: EntityDocument[], entityType: string): Promise<void> {

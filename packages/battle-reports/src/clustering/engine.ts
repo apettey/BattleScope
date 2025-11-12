@@ -125,10 +125,13 @@ const toBattlePlan = (systemId: bigint, killmails: KillmailEventRecord[]): Battl
     sideId: null,
   }));
 
+  const participantInserts = extractParticipants(battleId, sorted);
+
   return {
     battle,
     killmailInserts,
     killmailIds: killmails.map((km) => km.killmailId),
+    participantInserts,
   };
 };
 

@@ -154,8 +154,9 @@ export const BattleReportsConfigView: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const baseUrl = resolveBaseUrl();
+        const params = new URLSearchParams({ q: allianceInput, type: 'alliance' });
         const response = await fetch(
-          `${baseUrl}/search/entities?q=${encodeURIComponent(allianceInput)}&type=alliance&limit=10`,
+          `${baseUrl}/search/entities?${params}`,
           { credentials: 'include' }
         );
         if (response.ok) {
@@ -182,8 +183,9 @@ export const BattleReportsConfigView: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const baseUrl = resolveBaseUrl();
+        const params = new URLSearchParams({ q: corpInput, type: 'corporation' });
         const response = await fetch(
-          `${baseUrl}/search/entities?q=${encodeURIComponent(corpInput)}&type=corporation&limit=10`,
+          `${baseUrl}/search/entities?${params}`,
           { credentials: 'include' }
         );
         if (response.ok) {
@@ -523,13 +525,30 @@ export const BattleReportsConfigView: React.FC = () => {
                       cursor: 'pointer',
                       borderBottom: '1px solid #f1f5f9',
                       transition: 'background-color 0.15s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                   >
-                    <div style={{ fontWeight: '500', color: '#0f172a' }}>{alliance.name}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      {alliance.ticker ? `[${alliance.ticker}]` : ''} ID: {alliance.id}
+                    <img
+                      src={`https://images.evetech.net/alliances/${alliance.id}/logo?size=64`}
+                      alt={`${alliance.name} logo`}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '4px',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                        background: '#f1f5f9',
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: '500', color: '#0f172a' }}>{alliance.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {alliance.ticker ? `[${alliance.ticker}]` : ''} ID: {alliance.id}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -625,13 +644,30 @@ export const BattleReportsConfigView: React.FC = () => {
                       cursor: 'pointer',
                       borderBottom: '1px solid #f1f5f9',
                       transition: 'background-color 0.15s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                   >
-                    <div style={{ fontWeight: '500', color: '#0f172a' }}>{corp.name}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                      {corp.ticker ? `[${corp.ticker}]` : ''} ID: {corp.id}
+                    <img
+                      src={`https://images.evetech.net/corporations/${corp.id}/logo?size=64`}
+                      alt={`${corp.name} logo`}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '4px',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                        background: '#f1f5f9',
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: '500', color: '#0f172a' }}>{corp.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {corp.ticker ? `[${corp.ticker}]` : ''} ID: {corp.id}
+                      </div>
                     </div>
                   </div>
                 ))}

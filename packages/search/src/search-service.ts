@@ -90,7 +90,7 @@ export class SearchService {
           id: doc.id,
           type: doc.type as any,
           name: doc.name,
-          ticker: doc.ticker,
+          ticker: doc.ticker ?? null,
           allianceId: doc.allianceId ?? undefined,
           allianceName: doc.allianceName ?? undefined,
           corpId: doc.corpId ?? undefined,
