@@ -4,6 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4.5-blue.svg)
+[![codecov](https://codecov.io/github/apettey/BattleScope/graph/badge.svg?token=CYJSQF06I2)](https://codecov.io/github/apettey/BattleScope)
 
 **BattleScope** is a modular data intelligence platform for EVE Online that provides real-time battle reconstruction and combat intelligence through automated killmail ingestion, clustering, and analysis.
 
