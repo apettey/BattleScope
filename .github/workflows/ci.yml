@@ -29,13 +29,10 @@ jobs:
 
       - name: Upload coverage reports to Codecov
         if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
+          slug: apettey/BattleScope
 
   publish-images:
     runs-on: ubuntu-latest
