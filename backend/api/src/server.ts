@@ -40,6 +40,7 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerAdminBattleReportsRoutes } from './routes/admin-battle-reports.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerSearchRoutes } from './routes/search.js';
+import { registerRulesetRoutes } from './routes/rulesets.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
@@ -352,6 +353,7 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     nameEnricher,
   );
   registerDashboardRoutes(app, dashboardRepository, nameEnricher);
+  registerRulesetRoutes(app, rulesetRepository, nameEnricher);
 
   // Register search routes
   registerSearchRoutes(app, searchService);

@@ -1,4 +1,4 @@
-import { createDb, createPool } from '@battlescope/database';
+import { createDb } from '@battlescope/database';
 import { createLoggerConfig } from '@battlescope/shared';
 import Typesense from 'typesense';
 import { Pool } from 'pg';

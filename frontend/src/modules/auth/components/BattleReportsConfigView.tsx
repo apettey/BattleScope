@@ -55,7 +55,6 @@ export const BattleReportsConfigView: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   const [ingestionConfig, setIngestionConfig] = useState<IngestionConfig | null>(null);
-  const [clusteringConfig, setClusteringConfig] = useState<ClusteringConfig | null>(null);
   const [ingestionStats, setIngestionStats] = useState<IngestionStats | null>(null);
   const [clusteringStats, setClusteringStats] = useState<ClusteringStats | null>(null);
 
@@ -127,7 +126,6 @@ export const BattleReportsConfigView: React.FC = () => {
       ]);
 
       setIngestionConfig(ingestCfg);
-      setClusteringConfig(clusterCfg);
       setIngestionStats(ingestSts);
       setClusteringStats(clusterSts);
 
@@ -159,21 +157,23 @@ export const BattleReportsConfigView: React.FC = () => {
       return;
     }
 
-    const timer = setTimeout(async () => {
-      try {
-        const baseUrl = resolveBaseUrl();
-        const params = new URLSearchParams({ q: allianceInput, type: 'alliance' });
-        const response = await fetch(`${baseUrl}/search/entities?${params}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setAllianceSearchResults(data.alliances || []);
-          setShowAllianceDropdown(true);
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const baseUrl = resolveBaseUrl();
+          const params = new URLSearchParams({ q: allianceInput, type: 'alliance' });
+          const response = await fetch(`${baseUrl}/search/entities?${params}`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAllianceSearchResults(data.alliances || []);
+            setShowAllianceDropdown(true);
+          }
+        } catch (err) {
+          console.error('Alliance search failed:', err);
         }
-      } catch (err) {
-        console.error('Alliance search failed:', err);
-      }
+      })();
     }, 300);
 
     return () => clearTimeout(timer);
@@ -187,21 +187,23 @@ export const BattleReportsConfigView: React.FC = () => {
       return;
     }
 
-    const timer = setTimeout(async () => {
-      try {
-        const baseUrl = resolveBaseUrl();
-        const params = new URLSearchParams({ q: corpInput, type: 'corporation' });
-        const response = await fetch(`${baseUrl}/search/entities?${params}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setCorpSearchResults(data.corporations || []);
-          setShowCorpDropdown(true);
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const baseUrl = resolveBaseUrl();
+          const params = new URLSearchParams({ q: corpInput, type: 'corporation' });
+          const response = await fetch(`${baseUrl}/search/entities?${params}`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setCorpSearchResults(data.corporations || []);
+            setShowCorpDropdown(true);
+          }
+        } catch (err) {
+          console.error('Corporation search failed:', err);
         }
-      } catch (err) {
-        console.error('Corporation search failed:', err);
-      }
+      })();
     }, 300);
 
     return () => clearTimeout(timer);
