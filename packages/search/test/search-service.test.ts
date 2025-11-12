@@ -3,8 +3,7 @@ import { SearchService, createSearchService } from '../src/search-service.js';
 import type { TypesenseClient } from '../src/typesense-client.js';
 import { pino } from 'pino';
 
-// TODO: Fix test expectations for search service
-describe.skip('SearchService', () => {
+describe('SearchService', () => {
   let mockClient: Partial<TypesenseClient>;
   let logger: pino.Logger;
   let service: SearchService;
@@ -199,7 +198,6 @@ describe.skip('SearchService', () => {
       expect(result.systems).toHaveLength(1);
       expect(result.systems[0].name).toBe('Jita');
       expect(result.systems[0].securityType).toBe('nullsec');
-      expect(result.systems[0].securityType).toBe('highsec');
       expect(result.query).toBe('jita');
       expect(result.processingTimeMs).toBeGreaterThanOrEqual(0);
 
@@ -229,7 +227,7 @@ describe.skip('SearchService', () => {
       expect(mockClient.search).toHaveBeenCalledWith(
         'systems',
         expect.objectContaining({
-          filter_by: '(securityType:=jspace)',
+          filter_by: '(securityType:=wormhole)',
         }),
         'autocomplete_systems',
       );
@@ -246,7 +244,7 @@ describe.skip('SearchService', () => {
       expect(mockClient.search).toHaveBeenCalledWith(
         'systems',
         expect.objectContaining({
-          filter_by: '(securityType:=kspace || securityType:=jspace)',
+          filter_by: '(securityType:=nullsec || securityType:=wormhole)',
         }),
         'autocomplete_systems',
       );
@@ -329,7 +327,7 @@ describe.skip('SearchService', () => {
       expect(result.limit).toBe(20);
       expect(result.offset).toBe(0);
       expect(result.facets).toBeDefined();
-      expect(result.facets?.securityType).toEqual({ kspace: 10, jspace: 5 });
+      expect(result.facets?.securityType).toEqual({ nullsec: 10, wormhole: 5 });
 
       expect(mockClient.search).toHaveBeenCalledWith(
         'battles',
@@ -339,7 +337,7 @@ describe.skip('SearchService', () => {
           per_page: 20,
           page: 1,
           sort_by: 'startTime:desc',
-          facet_by: 'securityType,securityType',
+          facet_by: 'securityType',
         }),
         'search_battles',
       );
@@ -357,7 +355,7 @@ describe.skip('SearchService', () => {
       expect(mockClient.search).toHaveBeenCalledWith(
         'battles',
         expect.objectContaining({
-          filter_by: '(securityType:=kspace)',
+          filter_by: '(securityType:=nullsec)',
         }),
         'search_battles',
       );
@@ -491,7 +489,7 @@ describe.skip('SearchService', () => {
       const params = call[1];
 
       expect(params.q).toBe('pandemic');
-      expect(params.filter_by).toContain('securityType:=kspace');
+      expect(params.filter_by).toContain('securityType:=nullsec');
       expect(params.filter_by).toContain('totalKills:>=10');
       expect(params.filter_by).toMatch(/&&/); // Filters joined with &&
     });

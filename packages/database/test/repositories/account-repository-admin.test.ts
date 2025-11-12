@@ -2,39 +2,47 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { AccountRepository } from '../../src/repositories/auth/account-repository.js';
 import { createTestDatabase, type TestDatabase } from '../test-db.js';
 
-// TODO: Fix pg-mem UUID generation issues causing duplicate key errors
-describe.skip('AccountRepository - SuperAdmin Management', () => {
+describe('AccountRepository - SuperAdmin Management', () => {
   let testDb: TestDatabase | undefined;
   let repository: AccountRepository;
   let testAccountId: string;
   let superAdminId: string;
 
-  beforeEach(async () => {
-    // Create fresh database for each test to avoid UUID collision issues in pg-mem
+  beforeAll(async () => {
     testDb = await createTestDatabase();
     repository = new AccountRepository(testDb.db);
+  });
 
+  afterAll(async () => {
+    if (testDb) {
+      await testDb.destroy();
+    }
+  });
+
+  beforeEach(async () => {
     // Create a regular account
     const account = await repository.create({
       displayName: 'Test User',
-      email: 'test@example.com',
+      email: `test-${Math.random()}@example.com`,
     });
     testAccountId = account.id;
 
     // Create a SuperAdmin account
     const superAdmin = await repository.create({
       displayName: 'Super Admin',
-      email: 'admin@example.com',
+      email: `admin-${Math.random()}@example.com`,
       isSuperAdmin: true,
     });
     superAdminId = superAdmin.id;
   });
 
   afterEach(async () => {
-    // Destroy the database instance after each test
-    if (testDb) {
-      await testDb.destroy();
-      testDb = undefined;
+    // Hard delete from database to avoid UUID conflicts in pg-mem
+    if (superAdminId && testDb) {
+      await testDb.db.deleteFrom('accounts').where('id', '=', superAdminId).execute();
+    }
+    if (testAccountId && testDb) {
+      await testDb.db.deleteFrom('accounts').where('id', '=', testAccountId).execute();
     }
   });
 
@@ -99,8 +107,7 @@ describe.skip('AccountRepository - SuperAdmin Management', () => {
   });
 });
 
-// TODO: Fix pg-mem UUID generation issues causing duplicate key errors
-describe.skip('AccountRepository - getDetailWithCharactersGrouped', () => {
+describe('AccountRepository - getDetailWithCharactersGrouped', () => {
   let testDb: TestDatabase | undefined;
   let repository: AccountRepository;
   let accountId: string;

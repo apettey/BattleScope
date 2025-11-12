@@ -21,20 +21,34 @@ export const createInMemoryDatabase = async (): Promise<InMemoryDatabase> => {
     returns: DataType.timestamptz,
     implementation: () => new Date(),
   });
+
+  // Counter to ensure UUID uniqueness in pg-mem across multiple calls
+  let uuidCounter = 0;
   mem.public.registerFunction({
     name: 'gen_random_uuid',
     returns: DataType.uuid,
+    // Mark as impure/volatile to prevent pg-mem from caching the result
+    impure: true,
     implementation: () => {
-      // UUID v4 implementation using crypto if available, otherwise fallback
+      // UUID v4 implementation using crypto if available, with counter for uniqueness
       if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
+        const uuid = crypto.randomUUID();
+        // Inject counter into UUID to ensure uniqueness in pg-mem
+        const parts = uuid.split('-');
+        const counterHex = (uuidCounter++).toString(16).padStart(12, '0').slice(-12);
+        parts[4] = counterHex;
+        return parts.join('-');
       }
-      // Fallback UUID v4 implementation
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      // Fallback UUID v4 implementation with counter
+      const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
         const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
       });
+      const parts = uuid.split('-');
+      const counterHex = (uuidCounter++).toString(16).padStart(12, '0').slice(-12);
+      parts[4] = counterHex;
+      return parts.join('-');
     },
   });
 

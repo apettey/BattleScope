@@ -104,8 +104,7 @@ const sampleDetail = {
   ],
 };
 
-// TODO: Fix App test - Battles button not rendering
-describe.skip('App', () => {
+describe('App', () => {
   const mockedFetchBattles = fetchBattles as unknown as Mock;
   const mockedFetchBattleDetail = fetchBattleDetail as unknown as Mock;
   const mockedFetchDashboardSummary = fetchDashboardSummary as unknown as Mock;
@@ -116,7 +115,8 @@ describe.skip('App', () => {
     mockedFetchDashboardSummary.mockReset();
   });
 
-  it('renders home overview and navigates to battles tab', async () => {
+  // TODO: Fix test - Battles button may have been renamed or moved
+  it.skip('renders home overview and navigates to battles tab', async () => {
     mockedFetchDashboardSummary.mockResolvedValue({
       totalBattles: 12,
       totalKillmails: 34,
