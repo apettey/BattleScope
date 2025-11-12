@@ -1,8 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import {
-  ClusteringEngine,
-  type ClusteringParameters,
-} from '../src/clustering/engine.js';
+import { ClusteringEngine, type ClusteringParameters } from '../src/clustering/engine.js';
 import type { KillmailEventRecord } from '@battlescope/database';
 
 describe('ClusteringEngine', () => {
