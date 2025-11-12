@@ -33,7 +33,12 @@ const tabs: Array<{ id: TabId; label: string; render: () => JSX.Element; adminOn
   { id: 'battles', label: 'Battle Reports', render: () => <BattlesView /> },
   { id: 'profile', label: 'Profile', render: () => <EnhancedProfileView /> },
   { id: 'admin', label: 'Admin', render: () => <AdminView />, adminOnly: true },
-  { id: 'battle-reports-admin', label: 'Battle Reports Admin', render: () => <BattleReportsConfigView />, adminOnly: true },
+  {
+    id: 'battle-reports-admin',
+    label: 'Battle Reports Admin',
+    render: () => <BattleReportsConfigView />,
+    adminOnly: true,
+  },
 ];
 
 const isValidTab = (value: string): value is TabId => tabs.some((tab) => tab.id === value);

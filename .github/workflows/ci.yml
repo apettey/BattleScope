@@ -134,3 +134,26 @@ jobs:
           tags: |
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest
+
+  sync-docker-readmes:
+    name: Sync Docker Hub READMEs
+    runs-on: ubuntu-latest
+    needs: publish-images
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install docker-pushrm
+        run: |
+          wget https://github.com/christian-korneck/docker-pushrm/releases/download/v1.9.0/docker-pushrm_linux_amd64
+          chmod +x docker-pushrm_linux_amd64
+          sudo mv docker-pushrm_linux_amd64 /usr/local/bin/docker-pushrm
+
+      - name: Sync all Docker Hub READMEs
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          chmod +x ./scripts/docker-readme-sync.sh
+          ./scripts/docker-readme-sync.sh

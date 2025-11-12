@@ -375,9 +375,12 @@ export class EntitySyncer {
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
       try {
-        const result = await this.typesenseClient.collections('entities').documents().import(batch, {
-          action: 'upsert',
-        });
+        const result = await this.typesenseClient
+          .collections('entities')
+          .documents()
+          .import(batch, {
+            action: 'upsert',
+          });
 
         // Typesense returns an array of import results
         if (Array.isArray(result)) {

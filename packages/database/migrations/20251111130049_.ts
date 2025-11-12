@@ -37,6 +37,10 @@ export async function down(db: Kysely<Database>): Promise<void> {
   // Restore original primary key including ship_type_id
   await db.schema
     .alterTable('battle_participants')
-    .addPrimaryKeyConstraint('battle_participants_pk', ['battle_id', 'character_id', 'ship_type_id'])
+    .addPrimaryKeyConstraint('battle_participants_pk', [
+      'battle_id',
+      'character_id',
+      'ship_type_id',
+    ])
     .execute();
 }

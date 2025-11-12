@@ -74,14 +74,22 @@ export const BattleReportsConfigView: React.FC = () => {
   const [corpInput, setCorpInput] = useState('');
 
   // Autocomplete state
-  const [allianceSearchResults, setAllianceSearchResults] = useState<Array<{id: string; name: string; ticker: string | null}>>([]);
-  const [corpSearchResults, setCorpSearchResults] = useState<Array<{id: string; name: string; ticker: string | null}>>([]);
+  const [allianceSearchResults, setAllianceSearchResults] = useState<
+    Array<{ id: string; name: string; ticker: string | null }>
+  >([]);
+  const [corpSearchResults, setCorpSearchResults] = useState<
+    Array<{ id: string; name: string; ticker: string | null }>
+  >([]);
   const [showAllianceDropdown, setShowAllianceDropdown] = useState(false);
   const [showCorpDropdown, setShowCorpDropdown] = useState(false);
 
   // Entity name mappings (for displaying tracked entities)
-  const [allianceNames, setAllianceNames] = useState<Map<string, {name: string; ticker: string | null}>>(new Map());
-  const [corpNames, setCorpNames] = useState<Map<string, {name: string; ticker: string | null}>>(new Map());
+  const [allianceNames, setAllianceNames] = useState<
+    Map<string, { name: string; ticker: string | null }>
+  >(new Map());
+  const [corpNames, setCorpNames] = useState<Map<string, { name: string; ticker: string | null }>>(
+    new Map(),
+  );
 
   const loadData = async () => {
     try {
@@ -155,10 +163,9 @@ export const BattleReportsConfigView: React.FC = () => {
       try {
         const baseUrl = resolveBaseUrl();
         const params = new URLSearchParams({ q: allianceInput, type: 'alliance' });
-        const response = await fetch(
-          `${baseUrl}/search/entities?${params}`,
-          { credentials: 'include' }
-        );
+        const response = await fetch(`${baseUrl}/search/entities?${params}`, {
+          credentials: 'include',
+        });
         if (response.ok) {
           const data = await response.json();
           setAllianceSearchResults(data.alliances || []);
@@ -184,10 +191,9 @@ export const BattleReportsConfigView: React.FC = () => {
       try {
         const baseUrl = resolveBaseUrl();
         const params = new URLSearchParams({ q: corpInput, type: 'corporation' });
-        const response = await fetch(
-          `${baseUrl}/search/entities?${params}`,
-          { credentials: 'include' }
-        );
+        const response = await fetch(`${baseUrl}/search/entities?${params}`, {
+          credentials: 'include',
+        });
         if (response.ok) {
           const data = await response.json();
           setCorpSearchResults(data.corporations || []);
@@ -331,7 +337,14 @@ export const BattleReportsConfigView: React.FC = () => {
       </p>
 
       {/* Statistics Overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '16px',
+          marginBottom: '32px',
+        }}
+      >
         {ingestionStats && (
           <>
             <div
@@ -403,7 +416,9 @@ export const BattleReportsConfigView: React.FC = () => {
               <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
                 Last Processed
               </div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a', marginTop: '8px' }}>
+              <div
+                style={{ fontSize: '18px', fontWeight: '600', color: '#0f172a', marginTop: '8px' }}
+              >
                 {clusteringStats.lastProcessedAt
                   ? new Date(clusteringStats.lastProcessedAt).toLocaleString()
                   : 'Never'}
@@ -428,7 +443,15 @@ export const BattleReportsConfigView: React.FC = () => {
         </h2>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#0f172a',
+              marginBottom: '8px',
+            }}
+          >
             Minimum Pilots per Killmail
           </label>
           <input
@@ -451,7 +474,15 @@ export const BattleReportsConfigView: React.FC = () => {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#0f172a',
+              marginBottom: '8px',
+            }}
+          >
             Tracked Security Types
           </label>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -480,7 +511,15 @@ export const BattleReportsConfigView: React.FC = () => {
         </div>
 
         <div style={{ marginBottom: '20px', position: 'relative' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#0f172a',
+              marginBottom: '8px',
+            }}
+          >
             Tracked Alliances
           </label>
           <div style={{ position: 'relative' }}>
@@ -594,12 +633,21 @@ export const BattleReportsConfigView: React.FC = () => {
             </div>
           )}
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-            Only killmails involving these alliances will be ingested (if Ignore Unlisted is enabled)
+            Only killmails involving these alliances will be ingested (if Ignore Unlisted is
+            enabled)
           </div>
         </div>
 
         <div style={{ marginBottom: '20px', position: 'relative' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#0f172a',
+              marginBottom: '8px',
+            }}
+          >
             Tracked Corporations
           </label>
           <div style={{ position: 'relative' }}>
@@ -713,7 +761,8 @@ export const BattleReportsConfigView: React.FC = () => {
             </div>
           )}
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-            Only killmails involving these corporations will be ingested (if Ignore Unlisted is enabled)
+            Only killmails involving these corporations will be ingested (if Ignore Unlisted is
+            enabled)
           </div>
         </div>
 
@@ -782,7 +831,15 @@ export const BattleReportsConfigView: React.FC = () => {
 
         <div style={{ display: 'grid', gap: '20px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#0f172a',
+                marginBottom: '8px',
+              }}
+            >
               Time Window (minutes)
             </label>
             <input
@@ -806,7 +863,15 @@ export const BattleReportsConfigView: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#0f172a',
+                marginBottom: '8px',
+              }}
+            >
               Maximum Kill Gap (minutes)
             </label>
             <input
@@ -830,7 +895,15 @@ export const BattleReportsConfigView: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0f172a', marginBottom: '8px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#0f172a',
+                marginBottom: '8px',
+              }}
+            >
               Minimum Kills per Battle
             </label>
             <input
