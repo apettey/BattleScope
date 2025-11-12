@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import type { Redis } from 'ioredis';
 import { deriveSecurityType, SystemSecurityResolver } from '../src/system-security.js';
 
@@ -159,19 +159,21 @@ describe('deriveSecurityType', () => {
 });
 
 describe('SystemSecurityResolver', () => {
-  let mockEsiClient: { getSystemInfo: ReturnType<typeof vi.fn> };
+  let mockEsiClient: {
+    getSystemInfo: Mock<[systemId: number], Promise<{ security_status: number }>>;
+  };
   let mockRedis: Partial<Redis>;
   let resolver: SystemSecurityResolver;
 
   beforeEach(() => {
     mockEsiClient = {
-      getSystemInfo: vi.fn(),
+      getSystemInfo: vi.fn<[systemId: number], Promise<{ security_status: number }>>(),
     };
 
     mockRedis = {
       get: vi.fn(),
       setex: vi.fn(),
-      del: vi.fn(),
+      del: vi.fn() as unknown as Redis['del'],
     };
   });
 

@@ -4,7 +4,9 @@ import { z } from 'zod';
 export const SecurityTypeSchema = z.enum(['highsec', 'lowsec', 'nullsec', 'wormhole', 'pochven']);
 
 export const ErrorResponseSchema = z.object({
+  error: z.string(),
   message: z.string(),
+  statusCode: z.number(),
 });
 
 // Battle schemas

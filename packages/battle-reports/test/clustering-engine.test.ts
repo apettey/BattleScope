@@ -19,6 +19,9 @@ describe('ClusteringEngine', () => {
     killmailId: BigInt(Math.floor(Math.random() * 1000000)),
     systemId: 30000142n, // Jita by default
     occurredAt: new Date('2024-01-01T12:00:00Z'),
+    fetchedAt: new Date('2024-01-01T12:01:00Z'),
+    processedAt: null,
+    battleId: null,
     zkbUrl: 'https://zkillboard.com/kill/123456/',
     victimCharacterId: 12345n,
     victimCorpId: 67890n,
@@ -820,17 +823,17 @@ describe('ClusteringEngine', () => {
         createKillmail({
           killmailId: 1n,
           victimAllianceId: null,
-          attackerAllianceIds: null,
+          attackerAllianceIds: [],
         }),
         createKillmail({
           killmailId: 2n,
           victimAllianceId: null,
-          attackerAllianceIds: null,
+          attackerAllianceIds: [],
         }),
         createKillmail({
           killmailId: 3n,
           victimAllianceId: null,
-          attackerAllianceIds: null,
+          attackerAllianceIds: [],
         }),
       ];
 

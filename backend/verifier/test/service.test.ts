@@ -29,11 +29,14 @@ import {
 
 describe('CharacterVerifierService', () => {
   let service: CharacterVerifierService;
-  let mockDb: Partial<Kysely<Database>>;
-  let mockRedis: Partial<Redis>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDb: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockRedis: any;
   let mockEsiClient: Partial<EsiClient>;
   let mockEncryptionService: Partial<EncryptionService>;
-  let mockLogger: Partial<Logger>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockLogger: any;
   let mockCharacterRepo: {
     update: ReturnType<typeof vi.fn>;
   };
@@ -517,7 +520,11 @@ describe('CharacterVerifierService', () => {
       ]);
 
       vi.mocked(mockEsiClient.getCharacterInfo!).mockRejectedValue(
-        new EsiHttpError('Unauthorized', 401, 'GET', '/characters/123'),
+        new EsiHttpError('Unauthorized', {
+          statusCode: 401,
+          operationId: 'GET',
+          url: '/characters/123',
+        }),
       );
 
       mockAuthConfigRepo.isCharacterAllowed.mockResolvedValue(true);
@@ -554,7 +561,11 @@ describe('CharacterVerifierService', () => {
       ]);
 
       vi.mocked(mockEsiClient.getCharacterInfo!).mockRejectedValue(
-        new EsiHttpError('Forbidden', 403, 'GET', '/characters/123'),
+        new EsiHttpError('Forbidden', {
+          statusCode: 403,
+          operationId: 'GET',
+          url: '/characters/123',
+        }),
       );
 
       mockAuthConfigRepo.isCharacterAllowed.mockResolvedValue(true);
@@ -592,7 +603,13 @@ describe('CharacterVerifierService', () => {
 
       // First call rate limited, second succeeds
       vi.mocked(mockEsiClient.getCharacterInfo!)
-        .mockRejectedValueOnce(new EsiHttpError('Too Many Requests', 429, 'GET', '/characters/123'))
+        .mockRejectedValueOnce(
+          new EsiHttpError('Too Many Requests', {
+            statusCode: 429,
+            operationId: 'GET',
+            url: '/characters/123',
+          }),
+        )
         .mockResolvedValueOnce({
           corporation_id: Number(character.currentCorpId),
           alliance_id: Number(character.currentAllianceId),

@@ -101,7 +101,11 @@ const handleListRequest = async (
   if (query.cursor) {
     cursor = decodeCursor(query.cursor) ?? undefined;
     if (!cursor) {
-      return reply.status(400).send({ message: 'Invalid cursor' });
+      return reply.status(400).send({
+        error: 'invalid_input',
+        message: 'Invalid cursor',
+        statusCode: 400,
+      });
     }
   }
 
@@ -109,7 +113,11 @@ const handleListRequest = async (
   try {
     filters = buildFilters(query, overrides);
   } catch {
-    return reply.status(400).send({ message: 'Invalid character id' });
+    return reply.status(400).send({
+      error: 'invalid_input',
+      message: 'Invalid character id',
+      statusCode: 400,
+    });
   }
 
   const limit = query.limit ?? DEFAULT_LIMIT;
@@ -224,7 +232,11 @@ export const registerBattleRoutes = (
           characterId: BigInt(params.id),
         });
       } catch {
-        return reply.status(400).send({ message: 'Invalid character id' });
+        return reply.status(400).send({
+          error: 'invalid_input',
+          message: 'Invalid character id',
+          statusCode: 400,
+        });
       }
     },
   });
@@ -253,7 +265,11 @@ export const registerBattleRoutes = (
       });
 
       if (!battle) {
-        return reply.status(404).send({ message: 'Battle not found' });
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Battle not found',
+          statusCode: 404,
+        });
       }
 
       const response = await nameEnricher.enrichBattleDetail(battle);
@@ -286,7 +302,11 @@ export const registerBattleRoutes = (
       });
 
       if (!statistics) {
-        return reply.status(404).send({ message: 'Alliance not found or no battles recorded' });
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Alliance not found or no battles recorded',
+          statusCode: 404,
+        });
       }
 
       // Collect IDs for name resolution
@@ -358,7 +378,11 @@ export const registerBattleRoutes = (
       });
 
       if (!statistics) {
-        return reply.status(404).send({ message: 'Corporation not found or no battles recorded' });
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Corporation not found or no battles recorded',
+          statusCode: 404,
+        });
       }
 
       // Get corp info to find alliance
@@ -432,7 +456,11 @@ export const registerBattleRoutes = (
       });
 
       if (!statistics) {
-        return reply.status(404).send({ message: 'Character not found or no battles recorded' });
+        return reply.status(404).send({
+          error: 'not_found',
+          message: 'Character not found or no battles recorded',
+          statusCode: 404,
+        });
       }
 
       const idsToResolve = new Set<string>();
