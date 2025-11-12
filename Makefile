@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability k8s-reset k8s-reset-force k8s-deploy-all
+.PHONY: help install install-ci clean build lint test test-unit test-integration test-all test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability k8s-reset k8s-reset-force k8s-deploy-all
 
 # Default target: show help
 .DEFAULT_GOAL := help
@@ -44,8 +44,23 @@ build: ## Build all packages and services
 lint: ## Run ESLint on all TypeScript files
 	pnpm run lint
 
-test: ## Run all tests with coverage
-	pnpm run test
+test: test-unit ## Run all tests (alias for test-unit)
+
+test-unit: ## Run unit tests (currently runs all tests since no integration tests exist yet)
+	@echo "🧪 Running unit tests..."
+	@pnpm -r --workspace-concurrency=4 --if-present test
+
+test-integration: ## Run integration tests only (place integration tests in **/integration/*.test.ts)
+	@echo "🔌 Running integration tests..."
+	@echo "Note: Integration tests should be placed in **/integration/*.test.ts files"
+	@find . -path "*/integration/*.test.ts" -type f | head -1 | grep -q . && \
+		pnpm -r --workspace-concurrency=1 exec vitest run --dir integration || \
+		echo "No integration tests found (create files in **/integration/*.test.ts)"
+
+test-all: ## Run both unit and integration tests
+	@echo "🧪 Running all tests (unit + integration)..."
+	@$(MAKE) test-unit
+	@$(MAKE) test-integration
 
 test-watch: ## Run tests in watch mode (for development)
 	pnpm run test:watch
@@ -95,7 +110,7 @@ generate-openapi: ## Generate OpenAPI specification from API routes
 # CI/CD
 #==============================================================================
 
-ci: install-ci build format-check lint typecheck test ## Run full CI pipeline (install, build, lint, test)
+ci: install-ci build format-check lint typecheck test-unit ## Run full CI pipeline (install, build, lint, unit tests)
 
 #==============================================================================
 # DOCKER COMPOSE
