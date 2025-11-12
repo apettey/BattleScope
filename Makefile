@@ -1,75 +1,122 @@
 SHELL := /bin/bash
 
-.PHONY: install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability k8s-reset k8s-reset-force k8s-deploy-all
+.PHONY: help install install-ci clean build lint test test-watch typecheck format format-check dev ingest db-migrate db-migrate-make generate-openapi ci compose-up compose-down compose-logs compose-remote-up compose-remote-down battlescope-images-clean k8s-build-push k8s-redeploy k8s-restart-observability k8s-reset k8s-reset-force k8s-deploy-all
 
-install:
+# Default target: show help
+.DEFAULT_GOAL := help
+
+#==============================================================================
+# HELP TARGET
+#==============================================================================
+
+help: ## Display this help message
+	@echo "BattleScope Makefile Commands"
+	@echo "=============================="
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "For more information, see README.md"
+
+#==============================================================================
+# DEPENDENCY MANAGEMENT
+#==============================================================================
+
+install: ## Install all dependencies using PNPM
 	pnpm install
 
-install-ci:
+install-ci: ## Install dependencies with frozen lockfile (for CI)
 	pnpm install --frozen-lockfile
 
-clean:
+#==============================================================================
+# BUILD & CLEAN
+#==============================================================================
+
+clean: ## Remove build artifacts and coverage reports
 	pnpm run clean
 
-build:
+build: ## Build all packages and services
 	pnpm run build
 
-lint:
+#==============================================================================
+# CODE QUALITY
+#==============================================================================
+
+lint: ## Run ESLint on all TypeScript files
 	pnpm run lint
 
-test:
+test: ## Run all tests with coverage
 	pnpm run test
 
-test-watch:
+test-watch: ## Run tests in watch mode (for development)
 	pnpm run test:watch
 
-typecheck:
+typecheck: ## Run TypeScript type checking across all packages
 	pnpm run typecheck
 
-format:
+format: ## Format all code using Prettier
 	pnpm run format
 
-format-check:
+format-check: ## Check code formatting without making changes
 	pnpm run format:check
 
-dev:
+#==============================================================================
+# DEVELOPMENT
+#==============================================================================
+
+dev: ## Start all services in development mode
 	pnpm dev
 
-ingest:
+ingest: ## Start the ingest service standalone
 	pnpm ingest:start
 
-db-migrate:
+#==============================================================================
+# DATABASE
+#==============================================================================
+
+db-migrate: ## Run database migrations
 	pnpm run db:migrate
 
-db-migrate-make:
+db-migrate-make: ## Create a new database migration (usage: make db-migrate-make NAME=migration_name)
 ifndef NAME
 	$(error NAME is required, e.g. make db-migrate-make NAME=create_table)
 endif
 	pnpm run db:migrate:make $(NAME)
 
-generate-openapi:
+#==============================================================================
+# API DOCUMENTATION
+#==============================================================================
+
+generate-openapi: ## Generate OpenAPI specification from API routes
 	@echo "🔧 Generating OpenAPI specification..."
 	cd backend/api && pnpm run generate-openapi
 	@echo "✅ OpenAPI spec generated at docs/openapi.json and docs/openapi-generated.yaml"
 
-ci: install-ci build format-check lint typecheck test
+#==============================================================================
+# CI/CD
+#==============================================================================
 
-compose-up:
+ci: install-ci build format-check lint typecheck test ## Run full CI pipeline (install, build, lint, test)
+
+#==============================================================================
+# DOCKER COMPOSE
+#==============================================================================
+
+compose-up: ## Start all services with Docker Compose (builds locally)
 	docker compose up --build
 
-compose-down:
+compose-down: ## Stop and remove all Docker Compose containers
 	docker compose down --remove-orphans
 
-compose-logs:
+compose-logs: ## Follow logs from all Docker Compose services
 	docker compose logs -f
 
-compose-remote-up:
+compose-remote-up: ## Start services using pre-built images from Docker Hub
 	docker compose -f docker-compose.remote.yml up --pull always
 
-compose-remote-down:
+compose-remote-down: ## Stop services started from Docker Hub images
 	docker compose -f docker-compose.remote.yml down --remove-orphans
 
-battlescope-images-clean:
+battlescope-images-clean: ## Remove all local BattleScope Docker images
 	@set -e; \
 	images=$$(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep 'battlescope' || true); \
 	if [ -n "$$images" ]; then \
@@ -80,61 +127,75 @@ battlescope-images-clean:
 		echo "No Battlescope images found."; \
 	fi
 
-k8s-build-push:
-	@echo "Building and pushing all k8s images for arm64..."
-	@echo "Building frontend..."
+#==============================================================================
+# KUBERNETES DEPLOYMENT
+#==============================================================================
+
+k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
+	@echo "🐳 Building and pushing all Kubernetes images for arm64..."
+	@echo ""
+	@echo "📦 Building frontend (petdog/battlescope-frontend)..."
 	docker buildx build --platform linux/arm64 --push \
 		-t docker.io/petdog/battlescope-frontend:latest \
 		-f frontend/Dockerfile .
-	@echo "Building api..."
+	@echo ""
+	@echo "📦 Building api (petdog/battlescope-api)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/api \
 		--build-arg BUILD_TARGET=backend/api \
 		-t docker.io/petdog/battlescope-api:latest \
 		-f Dockerfile .
-	@echo "Building ingest..."
+	@echo ""
+	@echo "📦 Building ingest (petdog/battlescope-ingest)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/ingest \
 		--build-arg BUILD_TARGET=backend/ingest \
 		-t docker.io/petdog/battlescope-ingest:latest \
 		-f Dockerfile .
-	@echo "Building enrichment..."
+	@echo ""
+	@echo "📦 Building enrichment (petdog/battlescope-enrichment)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/enrichment \
 		--build-arg BUILD_TARGET=backend/enrichment \
 		-t docker.io/petdog/battlescope-enrichment:latest \
 		-f Dockerfile .
-	@echo "Building clusterer..."
+	@echo ""
+	@echo "📦 Building clusterer (petdog/battlescope-clusterer)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/clusterer \
 		--build-arg BUILD_TARGET=backend/clusterer \
 		-t docker.io/petdog/battlescope-clusterer:latest \
 		-f Dockerfile .
-	@echo "Building scheduler..."
+	@echo ""
+	@echo "📦 Building scheduler (petdog/battlescope-scheduler)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/scheduler \
 		--build-arg BUILD_TARGET=backend/scheduler \
 		-t docker.io/petdog/battlescope-scheduler:latest \
 		-f Dockerfile .
-	@echo "Building db-migrate..."
+	@echo ""
+	@echo "📦 Building db-migrate (petdog/battlescope-db-migrate)..."
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/database \
 		--build-arg BUILD_TARGET=packages/database \
 		-t docker.io/petdog/battlescope-db-migrate:latest \
 		-f Dockerfile .
-		@echo "Building verifier..."
-		docker buildx build --platform linux/arm64 --push \
-			--build-arg SERVICE_SCOPE=@battlescope/verifier \
-			--build-arg BUILD_TARGET=packages/verifier \
-			-t docker.io/petdog/battlescope-verifier:latest \
-			-f Dockerfile .
-	@echo "Building search-sync..."
+	@echo ""
+	@echo "📦 Building verifier (petdog/battlescope-verifier)..."
+	docker buildx build --platform linux/arm64 --push \
+		--build-arg SERVICE_SCOPE=@battlescope/verifier \
+		--build-arg BUILD_TARGET=packages/verifier \
+		-t docker.io/petdog/battlescope-verifier:latest \
+		-f Dockerfile .
+	@echo ""
+	@echo "📦 Building search-sync (petdog/battlescope-search-sync)..."
 	docker buildx build --platform linux/arm64 --push \
 		-t docker.io/petdog/battlescope-search-sync:latest \
 		-f backend/search-sync/Dockerfile .
-	@echo "All images built and pushed successfully!"
+	@echo ""
+	@echo "✅ All images built and pushed successfully!"
 
-k8s-redeploy:
+k8s-redeploy: ## Restart all application deployments (picks up new images)
 	@echo "🔄 Redeploying all application pods in the battlescope namespace..."
 	@echo "Restarting frontend deployment..."
 	kubectl rollout restart deployment/frontend -n battlescope
@@ -149,7 +210,7 @@ k8s-redeploy:
 	@echo "Note: scheduler CronJob will pick up the latest image on its next scheduled run"
 	@echo "✅ All application deployments restarted successfully!"
 
-k8s-restart-observability:
+k8s-restart-observability: ## Restart observability stack (Prometheus, Grafana, Loki, etc.)
 	@echo "🔄 Restarting observability stack to pick up config changes..."
 	@echo "Restarting OTEL Collector..."
 	kubectl rollout restart deployment/otel-collector -n battlescope
@@ -159,7 +220,7 @@ k8s-restart-observability:
 	kubectl rollout restart statefulset/loki -n battlescope
 	@echo "✅ Observability stack restarted successfully!"
 
-k8s-deploy-all:
+k8s-deploy-all: ## Deploy all Kubernetes resources to battlescope namespace
 	@echo "📦 Deploying all k8s resources to battlescope namespace..."
 	@echo ""
 	@echo "Step 1: Namespace and Secrets"
@@ -211,7 +272,7 @@ k8s-deploy-all:
 	@echo "To watch pods starting: kubectl get pods -n battlescope -w"
 	@echo "To check logs: kubectl logs -n battlescope -l app=<service-name>"
 
-k8s-reset-force:
+k8s-reset-force: ## Force reset cluster WITHOUT confirmation (DANGER: deletes all data)
 	@echo "💥 FORCE RESETTING k8s cluster (deleting all data)..."
 	@echo ""
 	@echo "Deleting namespace 'battlescope' (this will delete all resources and data)..."
@@ -225,7 +286,7 @@ k8s-reset-force:
 	@echo "Deploying all resources..."
 	@$(MAKE) k8s-deploy-all
 
-k8s-reset:
+k8s-reset: ## Reset cluster with confirmation prompt (WARNING: deletes all data)
 	@echo "⚠️  WARNING: This will DELETE ALL DATA in the battlescope namespace!"
 	@echo "⚠️  This includes:"
 	@echo "    - All PostgreSQL data (battles, killmails, accounts, etc.)"
