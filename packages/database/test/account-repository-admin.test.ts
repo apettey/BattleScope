@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AccountRepository } from '../../src/repositories/auth/account-repository.js';
-import { createTestDatabase, type TestDatabase } from '../test-db.js';
+import { AccountRepository } from '../src/repositories/auth/account-repository.js';
+import { createTestDatabase, type TestDatabase } from './test-db.js';
 
 describe('AccountRepository - SuperAdmin Management', () => {
   let testDb: TestDatabase | undefined;
