@@ -17,10 +17,10 @@ import {
 import { createInMemoryDatabase } from '@battlescope/database/testing';
 import type { KillmailEventInsert } from '@battlescope/database';
 import type { EsiClient, UniverseName } from '@battlescope/esi-client';
-import { buildServer } from '../src/server.js';
-import type { ApiConfig } from '../src/config.js';
-import { NameEnricher } from '../src/services/name-enricher.js';
-import { createMockEsiClient, createMockSearchService } from '../src/test-utils.js';
+import { buildServer } from '../../src/server.js';
+import type { ApiConfig } from '../../src/config.js';
+import { NameEnricher } from '../../src/services/name-enricher.js';
+import { createMockEsiClient, createMockSearchService } from '../../src/test-utils.js';
 
 const createNameEnricher = (): NameEnricher => {
   const cache = new Map<number, UniverseName>();

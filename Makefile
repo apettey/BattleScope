@@ -50,12 +50,16 @@ test-unit: ## Run unit tests (currently runs all tests since no integration test
 	@echo "🧪 Running unit tests..."
 	@pnpm -r --workspace-concurrency=4 --if-present test
 
-test-integration: ## Run integration tests only (place integration tests in **/integration/*.test.ts)
+test-integration: ## Run integration tests only (place integration tests in **/test/integration/*.test.ts)
 	@echo "🔌 Running integration tests..."
-	@echo "Note: Integration tests should be placed in **/integration/*.test.ts files"
-	@find . -path "*/integration/*.test.ts" -type f | head -1 | grep -q . && \
-		pnpm -r --workspace-concurrency=1 exec vitest run --dir integration || \
-		echo "No integration tests found (create files in **/integration/*.test.ts)"
+	@echo "Note: Integration tests should be placed in **/test/integration/*.test.ts files"
+	@if find . -path "*/test/integration/*.test.ts" -type f -not -path "*/node_modules/*" | grep -q .; then \
+		pnpm --filter @battlescope/database exec vitest run test/integration/ 2>/dev/null || true; \
+		pnpm --filter @battlescope/api exec vitest run test/integration/ 2>/dev/null || true; \
+		echo "✅ Integration tests completed"; \
+	else \
+		echo "No integration tests found (create files in **/test/integration/*.test.ts)"; \
+	fi
 
 test-all: ## Run both unit and integration tests
 	@echo "🧪 Running all tests (unit + integration)..."

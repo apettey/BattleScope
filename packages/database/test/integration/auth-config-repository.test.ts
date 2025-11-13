@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AuthConfigRepository } from '../src/repositories/auth/auth-config-repository.js';
-import { createTestDatabase, type TestDatabase } from './test-db.js';
+import { AuthConfigRepository } from '../../src/repositories/auth/auth-config-repository.js';
+import { createTestDatabase, type TestDatabase } from '../test-db.js';
 
 let testDb: TestDatabase | undefined;
 let repository: AuthConfigRepository;

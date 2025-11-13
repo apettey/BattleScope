@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { KillmailRepository } from '../src/repositories/killmail-repository.js';
-import { createTestDatabase, type TestDatabase } from './test-db.js';
+import { KillmailRepository } from '../../src/repositories/killmail-repository.js';
+import { createTestDatabase, type TestDatabase } from '../test-db.js';
 
 let testDb: TestDatabase | undefined;
 let repository: KillmailRepository;
