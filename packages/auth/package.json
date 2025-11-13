@@ -5,6 +5,12 @@
   "type": "module",
   "main": "dist/auth/src/index.js",
   "types": "dist/auth/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/auth/src/index.d.ts",
+      "default": "./dist/auth/src/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",

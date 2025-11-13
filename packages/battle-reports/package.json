@@ -5,6 +5,12 @@
   "type": "module",
   "main": "dist/battle-reports/src/index.js",
   "types": "dist/battle-reports/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/battle-reports/src/index.d.ts",
+      "default": "./dist/battle-reports/src/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
