@@ -87,6 +87,9 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           fail-on-cache-miss: true
 
+      - name: Run Build
+        run: make build
+
       - name: Run ESLint
         run: make lint
 
