@@ -125,6 +125,9 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           fail-on-cache-miss: true
 
+      - name: Run Build
+        run: make build
+
       - name: Run TypeScript type checking
         run: make typecheck
 
@@ -211,6 +214,9 @@ jobs:
             backend/*/dist
           key: ${{ runner.os }}-build-${{ github.sha }}
           fail-on-cache-miss: true
+
+      - name: Run Build
+        run: make build
 
       - name: Run unit tests
         run: make test-unit
