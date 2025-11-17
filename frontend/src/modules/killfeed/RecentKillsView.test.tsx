@@ -75,7 +75,7 @@ describe('RecentKillsView', () => {
     expect(await screen.findByText(/Jita/)).toBeInTheDocument();
     expect(createKillmailStreamMock).toHaveBeenCalled();
 
-    await act(async () => {
+    act(() => {
       handlers?.onUpdate?.({
         ...baseItem,
         killmailId: '2',
