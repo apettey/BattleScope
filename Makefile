@@ -50,6 +50,10 @@ test-unit: ## Run unit tests (currently runs all tests since no integration test
 	@echo "🧪 Running unit tests..."
 	@pnpm -r --workspace-concurrency=4 --if-present test
 
+test-unit-coverage: ## Run unit tests with coverage
+	@echo "🧪 Running unit tests with coverage..."
+	@pnpm -r --workspace-concurrency=4 --if-present test -- --coverage
+
 test-integration: ## Run integration tests only (place integration tests in **/test/integration/*.test.ts)
 	@echo "🔌 Running integration tests..."
 	@echo "Note: Integration tests should be placed in **/test/integration/*.test.ts files"
@@ -114,7 +118,7 @@ generate-openapi: ## Generate OpenAPI specification from API routes
 # CI/CD
 #==============================================================================
 
-ci: install-ci build format-check lint typecheck test-unit ## Run full CI pipeline (install, build, lint, unit tests)
+ci: install-ci build format-check lint typecheck test-unit-coverage ## Run full CI pipeline (install, build, lint, unit tests with coverage)
 
 #==============================================================================
 # DOCKER COMPOSE

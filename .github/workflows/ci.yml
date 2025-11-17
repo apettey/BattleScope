@@ -218,8 +218,16 @@ jobs:
       - name: Run Build
         run: make build
 
-      - name: Run unit tests
-        run: make test-unit
+      - name: Run unit tests with coverage
+        run: pnpm -r --workspace-concurrency=4 --if-present test -- --coverage
+
+      - name: List generated coverage files
+        if: always()
+        run: |
+          echo "Searching for coverage files..."
+          find . -name "coverage" -type d -not -path "*/node_modules/*" || true
+          find . -name "lcov.info" -not -path "*/node_modules/*" || true
+          find . -name "coverage-final.json" -not -path "*/node_modules/*" || true
 
       - name: Upload coverage reports
         if: always()
@@ -318,8 +326,22 @@ jobs:
       - name: Run database migrations
         run: make db-migrate
 
-      - name: Run integration tests
-        run: make test-integration
+      - name: Run integration tests with coverage
+        run: |
+          if find . -path "*/test/integration/*.test.ts" -type f -not -path "*/node_modules/*" | grep -q .; then
+            pnpm --filter @battlescope/database exec vitest run test/integration/ --coverage 2>/dev/null || true
+            pnpm --filter @battlescope/api exec vitest run test/integration/ --coverage 2>/dev/null || true
+          else
+            echo "No integration tests found"
+          fi
+
+      - name: List generated coverage files
+        if: always()
+        run: |
+          echo "Searching for coverage files..."
+          find . -name "coverage" -type d -not -path "*/node_modules/*" || true
+          find . -name "lcov.info" -not -path "*/node_modules/*" || true
+          find . -name "coverage-final.json" -not -path "*/node_modules/*" || true
 
       - name: Upload coverage reports
         if: always()

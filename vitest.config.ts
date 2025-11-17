@@ -14,8 +14,8 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', '**/test/integration/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
-      exclude: ['**/dist/**', '**/node_modules/**'],
+      reporter: ['text', 'lcov', 'json'],
+      exclude: ['**/dist/**', '**/node_modules/**', '**/test/**'],
     },
   },
   resolve: {
