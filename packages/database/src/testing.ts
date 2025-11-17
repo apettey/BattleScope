@@ -16,6 +16,15 @@ export interface InMemoryDatabase {
 
 export const createInMemoryDatabase = async (): Promise<InMemoryDatabase> => {
   const mem = newDb({ autoCreateForeignKeyIndices: true });
+
+  // Register plpgsql language for trigger functions
+  // pg-mem needs this to parse PL/pgSQL function definitions
+  mem.registerLanguage('plpgsql', () => {
+    // Return a function that pg-mem can use for trigger execution
+    // For our use case, we don't need to parse the function body
+    return () => ({});
+  });
+
   mem.public.registerFunction({
     name: 'now',
     returns: DataType.timestamptz,

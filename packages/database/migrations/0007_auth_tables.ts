@@ -274,7 +274,9 @@ export async function up(db: Kysely<Database>): Promise<void> {
   } catch (error) {
     // Ignore trigger creation errors (e.g., in pg-mem tests where plpgsql is not supported)
     // The default value of now() in the column definition will handle updated_at for tests
-    console.warn('Warning: Could not create triggers for updated_at columns:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn('Warning: Could not create triggers for updated_at columns:', error);
+    }
   }
 
   // Insert seed data for roles
