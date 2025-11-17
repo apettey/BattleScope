@@ -15,15 +15,17 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 RUN corepack enable pnpm
 
+# Copy only necessary files for backend services (exclude frontend)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.base.json ./
 COPY backend ./backend
-COPY frontend ./frontend
 COPY packages ./packages
 
+# Install all dependencies
 RUN pnpm install --frozen-lockfile
 
-# Build all packages to ensure dist folders exist
-RUN pnpm -r run build
+# Build only the specific service and its dependencies (much faster than -r run build)
+ARG SERVICE_SCOPE
+RUN pnpm --filter="${SERVICE_SCOPE}..." run build
 
 FROM ${NODE_RUNTIME_IMAGE} AS runner
 

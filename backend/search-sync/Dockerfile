@@ -22,12 +22,8 @@ COPY packages/shared ./packages/shared
 COPY backend/search-sync ./backend/search-sync
 COPY tsconfig.base.json ./
 
-# Build all packages
-RUN pnpm --filter @battlescope/database run build && \
-    pnpm --filter @battlescope/esi-client run build && \
-    pnpm --filter @battlescope/search run build && \
-    pnpm --filter @battlescope/shared run build && \
-    pnpm --filter @battlescope/search-sync run build
+# Build search-sync and all its dependencies in one command
+RUN pnpm --filter @battlescope/search-sync... run build
 
 # Production stage
 FROM node:22-alpine
