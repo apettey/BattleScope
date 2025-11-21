@@ -123,7 +123,7 @@ spec:
     spec:
       containers:
         - name: loki
-          image: grafana/loki:latest
+          image: grafana/loki:2.9.3
           imagePullPolicy: Always
           args:
             - '-config.file=/etc/loki/loki.yaml'

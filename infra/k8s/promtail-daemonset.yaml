@@ -100,7 +100,7 @@ data:
 
           # Only scrape specific apps (skip infrastructure pods)
           - source_labels: [__meta_kubernetes_pod_label_app]
-            regex: (api|frontend|ingest|enrichment|clusterer|scheduler)
+            regex: (api|frontend|ingest|enrichment|clusterer|scheduler|typesense)
             action: keep
 
           # Set the log path
