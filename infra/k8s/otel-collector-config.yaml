@@ -60,16 +60,9 @@ data:
         endpoint: http://loki:3100/loki/api/v1/push
         tls:
           insecure: true
-        labels:
-          resource:
-            service.name: "service_name"
-            service.namespace: "service_namespace"
-          attributes:
-            level: "level"
-            package: "package"
-            file: "file"
-        # Format for Loki
-        format: json
+        default_labels_enabled:
+          exporter: false
+          job: true
 
       # For debugging - logs to console
       logging:
