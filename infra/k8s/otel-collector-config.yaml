@@ -55,18 +55,9 @@ data:
         tls:
           insecure: true
 
-      # Export logs to Loki
-      loki:
-        endpoint: http://loki:3100/loki/api/v1/push
-        tls:
-          insecure: true
-        default_labels_enabled:
-          exporter: false
-          job: true
-
       # For debugging - logs to console
-      logging:
-        loglevel: info
+      debug:
+        verbosity: basic
 
     service:
       extensions: [health_check]
@@ -75,14 +66,16 @@ data:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [otlp/jaeger, logging]
+          exporters: [otlp/jaeger, debug]
 
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [prometheusremotewrite, logging]
+          exporters: [prometheusremotewrite, debug]
 
+        # Logs are collected by Promtail and sent to Loki directly
+        # This pipeline just receives OTLP logs for debugging
         logs:
           receivers: [otlp]
           processors: [memory_limiter, resource, attributes, batch]
-          exporters: [loki, logging]
+          exporters: [debug]

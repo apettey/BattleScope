@@ -13,10 +13,12 @@ spec:
       labels:
         app: ingest
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: ingest
           image: docker.io/petdog/battlescope-ingest:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - node
             - dist/backend/ingest/src/index.js
@@ -28,6 +30,8 @@ spec:
               value: '3002'
             - name: OTEL_SERVICE_NAME
               value: 'battlescope-ingest'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector:4318'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

@@ -123,6 +123,8 @@ spec:
       labels:
         app: promtail
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       serviceAccountName: promtail
       containers:
         - name: promtail

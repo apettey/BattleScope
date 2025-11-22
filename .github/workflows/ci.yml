@@ -447,6 +447,10 @@ jobs:
             ${{ runner.os }}-buildx-${{ matrix.name }}-
             ${{ runner.os }}-buildx-
 
+      - name: Get short SHA
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Build and push ${{ matrix.name }} image
         if: ${{ matrix.build_args != '' }}
         uses: docker/build-push-action@v5
@@ -457,7 +461,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: ${{ matrix.build_args }}
           tags: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ steps.sha.outputs.short }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
@@ -471,7 +475,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:${{ steps.sha.outputs.short }}
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/battlescope-${{ matrix.name }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max

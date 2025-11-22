@@ -37,6 +37,8 @@ spec:
         prometheus.io/port: '9121'
         prometheus.io/path: '/metrics'
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: redis
           image: redis:7-alpine

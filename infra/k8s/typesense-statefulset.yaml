@@ -56,6 +56,8 @@ spec:
         prometheus.io/port: '8108'
         prometheus.io/path: '/metrics'
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: typesense
           image: typesense/typesense:26.0

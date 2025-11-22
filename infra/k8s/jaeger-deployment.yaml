@@ -15,6 +15,8 @@ spec:
       labels:
         app: jaeger
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: jaeger
           image: jaegertracing/all-in-one:latest

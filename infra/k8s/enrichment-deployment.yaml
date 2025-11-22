@@ -13,10 +13,12 @@ spec:
       labels:
         app: enrichment
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: enrichment
           image: docker.io/petdog/battlescope-enrichment:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - node
             - dist/backend/enrichment/src/index.js
@@ -30,6 +32,8 @@ spec:
               value: '0.0.0.0'
             - name: OTEL_SERVICE_NAME
               value: 'battlescope-enrichment'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector:4318'
           envFrom:
             - secretRef:
                 name: battlescope-secrets

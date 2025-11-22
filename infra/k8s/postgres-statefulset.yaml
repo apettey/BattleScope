@@ -37,6 +37,8 @@ spec:
         prometheus.io/port: '9187'
         prometheus.io/path: '/metrics'
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: postgres
           image: postgres:15-alpine

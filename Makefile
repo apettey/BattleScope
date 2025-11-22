@@ -154,11 +154,16 @@ battlescope-images-clean: ## Remove all local BattleScope Docker images
 # KUBERNETES DEPLOYMENT
 #==============================================================================
 
-k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
+# Get current git commit SHA (short)
+GIT_SHA := $(shell git rev-parse --short HEAD)
+
+k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64) with git SHA tag
 	@echo "🐳 Building and pushing all Kubernetes images for arm64..."
+	@echo "📌 Git SHA: $(GIT_SHA)"
 	@echo ""
 	@echo "📦 Building frontend (petdog/battlescope-frontend)..."
 	docker buildx build --platform linux/arm64 --push \
+		-t docker.io/petdog/battlescope-frontend:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-frontend:latest \
 		-f frontend/Dockerfile .
 	@echo ""
@@ -166,6 +171,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/api \
 		--build-arg BUILD_TARGET=backend/api \
+		-t docker.io/petdog/battlescope-api:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-api:latest \
 		-f Dockerfile .
 	@echo ""
@@ -173,6 +179,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/ingest \
 		--build-arg BUILD_TARGET=backend/ingest \
+		-t docker.io/petdog/battlescope-ingest:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-ingest:latest \
 		-f Dockerfile .
 	@echo ""
@@ -180,6 +187,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/enrichment \
 		--build-arg BUILD_TARGET=backend/enrichment \
+		-t docker.io/petdog/battlescope-enrichment:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-enrichment:latest \
 		-f Dockerfile .
 	@echo ""
@@ -187,6 +195,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/clusterer \
 		--build-arg BUILD_TARGET=backend/clusterer \
+		-t docker.io/petdog/battlescope-clusterer:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-clusterer:latest \
 		-f Dockerfile .
 	@echo ""
@@ -194,6 +203,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/scheduler \
 		--build-arg BUILD_TARGET=backend/scheduler \
+		-t docker.io/petdog/battlescope-scheduler:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-scheduler:latest \
 		-f Dockerfile .
 	@echo ""
@@ -201,6 +211,7 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/database \
 		--build-arg BUILD_TARGET=packages/database \
+		-t docker.io/petdog/battlescope-db-migrate:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-db-migrate:latest \
 		-f Dockerfile .
 	@echo ""
@@ -208,30 +219,34 @@ k8s-build-push: ## Build and push all Docker images to Docker Hub (linux/arm64)
 	docker buildx build --platform linux/arm64 --push \
 		--build-arg SERVICE_SCOPE=@battlescope/verifier \
 		--build-arg BUILD_TARGET=packages/verifier \
+		-t docker.io/petdog/battlescope-verifier:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-verifier:latest \
 		-f Dockerfile .
 	@echo ""
 	@echo "📦 Building search-sync (petdog/battlescope-search-sync)..."
 	docker buildx build --platform linux/arm64 --push \
+		-t docker.io/petdog/battlescope-search-sync:$(GIT_SHA) \
 		-t docker.io/petdog/battlescope-search-sync:latest \
 		-f backend/search-sync/Dockerfile .
 	@echo ""
-	@echo "✅ All images built and pushed successfully!"
+	@echo "✅ All images built and pushed with tag: $(GIT_SHA)"
 
-k8s-redeploy: ## Restart all application deployments (picks up new images)
-	@echo "🔄 Redeploying all application pods in the battlescope namespace..."
-	@echo "Restarting frontend deployment..."
-	kubectl rollout restart deployment/frontend -n battlescope
-	@echo "Restarting api deployment..."
-	kubectl rollout restart deployment/api -n battlescope
-	@echo "Restarting ingest deployment..."
-	kubectl rollout restart deployment/ingest -n battlescope
-	@echo "Restarting enrichment deployment..."
-	kubectl rollout restart deployment/enrichment -n battlescope
-	@echo "Restarting clusterer deployment..."
-	kubectl rollout restart deployment/clusterer -n battlescope
-	@echo "Note: scheduler CronJob will pick up the latest image on its next scheduled run"
-	@echo "✅ All application deployments restarted successfully!"
+k8s-redeploy: ## Deploy all application services using current git SHA
+	@echo "🔄 Deploying all application pods with image tag: $(GIT_SHA)"
+	@echo ""
+	@echo "Updating frontend deployment..."
+	kubectl set image deployment/frontend frontend=docker.io/petdog/battlescope-frontend:$(GIT_SHA) -n battlescope
+	@echo "Updating api deployment..."
+	kubectl set image deployment/api api=docker.io/petdog/battlescope-api:$(GIT_SHA) -n battlescope
+	@echo "Updating ingest deployment..."
+	kubectl set image deployment/ingest ingest=docker.io/petdog/battlescope-ingest:$(GIT_SHA) -n battlescope
+	@echo "Updating enrichment deployment..."
+	kubectl set image deployment/enrichment enrichment=docker.io/petdog/battlescope-enrichment:$(GIT_SHA) -n battlescope
+	@echo "Updating clusterer deployment..."
+	kubectl set image deployment/clusterer clusterer=docker.io/petdog/battlescope-clusterer:$(GIT_SHA) -n battlescope
+	@echo ""
+	@echo "Note: scheduler CronJob will continue using the image tag specified in its manifest"
+	@echo "✅ All application deployments updated to $(GIT_SHA)!"
 
 k8s-restart-observability: ## Restart observability stack (Prometheus, Grafana, Loki, etc.)
 	@echo "🔄 Restarting observability stack to pick up config changes..."

@@ -13,13 +13,20 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: dockerhub-creds
       containers:
         - name: frontend
           image: docker.io/petdog/battlescope-frontend:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 80
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: 'battlescope-frontend'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector:4318'
           envFrom:
             - configMapRef:
                 name: battlescope-config
