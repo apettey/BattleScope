@@ -2,7 +2,7 @@
 
 **Feature Key**: `battle-intel`
 **Feature Name**: Battle Intel
-**Last Updated**: 2025-11-07
+**Last Updated**: 2025-11-22
 
 ---
 
@@ -41,6 +41,7 @@ Provide users with actionable intelligence and analytics about:
 | **ISK Efficiency**     | Ratio of ISK destroyed vs ISK lost                            |
 | **Activity Timeline**  | Historical pattern of battle participation                    |
 | **Doctrine Detection** | Identification of common fleet compositions                   |
+| **Pilot Ship History** | Complete record of ships flown by each pilot with kill/loss links |
 
 ---
 
@@ -69,13 +70,109 @@ Provide users with actionable intelligence and analytics about:
    - Invalidate cache on new battle data
    - Background job to refresh stale statistics
 
+### 3.2 Pilot Ship History Pipeline
+
+1. **Ship Record Extraction**
+   - During killmail enrichment, extract ship type for each participant
+   - For victims: Record the ship they lost
+   - For attackers: Record the ship they were flying
+
+2. **Ship History Storage**
+   - Store each ship appearance in `pilot_ship_history` table
+   - Link to the specific killmail for easy navigation
+   - Track whether it was a kill or loss for that pilot
+
+3. **Query Capabilities**
+   - Get all ships a pilot has ever flown
+   - Filter by ship type to find all killmails where pilot flew that ship
+   - Quickly find all losses for a pilot (with direct killmail links)
+
 ---
 
 ## 4. Data Model
 
-### 4.1 Views (Computed from Battle Reports Data)
+### 4.1 Pilot Ship History Table
 
-Battle Intel does NOT have its own tables - it computes statistics from Battle Reports tables:
+Battle Intel introduces the `pilot_ship_history` table to track ships flown by pilots:
+
+```sql
+CREATE TABLE pilot_ship_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  killmail_id bigint NOT NULL REFERENCES killmail_events(killmail_id),
+  character_id bigint NOT NULL,
+  ship_type_id bigint NOT NULL,
+  alliance_id bigint,
+  corp_id bigint,
+  system_id bigint NOT NULL,
+  is_loss boolean NOT NULL,           -- true if this pilot lost the ship
+  ship_value bigint,                  -- value of the ship flown (always populated)
+  killmail_value bigint,              -- total value of the killmail
+  occurred_at timestamptz NOT NULL,
+  zkb_url text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+
+  -- Indexes for common queries
+  CONSTRAINT unique_pilot_killmail UNIQUE (killmail_id, character_id)
+);
+
+-- Index for querying all ships a character has flown
+CREATE INDEX idx_pilot_ship_history_character ON pilot_ship_history(character_id);
+
+-- Index for querying all losses for a character
+CREATE INDEX idx_pilot_ship_history_character_losses ON pilot_ship_history(character_id) WHERE is_loss = true;
+
+-- Index for querying by ship type
+CREATE INDEX idx_pilot_ship_history_ship_type ON pilot_ship_history(ship_type_id);
+
+-- Index for querying character + ship type combination
+CREATE INDEX idx_pilot_ship_history_character_ship ON pilot_ship_history(character_id, ship_type_id);
+
+-- Index for time-based queries
+CREATE INDEX idx_pilot_ship_history_occurred_at ON pilot_ship_history(occurred_at DESC);
+```
+
+**Usage Examples**:
+
+```sql
+-- Get all ships a pilot has flown (aggregated with ISK values)
+SELECT ship_type_id,
+       COUNT(*) as times_flown,
+       SUM(CASE WHEN is_loss THEN 1 ELSE 0 END) as losses,
+       SUM(CASE WHEN NOT is_loss THEN 1 ELSE 0 END) as kills,
+       SUM(CASE WHEN is_loss THEN ship_value ELSE 0 END) as total_isk_lost,
+       SUM(CASE WHEN NOT is_loss THEN killmail_value ELSE 0 END) as total_isk_killed
+FROM pilot_ship_history
+WHERE character_id = 123456789
+GROUP BY ship_type_id
+ORDER BY times_flown DESC;
+
+-- Get all losses for a pilot with killmail links and values
+SELECT ship_type_id, zkb_url, ship_value, killmail_value, occurred_at
+FROM pilot_ship_history
+WHERE character_id = 123456789 AND is_loss = true
+ORDER BY occurred_at DESC;
+
+-- Get all killmails where pilot flew a specific ship
+SELECT killmail_id, zkb_url, is_loss, ship_value, killmail_value, occurred_at
+FROM pilot_ship_history
+WHERE character_id = 123456789 AND ship_type_id = 11567
+ORDER BY occurred_at DESC;
+
+-- Get total ISK destroyed and lost for a pilot
+SELECT
+  SUM(CASE WHEN is_loss THEN ship_value ELSE 0 END) as total_isk_lost,
+  SUM(CASE WHEN NOT is_loss THEN killmail_value ELSE 0 END) as total_isk_killed,
+  COUNT(CASE WHEN is_loss THEN 1 END) as total_losses,
+  COUNT(CASE WHEN NOT is_loss THEN 1 END) as total_kills
+FROM pilot_ship_history
+WHERE character_id = 123456789;
+```
+
+---
+
+### 4.2 Views (Computed from Battle Reports Data)
+
+Battle Intel also computes statistics from Battle Reports tables:
 
 ```sql
 -- Example materialized view for alliance statistics
@@ -100,7 +197,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY alliance_statistics;
 
 ---
 
-### 4.2 Cache Keys
+### 4.3 Cache Keys
 
 **Redis Cache Keys**:
 
@@ -109,6 +206,8 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY alliance_statistics;
 - `battlescope:intel:character:{characterId}:stats` - Character statistics (TTL: 1 hour)
 - `battlescope:intel:alliance:{allianceId}:opponents` - Top opponents (TTL: 1 hour)
 - `battlescope:intel:summary` - Global summary statistics (TTL: 5 minutes)
+- `battlescope:intel:character:{characterId}:ships` - Character ship history summary (TTL: 30 minutes)
+- `battlescope:intel:character:{characterId}:losses` - Character loss summary (TTL: 30 minutes)
 
 ---
 
@@ -445,6 +544,148 @@ GET /intel/alliances/{id}/ships?limit={n}
 
 ---
 
+### 5.7 Character Ship History
+
+```
+GET /intel/characters/{id}/ships?limit={n}&shipTypeId={shipTypeId}
+```
+
+**Authorization**: `feature.view` action on `battle-intel`
+
+**Query Parameters**:
+- `limit` (optional): Maximum number of ship types to return (default: 20)
+- `shipTypeId` (optional): Filter to a specific ship type to get detailed killmail history
+
+**Response** (aggregated by ship type):
+
+```json
+{
+  "characterId": "90012345",
+  "characterName": "John Doe",
+  "totalIskDestroyed": "15000000000",
+  "totalIskLost": "8000000000",
+  "iskEfficiency": 65.22,
+  "ships": [
+    {
+      "shipTypeId": "11567",
+      "shipTypeName": "Loki",
+      "shipClass": "Strategic Cruiser",
+      "timesFlown": 18,
+      "kills": 15,
+      "losses": 3,
+      "iskDestroyed": "4500000000",
+      "iskLost": "1050000000"
+    },
+    {
+      "shipTypeId": "11987",
+      "shipTypeName": "Proteus",
+      "shipClass": "Strategic Cruiser",
+      "timesFlown": 12,
+      "kills": 10,
+      "losses": 2,
+      "iskDestroyed": "3200000000",
+      "iskLost": "700000000"
+    }
+  ],
+  "updatedAt": "2025-11-22T14:30:00Z"
+}
+```
+
+**Response** (filtered by shipTypeId - detailed killmail list):
+
+```json
+{
+  "characterId": "90012345",
+  "characterName": "John Doe",
+  "shipTypeId": "11567",
+  "shipTypeName": "Loki",
+  "shipClass": "Strategic Cruiser",
+  "summary": {
+    "timesFlown": 18,
+    "kills": 15,
+    "losses": 3,
+    "iskDestroyed": "4500000000",
+    "iskLost": "1050000000"
+  },
+  "killmails": [
+    {
+      "killmailId": "123456789",
+      "zkbUrl": "https://zkillboard.com/kill/123456789/",
+      "isLoss": false,
+      "shipValue": "350000000",
+      "killmailValue": "1200000000",
+      "systemId": "30002187",
+      "systemName": "M-OEE8",
+      "occurredAt": "2025-11-20T18:45:00Z"
+    },
+    {
+      "killmailId": "123456780",
+      "zkbUrl": "https://zkillboard.com/kill/123456780/",
+      "isLoss": true,
+      "shipValue": "350000000",
+      "killmailValue": "350000000",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "occurredAt": "2025-11-19T12:30:00Z"
+    }
+  ],
+  "updatedAt": "2025-11-22T14:30:00Z"
+}
+```
+
+---
+
+### 5.8 Character Losses
+
+```
+GET /intel/characters/{id}/losses?limit={n}&cursor={cursor}
+```
+
+**Authorization**: `feature.view` action on `battle-intel`
+
+**Query Parameters**:
+- `limit` (optional): Maximum number of losses to return (default: 50)
+- `cursor` (optional): Pagination cursor for fetching more results
+
+**Response**:
+
+```json
+{
+  "characterId": "90012345",
+  "characterName": "John Doe",
+  "totalLosses": 12,
+  "totalIskLost": "8000000000",
+  "losses": [
+    {
+      "killmailId": "123456780",
+      "zkbUrl": "https://zkillboard.com/kill/123456780/",
+      "shipTypeId": "11567",
+      "shipTypeName": "Loki",
+      "shipClass": "Strategic Cruiser",
+      "shipValue": "350000000",
+      "systemId": "31000123",
+      "systemName": "J115422",
+      "occurredAt": "2025-11-19T12:30:00Z"
+    },
+    {
+      "killmailId": "123456770",
+      "zkbUrl": "https://zkillboard.com/kill/123456770/",
+      "shipTypeId": "11987",
+      "shipTypeName": "Proteus",
+      "shipClass": "Strategic Cruiser",
+      "shipValue": "320000000",
+      "systemId": "30002187",
+      "systemName": "M-OEE8",
+      "occurredAt": "2025-11-18T20:15:00Z"
+    }
+  ],
+  "nextCursor": "eyJvZmZzZXQiOjUwfQ==",
+  "updatedAt": "2025-11-22T14:30:00Z"
+}
+```
+
+---
+
 ## 6. UI Components
 
 ### 6.1 Home Dashboard (Intel Summary)
@@ -550,7 +791,104 @@ Similar layout to Alliance Intel Page but with corp-specific metrics and top pil
 
 **Access**: Requires `battle-intel` feature access (user role minimum)
 
-Similar layout to Alliance Intel Page but with character-specific metrics and detailed ship usage stats.
+**Layout**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Character Intelligence: John Doe                                 │
+│ Sniggerdly [SNGGR] • Pandemic Legion [PL]                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ Overview                                                        │
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐      │
+│ │ 32        │ │ 45        │ │ 12        │ │ 65.2%     │      │
+│ │ Battles   │ │ Kills     │ │ Losses    │ │ ISK Eff.  │      │
+│ └───────────┘ └───────────┘ └───────────┘ └───────────┘      │
+│                                                                 │
+│ ┌───────────┐ ┌───────────┐                                    │
+│ │ 15B       │ │ 8B        │                                    │
+│ │ Destroyed │ │ Lost      │                                    │
+│ └───────────┘ └───────────┘                                    │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│ Ships Flown                       [View All Ships →]            │
+│ ┌─────────────────────────────────────────────────────────┐   │
+│ │ Ship             │ Flown │ Kills │ Losses │ ISK Eff.   │   │
+│ ├─────────────────────────────────────────────────────────┤   │
+│ │ Loki             │  18   │  15   │   3    │  81.1%     │   │
+│ │  → 4.5B destroyed • 1.05B lost              [View →]   │   │
+│ ├─────────────────────────────────────────────────────────┤   │
+│ │ Proteus          │  12   │  10   │   2    │  82.1%     │   │
+│ │  → 3.2B destroyed • 700M lost               [View →]   │   │
+│ └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│ Recent Losses                     [View All Losses →]           │
+│ ┌─────────────────────────────────────────────────────────┐   │
+│ │ 2025-11-19 • Loki • J115422 • 350M     [View Kill →]   │   │
+│ │ 2025-11-18 • Proteus • M-OEE8 • 320M   [View Kill →]   │   │
+│ │ 2025-11-15 • Sabre • Amamake • 45M     [View Kill →]   │   │
+│ └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│ Top Opponents                                                   │
+│ 1. Goonswarm Federation     12 battles  •  18 kills vs 4 losses│
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 6.5 Character Ship Detail Page
+
+**Route**: `/intel/characters/{id}/ships/{shipTypeId}`
+
+**Access**: Requires `battle-intel` feature access (user role minimum)
+
+**Layout**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ← Back to John Doe                                              │
+│                                                                 │
+│ Loki Usage: John Doe                                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ Summary                                                         │
+│ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐      │
+│ │ 18        │ │ 15        │ │ 3         │ │ 81.1%     │      │
+│ │ Times Flown│ │ Kills     │ │ Losses    │ │ ISK Eff.  │      │
+│ └───────────┘ └───────────┘ └───────────┘ └───────────┘      │
+│                                                                 │
+│ ┌───────────┐ ┌───────────┐                                    │
+│ │ 4.5B      │ │ 1.05B     │                                    │
+│ │ Destroyed │ │ Lost      │                                    │
+│ └───────────┘ └───────────┘                                    │
+│                                                                 │
+│ ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│ Killmail History                                                │
+│ ┌─────────────────────────────────────────────────────────┐   │
+│ │ Date       │ System   │ Result │ Value    │ Action     │   │
+│ ├─────────────────────────────────────────────────────────┤   │
+│ │ 2025-11-20 │ M-OEE8   │ Kill   │ 1.2B     │ [View →]   │   │
+│ │ 2025-11-19 │ J115422  │ LOSS   │ 350M     │ [View →]   │   │
+│ │ 2025-11-18 │ Amamake  │ Kill   │ 890M     │ [View →]   │   │
+│ │ 2025-11-17 │ M-OEE8   │ Kill   │ 450M     │ [View →]   │   │
+│ └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│ [Load More]                                                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Behavior**:
+- Clicking "View →" opens ZKillboard in a new tab
+- Losses are highlighted (red text or background)
+- Pagination via cursor-based loading
 
 ---
 
@@ -686,9 +1024,173 @@ app.get('/intel/alliances/:id', {
 
 ---
 
-## 9. Configuration Page
+## 9. Pilot Ship History Ingestion
 
-### 9.1 Overview
+### 9.1 Data Source
+
+Pilot ship history data is extracted from enriched killmails during the battle clustering process. The enrichment service already fetches detailed killmail data from ESI, which includes:
+
+- Victim ship type and fitted value
+- All attackers with their ship types
+- Total killmail ISK value (from zKillboard)
+
+### 9.2 Ingestion Pipeline Integration
+
+The `pilot_ship_history` table is populated by the **Clusterer Service** when processing enriched killmails:
+
+```typescript
+// backend/clusterer/src/ship-history-processor.ts
+export class ShipHistoryProcessor {
+  async processKillmail(
+    killmailId: bigint,
+    enrichedData: EnrichedKillmail,
+    zkbUrl: string
+  ): Promise<void> {
+    const records: PilotShipHistoryRecord[] = [];
+
+    // Add victim record (is_loss = true)
+    if (enrichedData.victim.character_id) {
+      records.push({
+        killmailId,
+        characterId: enrichedData.victim.character_id,
+        shipTypeId: enrichedData.victim.ship_type_id,
+        allianceId: enrichedData.victim.alliance_id,
+        corpId: enrichedData.victim.corporation_id,
+        systemId: enrichedData.solar_system_id,
+        isLoss: true,
+        shipValue: this.calculateShipValue(enrichedData.victim),
+        killmailValue: enrichedData.zkb?.totalValue,
+        occurredAt: enrichedData.killmail_time,
+        zkbUrl,
+      });
+    }
+
+    // Add attacker records (is_loss = false)
+    for (const attacker of enrichedData.attackers) {
+      if (attacker.character_id && attacker.ship_type_id) {
+        records.push({
+          killmailId,
+          characterId: attacker.character_id,
+          shipTypeId: attacker.ship_type_id,
+          allianceId: attacker.alliance_id,
+          corpId: attacker.corporation_id,
+          systemId: enrichedData.solar_system_id,
+          isLoss: false,
+          shipValue: null, // Attacker ship value not available from killmail
+          killmailValue: enrichedData.zkb?.totalValue,
+          occurredAt: enrichedData.killmail_time,
+          zkbUrl,
+        });
+      }
+    }
+
+    // Batch insert with ON CONFLICT DO NOTHING
+    await this.repository.insertShipHistory(records);
+  }
+}
+```
+
+### 9.3 Data Re-ingestion (Reset)
+
+To populate ship history for existing killmails, a reset mechanism is provided:
+
+#### Admin API Endpoint
+
+```
+POST /admin/intel/reset-ship-history
+```
+
+**Authorization**: SuperAdmin only
+
+**Request Body**:
+
+```json
+{
+  "mode": "full" | "incremental",
+  "fromDate": "2025-01-01T00:00:00Z",  // optional, for incremental
+  "batchSize": 1000                     // optional, default 1000
+}
+```
+
+**Response**:
+
+```json
+{
+  "jobId": "uuid",
+  "status": "started",
+  "estimatedKillmails": 8721,
+  "message": "Ship history reset job started. Check /admin/jobs/{jobId} for progress."
+}
+```
+
+#### Reset Process
+
+1. **Full Reset**:
+   - Truncate `pilot_ship_history` table
+   - Iterate through all `killmail_enrichments` with status = 'succeeded'
+   - Extract ship data and insert into `pilot_ship_history`
+   - Process in batches to avoid memory issues
+
+2. **Incremental Reset**:
+   - Only process killmails after `fromDate`
+   - Use `ON CONFLICT DO UPDATE` to update existing records
+   - Useful for fixing data issues without full re-process
+
+#### Background Job Implementation
+
+```typescript
+// backend/scheduler/src/jobs/reset-ship-history.ts
+export class ResetShipHistoryJob {
+  async execute(options: ResetOptions): Promise<void> {
+    const { mode, fromDate, batchSize = 1000 } = options;
+
+    if (mode === 'full') {
+      await this.db.deleteFrom('pilot_ship_history').execute();
+    }
+
+    let cursor: bigint | null = null;
+    let processed = 0;
+
+    while (true) {
+      const enrichments = await this.getEnrichmentsBatch(cursor, batchSize, fromDate);
+      if (enrichments.length === 0) break;
+
+      for (const enrichment of enrichments) {
+        await this.shipHistoryProcessor.processKillmail(
+          enrichment.killmailId,
+          enrichment.payload,
+          enrichment.zkbUrl
+        );
+      }
+
+      cursor = enrichments[enrichments.length - 1].killmailId;
+      processed += enrichments.length;
+
+      await this.updateJobProgress(processed);
+    }
+  }
+}
+```
+
+### 9.4 Monitoring
+
+Ship history ingestion is monitored via:
+
+- **Prometheus Metrics**:
+  - `battlescope_ship_history_records_total` - Total records in table
+  - `battlescope_ship_history_inserts_total` - Records inserted (counter)
+  - `battlescope_ship_history_reset_duration_seconds` - Reset job duration
+
+- **Admin Dashboard**:
+  - Current record count
+  - Last reset timestamp
+  - Processing status (if reset in progress)
+
+---
+
+## 10. Configuration Page
+
+### 10.1 Overview
 
 **Route**: `/admin/features/battle-intel/config`
 
@@ -698,9 +1200,9 @@ The Battle Intel configuration page provides limited configuration options, as m
 
 ---
 
-### 9.2 Configuration Sections
+### 10.2 Configuration Sections
 
-#### 9.2.1 Data Source Notice
+#### 10.2.1 Data Source Notice
 
 ```
 ℹ️  Battle Intel Data Source
@@ -722,7 +1224,7 @@ on what data is ingested.
 
 ---
 
-#### 9.2.2 Cache Settings
+#### 10.2.2 Cache Settings
 
 ```
 Cache Configuration:
@@ -751,7 +1253,7 @@ Top Entities to Warm: [___50___] entities
 
 ---
 
-#### 9.2.3 Display Settings
+#### 10.2.3 Display Settings
 
 ```
 Display Configuration:
@@ -775,7 +1277,7 @@ ISK Value Display Format: [Abbreviated (3.6B) ▼]
 
 ---
 
-#### 9.2.4 Current Intelligence Statistics
+#### 10.2.4 Current Intelligence Statistics
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -799,7 +1301,7 @@ ISK Value Display Format: [Abbreviated (3.6B) ▼]
 
 ---
 
-#### 9.2.5 Data Collection Reference
+#### 10.2.5 Data Collection Reference
 
 ```
 ⚠️  IMPORTANT: Data Collection & Ingestion
@@ -829,7 +1331,7 @@ not what data is collected.
 
 ---
 
-### 9.3 Configuration Validation
+### 10.3 Configuration Validation
 
 The UI performs client-side validation:
 
@@ -846,7 +1348,7 @@ Server-side validation ensures:
 
 ---
 
-### 9.4 Configuration Storage
+### 10.4 Configuration Storage
 
 Configuration is stored in the database:
 
@@ -882,7 +1384,7 @@ INSERT INTO feature_config (feature_key, config_key, config_value) VALUES
 
 ---
 
-## 10. Caching Strategy
+## 11. Caching Strategy
 
 **Cache Invalidation**:
 
@@ -899,7 +1401,7 @@ INSERT INTO feature_config (feature_key, config_key, config_value) VALUES
 
 ---
 
-## 11. Success Metrics
+## 12. Success Metrics
 
 - **Query Performance**: Intel API responses < 500ms (p95)
 - **Cache Hit Rate**: >85% for entity statistics
@@ -909,7 +1411,7 @@ INSERT INTO feature_config (feature_key, config_key, config_value) VALUES
 
 ---
 
-## 11. Future Enhancements
+## 13. Future Enhancements
 
 - [ ] Doctrine detection and classification
 - [ ] Activity heatmaps (time-based)

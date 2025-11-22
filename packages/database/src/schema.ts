@@ -247,6 +247,38 @@ export interface AuditLogsTable {
   createdAt: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface PilotShipHistoryTable {
+  id: ColumnType<string, string | undefined, never>;
+  killmailId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  characterId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  shipTypeId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  allianceId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  corpId: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  systemId: ColumnType<bigint, string | number | bigint, string | number | bigint>;
+  isLoss: boolean;
+  shipValue: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  killmailValue: ColumnType<
+    bigint | null,
+    string | number | bigint | null,
+    string | number | bigint | null
+  >;
+  occurredAt: ColumnType<Date, Date, Date>;
+  zkbUrl: string;
+  createdAt: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface Database {
   battles: BattlesTable;
   battle_killmails: BattleKillmailsTable;
@@ -262,4 +294,5 @@ export interface Database {
   feature_settings: FeatureSettingsTable;
   auth_config: AuthConfigTable;
   audit_logs: AuditLogsTable;
+  pilot_ship_history: PilotShipHistoryTable;
 }

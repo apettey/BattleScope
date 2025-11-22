@@ -194,3 +194,43 @@ export interface DashboardSummary {
   topCorporations: Array<{ corpId: bigint; battleCount: number }>;
   generatedAt: Date;
 }
+
+// Pilot Ship History Types
+export const PilotShipHistoryInsertSchema = z.object({
+  killmailId: nonNegativeBigint,
+  characterId: nonNegativeBigint,
+  shipTypeId: nonNegativeBigint,
+  allianceId: nonNegativeBigint.nullable(),
+  corpId: nonNegativeBigint.nullable(),
+  systemId: nonNegativeBigint,
+  isLoss: z.boolean(),
+  shipValue: nonNegativeBigint.nullable(),
+  killmailValue: nonNegativeBigint.nullable(),
+  occurredAt: z.coerce.date(),
+  zkbUrl: z.string().url(),
+});
+
+export type PilotShipHistoryInsert = z.infer<typeof PilotShipHistoryInsertSchema>;
+
+export interface PilotShipHistoryRecord extends PilotShipHistoryInsert {
+  id: string;
+  createdAt: Date;
+}
+
+export interface CharacterShipSummary {
+  shipTypeId: bigint;
+  timesFlown: number;
+  kills: number;
+  losses: number;
+  iskDestroyed: bigint;
+  iskLost: bigint;
+}
+
+export interface CharacterLossRecord {
+  killmailId: bigint;
+  zkbUrl: string;
+  shipTypeId: bigint;
+  shipValue: bigint | null;
+  systemId: bigint;
+  occurredAt: Date;
+}

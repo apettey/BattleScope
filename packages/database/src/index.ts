@@ -6,6 +6,7 @@ export { KillmailRepository } from './repositories/killmail-repository.js';
 export { KillmailEnrichmentRepository } from './repositories/killmail-enrichment-repository.js';
 export { RulesetRepository } from './repositories/ruleset-repository.js';
 export { DashboardRepository } from './repositories/dashboard-repository.js';
+export { PilotShipHistoryRepository } from './repositories/pilot-ship-history-repository.js';
 export type { Database } from './schema.js';
 export {
   BattleInsertSchema,
@@ -32,5 +33,10 @@ export {
   type DashboardSummary,
   type SecurityType,
   KillmailEnrichmentStatusSchema,
+  PilotShipHistoryInsertSchema,
+  type PilotShipHistoryInsert,
+  type PilotShipHistoryRecord,
+  type CharacterShipSummary,
+  type CharacterLossRecord,
 } from './types.js';
 export * from './repositories/auth/index.js';

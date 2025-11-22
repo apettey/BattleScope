@@ -1,7 +1,13 @@
-import type { BattleRepository, KillmailRepository } from '@battlescope/database';
+import type {
+  BattleRepository,
+  KillmailRepository,
+  KillmailEnrichmentRepository,
+  PilotShipHistoryRepository,
+} from '@battlescope/database';
 import { trace } from '@opentelemetry/api';
 import { pino } from 'pino';
 import type { ClusteringEngine } from './engine.js';
+import { ShipHistoryProcessor } from './ship-history-processor.js';
 
 const tracer = trace.getTracer('battlescope.clusterer.service');
 
@@ -9,6 +15,7 @@ export interface ClustererStats {
   battles: number;
   processedKillmails: number;
   ignored: number;
+  shipHistoryRecords: number;
 }
 
 export class ClustererService {
@@ -16,12 +23,15 @@ export class ClustererService {
     name: 'clusterer-service',
     level: process.env.LOG_LEVEL ?? 'info',
   });
+  private readonly shipHistoryProcessor = new ShipHistoryProcessor();
 
   constructor(
     private readonly battleRepository: BattleRepository,
     private readonly killmailRepository: KillmailRepository,
     private readonly engine: ClusteringEngine,
     private readonly processingDelayMinutes = 30,
+    private readonly enrichmentRepository?: KillmailEnrichmentRepository,
+    private readonly shipHistoryRepository?: PilotShipHistoryRepository,
   ) {}
 
   async processBatch(limit: number): Promise<ClustererStats> {
@@ -34,7 +44,7 @@ export class ClustererService {
         span.setAttribute('killmail.batch.size', killmails.length);
 
         if (killmails.length === 0) {
-          return { battles: 0, processedKillmails: 0, ignored: 0 };
+          return { battles: 0, processedKillmails: 0, ignored: 0, shipHistoryRecords: 0 };
         }
 
         const timeRange =
@@ -43,7 +53,19 @@ export class ClustererService {
             : 'N/A';
         this.logger.info({ count: killmails.length, timeRange }, 'Processing killmail batch');
 
+        // Fetch enrichments for ship history processing
+        let enrichmentMap = new Map<
+          bigint,
+          Awaited<ReturnType<KillmailEnrichmentRepository['find']>>
+        >();
+        if (this.enrichmentRepository && this.shipHistoryRepository) {
+          const killmailIds = killmails.map((km) => km.killmailId);
+          enrichmentMap = await this.enrichmentRepository.findByIds(killmailIds);
+          span.setAttribute('enrichments.found', enrichmentMap.size);
+        }
+
         const { battles, ignoredKillmailIds } = this.engine.cluster(killmails);
+        let totalShipHistoryRecords = 0;
 
         for (const plan of battles) {
           await tracer.startActiveSpan('clusterer.createBattle', async (battleSpan) => {
@@ -88,6 +110,33 @@ export class ClustererService {
                 }
               });
 
+              // Process ship history if repositories are available
+              if (this.shipHistoryRepository && enrichmentMap.size > 0) {
+                await tracer.startActiveSpan('db.insertShipHistory', async (dbSpan) => {
+                  try {
+                    const planKillmails = killmails.filter((km) =>
+                      plan.killmailIds.includes(km.killmailId),
+                    );
+                    const shipHistoryRecords = this.shipHistoryProcessor.processBatch(
+                      planKillmails,
+                      enrichmentMap as Map<
+                        bigint,
+                        NonNullable<typeof enrichmentMap extends Map<bigint, infer V> ? V : never>
+                      >,
+                    );
+                    if (shipHistoryRecords.length > 0) {
+                      await this.shipHistoryRepository!.insertBatch(shipHistoryRecords);
+                      totalShipHistoryRecords += shipHistoryRecords.length;
+                    }
+                    dbSpan.setAttribute('db.operation', 'INSERT');
+                    dbSpan.setAttribute('db.table', 'pilot_ship_history');
+                    dbSpan.setAttribute('db.records', shipHistoryRecords.length);
+                  } finally {
+                    dbSpan.end();
+                  }
+                });
+              }
+
               // Mark killmails as processed
               await tracer.startActiveSpan('db.markKillmailsProcessed', async (dbSpan) => {
                 try {
@@ -105,12 +154,13 @@ export class ClustererService {
                   battleId: plan.battle.id,
                   kills: plan.killmailIds.length,
                   participants: plan.participantInserts.length,
+                  shipHistoryRecords: totalShipHistoryRecords,
                   systemId: plan.battle.systemId.toString(),
                   startTime: plan.battle.startTime.toISOString(),
                   endTime: plan.battle.endTime.toISOString(),
                   totalIskDestroyed: plan.battle.totalIskDestroyed.toString(),
                 },
-                'Created battle with participants',
+                'Created battle with participants and ship history',
               );
             } catch (error) {
               battleSpan.recordException(error as Error);
@@ -139,11 +189,13 @@ export class ClustererService {
 
         span.setAttribute('battles.created', battles.length);
         span.setAttribute('killmail.ignored', ignoredKillmailIds.length);
+        span.setAttribute('shipHistory.records', totalShipHistoryRecords);
 
         return {
           battles: battles.length,
           processedKillmails: killmails.length,
           ignored: ignoredKillmailIds.length,
+          shipHistoryRecords: totalShipHistoryRecords,
         };
       } catch (error) {
         this.logger.error({ err: error }, 'Failed to cluster killmails');

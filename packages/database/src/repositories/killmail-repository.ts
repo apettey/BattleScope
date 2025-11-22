@@ -323,4 +323,32 @@ export class KillmailRepository {
       .where('occurredAt', '<=', endTime)
       .execute();
   }
+
+  /**
+   * Find killmails by their IDs
+   */
+  async findByIds(killmailIds: bigint[]): Promise<KillmailEventRecord[]> {
+    if (killmailIds.length === 0) {
+      return [];
+    }
+
+    const rows = await this.db
+      .selectFrom('killmail_events')
+      .selectAll()
+      .where('killmailId', 'in', killmailIds)
+      .execute();
+
+    return rows.map((row) => ({
+      ...row,
+      killmailId: toBigInt(row.killmailId) ?? 0n,
+      systemId: toBigInt(row.systemId) ?? 0n,
+      victimAllianceId: toBigInt(row.victimAllianceId),
+      victimCorpId: toBigInt(row.victimCorpId),
+      victimCharacterId: toBigInt(row.victimCharacterId),
+      attackerAllianceIds: row.attackerAllianceIds ? toBigIntArray(row.attackerAllianceIds) : [],
+      attackerCorpIds: row.attackerCorpIds ? toBigIntArray(row.attackerCorpIds) : [],
+      attackerCharacterIds: row.attackerCharacterIds ? toBigIntArray(row.attackerCharacterIds) : [],
+      iskValue: toBigInt(row.iskValue),
+    }));
+  }
 }

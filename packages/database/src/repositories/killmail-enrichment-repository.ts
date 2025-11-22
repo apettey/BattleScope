@@ -131,4 +131,83 @@ export class KillmailEnrichmentRepository {
       }),
     );
   }
+
+  /**
+   * Find multiple enrichments by killmail IDs
+   * Returns a Map for efficient lookup
+   */
+  async findByIds(killmailIds: bigint[]): Promise<Map<bigint, KillmailEnrichmentRecord>> {
+    if (killmailIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.db
+      .selectFrom('killmail_enrichments')
+      .selectAll()
+      .where('killmailId', 'in', killmailIds)
+      .where('status', '=', 'succeeded')
+      .execute();
+
+    const result = new Map<bigint, KillmailEnrichmentRecord>();
+    for (const row of rows) {
+      const killmailId = toBigInt(row.killmailId) ?? 0n;
+      const parsed = KillmailEnrichmentSchema.parse({
+        ...row,
+        killmailId,
+      });
+      result.set(killmailId, parsed);
+    }
+
+    return result;
+  }
+
+  /**
+   * List all succeeded enrichments with pagination (for reset jobs)
+   */
+  async listSucceededPaginated(
+    cursor: bigint | null,
+    limit: number,
+    fromDate?: Date,
+  ): Promise<KillmailEnrichmentRecord[]> {
+    let query = this.db
+      .selectFrom('killmail_enrichments')
+      .selectAll()
+      .where('status', '=', 'succeeded')
+      .orderBy('killmailId', 'asc')
+      .limit(limit);
+
+    if (cursor !== null) {
+      query = query.where('killmailId', '>', cursor);
+    }
+
+    if (fromDate) {
+      query = query.where('fetchedAt', '>=', fromDate);
+    }
+
+    const rows = await query.execute();
+
+    return rows.map((row) =>
+      KillmailEnrichmentSchema.parse({
+        ...row,
+        killmailId: toBigInt(row.killmailId) ?? 0n,
+      }),
+    );
+  }
+
+  /**
+   * Count succeeded enrichments (for progress tracking)
+   */
+  async countSucceeded(fromDate?: Date): Promise<number> {
+    let query = this.db
+      .selectFrom('killmail_enrichments')
+      .select((eb) => eb.fn.count('killmailId').as('count'))
+      .where('status', '=', 'succeeded');
+
+    if (fromDate) {
+      query = query.where('fetchedAt', '>=', fromDate);
+    }
+
+    const result = await query.executeTakeFirst();
+    return Number(result?.count ?? 0);
+  }
 }

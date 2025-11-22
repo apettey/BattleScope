@@ -143,3 +143,129 @@ export const formatIsk = (iskString: string): string => {
   }
   return `${Number(isk).toLocaleString()} ISK`;
 };
+
+// Character Ship History Schemas
+const CharacterShipSummarySchema = z.object({
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  shipClass: z.string().nullable().optional(),
+  timesFlown: z.number().int(),
+  kills: z.number().int(),
+  losses: z.number().int(),
+  iskDestroyed: z.string(),
+  iskLost: z.string(),
+});
+
+const CharacterShipsResponseSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  totalIskDestroyed: z.string(),
+  totalIskLost: z.string(),
+  iskEfficiency: z.number(),
+  ships: z.array(CharacterShipSummarySchema),
+  updatedAt: z.string(),
+});
+
+const CharacterLossSchema = z.object({
+  killmailId: z.string(),
+  zkbUrl: z.string(),
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  shipClass: z.string().nullable().optional(),
+  shipValue: z.string().nullable(),
+  systemId: z.string(),
+  systemName: z.string().nullable(),
+  occurredAt: z.string(),
+});
+
+const CharacterLossesResponseSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  totalLosses: z.number().int(),
+  totalIskLost: z.string(),
+  losses: z.array(CharacterLossSchema),
+  nextCursor: z.string().nullable(),
+  updatedAt: z.string(),
+});
+
+const ShipKillmailSchema = z.object({
+  killmailId: z.string(),
+  zkbUrl: z.string(),
+  isLoss: z.boolean(),
+  shipValue: z.string().nullable(),
+  killmailValue: z.string(),
+  systemId: z.string(),
+  systemName: z.string().nullable(),
+  occurredAt: z.string(),
+});
+
+const CharacterShipKillmailsResponseSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  shipClass: z.string().nullable().optional(),
+  summary: z.object({
+    timesFlown: z.number().int(),
+    kills: z.number().int(),
+    losses: z.number().int(),
+    iskDestroyed: z.string(),
+    iskLost: z.string(),
+  }),
+  killmails: z.array(ShipKillmailSchema),
+  updatedAt: z.string(),
+});
+
+export type CharacterShipSummary = z.infer<typeof CharacterShipSummarySchema>;
+export type CharacterShipsResponse = z.infer<typeof CharacterShipsResponseSchema>;
+export type CharacterLoss = z.infer<typeof CharacterLossSchema>;
+export type CharacterLossesResponse = z.infer<typeof CharacterLossesResponseSchema>;
+export type ShipKillmail = z.infer<typeof ShipKillmailSchema>;
+export type CharacterShipKillmailsResponse = z.infer<typeof CharacterShipKillmailsResponseSchema>;
+
+export interface FetchCharacterShipsOptions extends FetchEntityOptions {
+  limit?: number;
+  shipTypeId?: string;
+}
+
+export interface FetchCharacterLossesOptions extends FetchEntityOptions {
+  limit?: number;
+  cursor?: string;
+}
+
+export const fetchCharacterShips = async (
+  characterId: string,
+  options: FetchCharacterShipsOptions = {},
+): Promise<CharacterShipsResponse> => {
+  const { signal, baseUrl, fetchFn, limit, shipTypeId } = options;
+  const params: Record<string, string> = {};
+  if (limit) params.limit = limit.toString();
+  if (shipTypeId) params.shipTypeId = shipTypeId;
+  const url = buildUrl(`/intel/characters/${characterId}/ships`, params, baseUrl);
+  const response = await fetchJson<unknown>(url, { signal }, fetchFn);
+  return CharacterShipsResponseSchema.parse(response);
+};
+
+export const fetchCharacterLosses = async (
+  characterId: string,
+  options: FetchCharacterLossesOptions = {},
+): Promise<CharacterLossesResponse> => {
+  const { signal, baseUrl, fetchFn, limit, cursor } = options;
+  const params: Record<string, string> = {};
+  if (limit) params.limit = limit.toString();
+  if (cursor) params.cursor = cursor;
+  const url = buildUrl(`/intel/characters/${characterId}/losses`, params, baseUrl);
+  const response = await fetchJson<unknown>(url, { signal }, fetchFn);
+  return CharacterLossesResponseSchema.parse(response);
+};
+
+export const fetchCharacterShipKillmails = async (
+  characterId: string,
+  shipTypeId: string,
+  options: FetchEntityOptions = {},
+): Promise<CharacterShipKillmailsResponse> => {
+  const { signal, baseUrl, fetchFn } = options;
+  const url = buildUrl(`/intel/characters/${characterId}/ships`, { shipTypeId }, baseUrl);
+  const response = await fetchJson<unknown>(url, { signal }, fetchFn);
+  return CharacterShipKillmailsResponseSchema.parse(response);
+};
