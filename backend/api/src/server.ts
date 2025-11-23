@@ -249,8 +249,22 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
     return reply.status(statusCode).send({ message: error.message });
   });
 
-  app.get('/healthz', async () => {
+  app.get('/healthz', async (request, reply) => {
+    // Check database connectivity
     await db.selectFrom('battles').select('id').limit(1).execute();
+
+    // Check session Redis connectivity (critical for auth)
+    if (sessionService) {
+      const sessionHealth = await sessionService.isHealthy();
+      if (!sessionHealth.healthy) {
+        request.log.error({ reason: sessionHealth.reason }, 'Session Redis health check failed');
+        return reply.status(503).send({
+          status: 'unhealthy',
+          reason: sessionHealth.reason,
+        });
+      }
+    }
+
     return { status: 'ok' };
   });
 

@@ -271,6 +271,30 @@ export class SessionService {
   getCookieName(): string {
     return this.cookieName;
   }
+
+  /**
+   * Check if the session service is healthy (Redis connected and responsive)
+   *
+   * @returns Health status with details
+   */
+  async isHealthy(): Promise<{ healthy: boolean; reason?: string }> {
+    if (!this.redis) {
+      return { healthy: false, reason: 'Redis not connected' };
+    }
+
+    try {
+      const result = await this.redis.ping();
+      if (result === 'PONG') {
+        return { healthy: true };
+      }
+      return { healthy: false, reason: `Unexpected ping response: ${result}` };
+    } catch (error) {
+      return {
+        healthy: false,
+        reason: `Redis ping failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
 }
 
 /**
