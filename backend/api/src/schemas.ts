@@ -364,3 +364,62 @@ export type CharacterDetail = z.infer<typeof CharacterDetailSchema>;
 export type AllianceBattleSummary = z.infer<typeof AllianceBattleSummarySchema>;
 export type CorporationBattleSummary = z.infer<typeof CorporationBattleSummarySchema>;
 export type CharacterBattleSummary = z.infer<typeof CharacterBattleSummarySchema>;
+
+// Intel schemas for character ship history
+export const CharacterShipSummarySchema = z.object({
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  shipClass: z.string().nullable().optional(),
+  timesFlown: z.number().int(),
+  kills: z.number().int(),
+  losses: z.number().int(),
+  iskDestroyed: z.string(),
+  iskLost: z.string(),
+});
+
+export const CharacterShipsResponseSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  totalIskDestroyed: z.string(),
+  totalIskLost: z.string(),
+  iskEfficiency: z.number(),
+  ships: z.array(CharacterShipSummarySchema),
+  updatedAt: z.string().datetime(),
+});
+
+export const CharacterLossSchema = z.object({
+  killmailId: z.string(),
+  zkbUrl: z.string(),
+  shipTypeId: z.string(),
+  shipTypeName: z.string().nullable(),
+  shipClass: z.string().nullable().optional(),
+  shipValue: z.string().nullable(),
+  systemId: z.string(),
+  systemName: z.string().nullable(),
+  occurredAt: z.string().datetime(),
+});
+
+export const CharacterLossesResponseSchema = z.object({
+  characterId: z.string(),
+  characterName: z.string().nullable(),
+  totalLosses: z.number().int(),
+  totalIskLost: z.string(),
+  losses: z.array(CharacterLossSchema),
+  nextCursor: z.string().nullable(),
+  updatedAt: z.string().datetime(),
+});
+
+export const CharacterShipsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  shipTypeId: z.string().regex(/^\d+$/).optional(),
+});
+
+export const CharacterLossesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  cursor: z.string().optional(),
+});
+
+export type CharacterShipSummary = z.infer<typeof CharacterShipSummarySchema>;
+export type CharacterShipsResponse = z.infer<typeof CharacterShipsResponseSchema>;
+export type CharacterLoss = z.infer<typeof CharacterLossSchema>;
+export type CharacterLossesResponse = z.infer<typeof CharacterLossesResponseSchema>;

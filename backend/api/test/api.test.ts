@@ -14,6 +14,7 @@ import type {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
+  PilotShipHistoryRepository,
   DatabaseClient,
 } from '@battlescope/database';
 import type { SearchService } from '@battlescope/search';
@@ -67,6 +68,17 @@ describe.skip('API OpenAPI Compliance Tests', () => {
     search: vi.fn().mockResolvedValue({ results: [], found: 0 }),
   } as unknown as SearchService;
 
+  const mockShipHistoryRepo = {
+    getCharacterShipSummary: vi.fn().mockResolvedValue([]),
+    getCharacterIskTotals: vi.fn().mockResolvedValue({
+      totalIskDestroyed: 0n,
+      totalIskLost: 0n,
+      totalKills: 0,
+      totalLosses: 0,
+    }),
+    getCharacterLosses: vi.fn().mockResolvedValue([]),
+  } as unknown as PilotShipHistoryRepository;
+
   beforeAll(async () => {
     // Load OpenAPI spec - currently not used but available for future validation tests
     const specPath = path.join(process.cwd(), '../../docs/openapi.yaml');
@@ -111,6 +123,7 @@ describe.skip('API OpenAPI Compliance Tests', () => {
       nameEnricher: mockNameEnricher as NameEnricher,
       esiClient: mockEsiClient as EsiClient,
       searchService: mockSearchService as SearchService,
+      shipHistoryRepository: mockShipHistoryRepo as PilotShipHistoryRepository,
     });
 
     await server.ready();

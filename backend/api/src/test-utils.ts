@@ -12,6 +12,7 @@ import type {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
+  PilotShipHistoryRepository,
   DatabaseClient,
 } from '@battlescope/database';
 import type {
@@ -140,6 +141,17 @@ export const createMockRepositories = () => {
     }),
   } as unknown as AuditLogRepository;
 
+  const mockShipHistoryRepository: PilotShipHistoryRepository = {
+    getCharacterShipSummary: async () => [],
+    getCharacterIskTotals: async () => ({
+      totalIskDestroyed: 0n,
+      totalIskLost: 0n,
+      totalKills: 0,
+      totalLosses: 0,
+    }),
+    getCharacterLosses: async () => [],
+  } as unknown as PilotShipHistoryRepository;
+
   return {
     battleRepository: mockBattleRepository,
     killmailRepository: mockKillmailRepository,
@@ -150,6 +162,7 @@ export const createMockRepositories = () => {
     featureRepository: mockFeatureRepository,
     authConfigRepository: mockAuthConfigRepository,
     auditLogRepository: mockAuditLogRepository,
+    shipHistoryRepository: mockShipHistoryRepository,
   };
 };
 
@@ -165,7 +178,11 @@ export const createMockNameEnricher = (): NameEnricher => {
     enrichDashboardSummary: async (summary: any) => summary as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     enrichRuleset: async (ruleset: any) => ruleset as any,
-  } as NameEnricher;
+    enrichShipTypeIds: async () => new Map<bigint, string>(),
+    enrichSystemIds: async () => new Map<bigint, string>(),
+    enrichCharacterIds: async () => new Map<bigint, string>(),
+    lookupNames: async () => new Map<string, string>(),
+  } as unknown as NameEnricher;
 };
 
 export const createMockSearchService = (): SearchService => {

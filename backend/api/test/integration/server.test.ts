@@ -13,6 +13,7 @@ import {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
+  PilotShipHistoryRepository,
 } from '@battlescope/database';
 import { createInMemoryDatabase } from '@battlescope/database/testing';
 import type { KillmailEventInsert } from '@battlescope/database';
@@ -214,6 +215,7 @@ describe('API routes', () => {
       featureRepository,
       authConfigRepository,
       auditLogRepository,
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: baseConfig,
       nameEnricher,
@@ -439,6 +441,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
@@ -476,6 +479,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
@@ -513,6 +517,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
@@ -585,6 +590,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: {
         ...baseConfig,
@@ -620,6 +626,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: { ...baseConfig, developerMode: true },
       nameEnricher: createNameEnricher(),
@@ -653,6 +660,7 @@ describe('API routes', () => {
       featureRepository: new FeatureRepository(db.db),
       authConfigRepository: new AuthConfigRepository(db.db),
       auditLogRepository: new AuditLogRepository(db.db),
+      shipHistoryRepository: new PilotShipHistoryRepository(db.db),
       db: db.db,
       config: { ...baseConfig, corsAllowedOrigins: ['https://app.example.com'] },
       nameEnricher: createNameEnricher(),

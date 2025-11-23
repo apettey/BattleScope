@@ -190,4 +190,43 @@ export class NameEnricher {
     }
     return buildLookup(this.esiClient, idSet);
   }
+
+  async enrichShipTypeIds(shipTypeIds: bigint[]): Promise<Map<bigint, string>> {
+    const ids = new Set<number>();
+    for (const id of shipTypeIds) {
+      addId(ids, id);
+    }
+    const lookup = await buildLookup(this.esiClient, ids);
+    const result = new Map<bigint, string>();
+    for (const [key, value] of lookup.entries()) {
+      result.set(BigInt(key), value);
+    }
+    return result;
+  }
+
+  async enrichSystemIds(systemIds: bigint[]): Promise<Map<bigint, string>> {
+    const ids = new Set<number>();
+    for (const id of systemIds) {
+      addId(ids, id);
+    }
+    const lookup = await buildLookup(this.esiClient, ids);
+    const result = new Map<bigint, string>();
+    for (const [key, value] of lookup.entries()) {
+      result.set(BigInt(key), value);
+    }
+    return result;
+  }
+
+  async enrichCharacterIds(characterIds: bigint[]): Promise<Map<bigint, string>> {
+    const ids = new Set<number>();
+    for (const id of characterIds) {
+      addId(ids, id);
+    }
+    const lookup = await buildLookup(this.esiClient, ids);
+    const result = new Map<bigint, string>();
+    for (const [key, value] of lookup.entries()) {
+      result.set(BigInt(key), value);
+    }
+    return result;
+  }
 }

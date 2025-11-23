@@ -20,6 +20,7 @@ import type {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
+  PilotShipHistoryRepository,
   DatabaseClient,
 } from '@battlescope/database';
 import type { Redis } from 'ioredis';
@@ -41,6 +42,7 @@ import { registerAdminBattleReportsRoutes } from './routes/admin-battle-reports.
 import { registerProfileRoutes } from './routes/profile.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerRulesetRoutes } from './routes/rulesets.js';
+import { registerIntelRoutes } from './routes/intel.js';
 import type { ApiConfig } from './config.js';
 import { ensureCorsHeaders, type ResolveCorsOrigin } from './cors.js';
 import type { NameEnricher } from './services/name-enricher.js';
@@ -72,6 +74,7 @@ interface BuildServerOptions {
   featureRepository: FeatureRepository;
   authConfigRepository: AuthConfigRepository;
   auditLogRepository: AuditLogRepository;
+  shipHistoryRepository: PilotShipHistoryRepository;
   db: DatabaseClient;
   config: ApiConfig;
   nameEnricher: NameEnricher;
@@ -94,6 +97,7 @@ export const buildServer = ({
   featureRepository,
   authConfigRepository,
   auditLogRepository,
+  shipHistoryRepository,
   db,
   config,
   nameEnricher,
@@ -368,6 +372,9 @@ All EVE Online entity IDs (killmail, character, corporation, alliance, system, s
   );
   registerDashboardRoutes(app, dashboardRepository, nameEnricher);
   registerRulesetRoutes(app, rulesetRepository, nameEnricher);
+
+  // Register intel routes for ship history
+  registerIntelRoutes(app, shipHistoryRepository, nameEnricher);
 
   // Register search routes
   registerSearchRoutes(app, searchService);

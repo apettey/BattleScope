@@ -9,6 +9,7 @@ import {
   FeatureRepository,
   AuthConfigRepository,
   AuditLogRepository,
+  PilotShipHistoryRepository,
   createDb,
 } from '@battlescope/database';
 import {
@@ -42,6 +43,7 @@ export const start = async (): Promise<void> => {
   const featureRepository = new FeatureRepository(db);
   const authConfigRepository = new AuthConfigRepository(db, logger);
   const auditLogRepository = new AuditLogRepository(db);
+  const shipHistoryRepository = new PilotShipHistoryRepository(db);
 
   let redis: RedisClient | null = null;
   if (config.esiRedisCacheUrl) {
@@ -154,6 +156,7 @@ export const start = async (): Promise<void> => {
     featureRepository,
     authConfigRepository,
     auditLogRepository,
+    shipHistoryRepository,
     db,
     config,
     nameEnricher,
