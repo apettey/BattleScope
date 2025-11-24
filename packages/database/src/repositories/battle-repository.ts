@@ -776,4 +776,78 @@ export class BattleRepository {
       .where('startTime', '<=', endTime)
       .execute();
   }
+
+  /**
+   * Find battles that overlap with a given time range in a specific system
+   * Used for retroactive killmail attribution
+   */
+  async findOverlappingBattles(
+    systemId: bigint,
+    startTime: Date,
+    endTime: Date,
+    lookbackMinutes: number = 60,
+  ): Promise<BattleRecord[]> {
+    // Look back from the startTime to catch battles that might still be ongoing
+    const lookbackTime = new Date(startTime.getTime() - lookbackMinutes * 60 * 1000);
+
+    const rows = await this.db
+      .selectFrom('battles')
+      .selectAll()
+      .where('systemId', '=', systemId)
+      .where((eb) =>
+        eb.or([
+          // Battle overlaps with the time range
+          eb.and([eb('startTime', '<=', endTime), eb('endTime', '>=', lookbackTime)]),
+        ]),
+      )
+      .execute();
+
+    return rows.map((row) => ({
+      ...row,
+      systemId: toBigInt(row.systemId) ?? 0n,
+      totalKills: toBigInt(row.totalKills) ?? 0n,
+      totalIskDestroyed: toBigInt(row.totalIskDestroyed) ?? 0n,
+    }));
+  }
+
+  /**
+   * Update battle with additional killmails (retroactive attribution)
+   * Returns the updated battle statistics
+   */
+  async updateBattleWithKillmails(
+    battleId: string,
+    additionalKillmails: {
+      totalKills: bigint;
+      totalIskDestroyed: bigint;
+      earliestTime?: Date;
+      latestTime?: Date;
+    },
+  ): Promise<BattleRecord> {
+    const updateData: Record<string, any> = {
+      totalKills: sql`total_kills + ${serializeBigIntRequired(additionalKillmails.totalKills)}`,
+      totalIskDestroyed: sql`total_isk_destroyed + ${serializeBigIntRequired(additionalKillmails.totalIskDestroyed)}`,
+    };
+
+    // Extend time range if needed using CASE to avoid LEAST/GREATEST (pg-mem compatibility)
+    if (additionalKillmails.earliestTime) {
+      updateData.startTime = sql`CASE WHEN start_time < ${additionalKillmails.earliestTime} THEN start_time ELSE ${additionalKillmails.earliestTime} END`;
+    }
+    if (additionalKillmails.latestTime) {
+      updateData.endTime = sql`CASE WHEN end_time > ${additionalKillmails.latestTime} THEN end_time ELSE ${additionalKillmails.latestTime} END`;
+    }
+
+    const updated = await this.db
+      .updateTable('battles')
+      .set(updateData as any)
+      .where('id', '=', battleId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return {
+      ...updated,
+      systemId: toBigInt(updated.systemId) ?? 0n,
+      totalKills: toBigInt(updated.totalKills) ?? 0n,
+      totalIskDestroyed: toBigInt(updated.totalIskDestroyed) ?? 0n,
+    };
+  }
 }
