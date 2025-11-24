@@ -1,4 +1,10 @@
-import { BattleRepository, KillmailRepository, createDb } from '@battlescope/database';
+import {
+  BattleRepository,
+  KillmailRepository,
+  KillmailEnrichmentRepository,
+  PilotShipHistoryRepository,
+  createDb,
+} from '@battlescope/database';
 import { startTelemetry, stopTelemetry } from '@battlescope/shared';
 import { ClusteringEngine, ClustererService } from '@battlescope/battle-reports';
 import { loadConfig } from './config.js';
@@ -13,6 +19,8 @@ export const start = async (): Promise<void> => {
   const db = createDb();
   const battleRepository = new BattleRepository(db);
   const killmailRepository = new KillmailRepository(db);
+  const enrichmentRepository = new KillmailEnrichmentRepository(db);
+  const shipHistoryRepository = new PilotShipHistoryRepository(db);
   const engine = new ClusteringEngine({
     windowMinutes: config.windowMinutes,
     gapMaxMinutes: config.gapMaxMinutes,
@@ -23,6 +31,8 @@ export const start = async (): Promise<void> => {
     killmailRepository,
     engine,
     config.processingDelayMinutes,
+    enrichmentRepository,
+    shipHistoryRepository,
   );
   const healthServer = createHealthServer(db);
   const abortController = new AbortController();
