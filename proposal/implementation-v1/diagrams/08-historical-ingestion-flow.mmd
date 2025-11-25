@@ -1,0 +1,69 @@
+sequenceDiagram
+    participant Admin as Admin User
+    participant UI as Admin UI
+    participant Ingest as Ingestion Service
+    participant HistAPI as zKillboard<br/>History API
+    participant IngestDB as ingestion_db
+    participant Kafka as Kafka Topic:<br/>killmail.ingested
+    participant Enrich as Enrichment Service
+    participant Battle as Battle Service
+
+    Note over Admin,UI: Admin Initiates Historical Backfill
+    Admin->>UI: Navigate to Historical Ingestion
+    Admin->>UI: Create job (2025-01-01 to 2025-01-31)
+
+    UI->>Ingest: POST /api/ingestion/historical/jobs<br/>{startDate, endDate, rulesetId}
+    Ingest->>IngestDB: INSERT INTO historical_ingestion_jobs<br/>(status: 'pending')
+    IngestDB-->>Ingest: Job created (jobId)
+    Ingest-->>UI: 201 Created {jobId, estimatedKillmails}
+    UI-->>Admin: Job created, show progress page
+
+    Note over Ingest,HistAPI: Historical Ingestion Worker Starts
+    Ingest->>IngestDB: UPDATE job status = 'running'
+
+    loop For each date in range
+        Ingest->>HistAPI: GET /api/history/20250101.json
+        HistAPI-->>Ingest: [{killmail_id, hash}, ...]
+
+        Ingest->>Ingest: Apply ruleset filters<br/>(same as RedisQ)
+
+        alt Killmails Accepted
+            Ingest->>IngestDB: INSERT INTO killmail_events<br/>(source='historical', job_id)
+            Ingest->>Kafka: Publish killmail.ingested events<br/>(source='historical')
+
+            Note over Kafka: Same event format<br/>as RedisQ events!
+        end
+
+        Ingest->>IngestDB: UPDATE job progress<br/>(processed_dates++, killmail counts)
+
+        opt Rate Limit Check
+            HistAPI-->>Ingest: 429 Rate Limit
+            Ingest->>Ingest: Exponential backoff
+        end
+
+        opt Progress Monitoring
+            Admin->>UI: Refresh progress page
+            UI->>Ingest: GET /api/ingestion/historical/jobs/:id
+            Ingest->>IngestDB: SELECT job progress
+            IngestDB-->>Ingest: Current progress
+            Ingest-->>UI: Progress (27% complete)
+            UI-->>Admin: Show progress bar, ETA
+        end
+    end
+
+    Note over Ingest,IngestDB: Job Complete
+    Ingest->>IngestDB: UPDATE job status = 'completed'
+    Ingest->>IngestDB: SET completed_at = NOW()
+
+    Note over Kafka,Battle: Downstream Processing (Same as Real-Time)
+    Kafka->>Enrich: Consume killmail.ingested events<br/>(no difference from RedisQ)
+    Note over Enrich: Enrichment process<br/>identical for historical
+    Enrich->>Battle: Publish killmail.enriched events
+    Note over Battle: Clustering process<br/>handles historical killmails
+    Battle->>Battle: Retroactive battle attribution
+
+    Note over Admin,Battle: Result
+    Admin->>UI: View battles from historical period
+    UI-->>Admin: Show battles from Jan 2025<br/>(reconstructed from historical data)
+
+    Note over Ingest,Battle: Total Time: 4-8 hours for 30 days<br/>(depends on killmail volume and rate limits)

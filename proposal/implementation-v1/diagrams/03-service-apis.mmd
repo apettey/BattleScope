@@ -1,0 +1,70 @@
+graph TB
+    subgraph "Frontend"
+        FE[React Frontend]
+    end
+
+    subgraph "Ingestion Service API"
+        INGEST_API["/api/ingestion"]
+        INGEST_HEALTH["/api/ingestion/health"]
+        INGEST_STATS["/api/ingestion/stats"]
+    end
+
+    subgraph "Enrichment Service API"
+        ENRICH_API["/api/enrichment"]
+        ENRICH_KM["/api/enrichment/killmails/:id"]
+        ENRICH_HEALTH["/api/enrichment/health"]
+    end
+
+    subgraph "Battle Service API"
+        BATTLE_API["/api/battles"]
+        BATTLE_ID["/api/battles/:id"]
+        BATTLE_PARTICIPANTS["/api/battles/:id/participants"]
+        BATTLE_STATS["/api/battles/stats"]
+        BATTLE_HEALTH["/api/battles/health"]
+    end
+
+    subgraph "Search Service API"
+        SEARCH_API["/api/search"]
+        SEARCH_BATTLES["/api/search/battles"]
+        SEARCH_ENTITIES["/api/search/entities"]
+        SEARCH_HEALTH["/api/search/health"]
+    end
+
+    subgraph "Notification Service API"
+        NOTIFY_API["/api/notifications"]
+        NOTIFY_SUB["/api/notifications/subscriptions"]
+        NOTIFY_WS["/ws (WebSocket)"]
+        NOTIFY_HEALTH["/api/notifications/health"]
+    end
+
+    subgraph "Frontend BFF API"
+        BFF_API["/api/bff"]
+        BFF_BATTLES["/api/bff/battles<br/>(aggregates from Battle + Search)"]
+        BFF_DASHBOARD["/api/bff/dashboard<br/>(aggregates from multiple services)"]
+        BFF_HEALTH["/api/bff/health"]
+    end
+
+    %% Frontend calls
+    FE -->|GET /battles| BFF_BATTLES
+    FE -->|GET /dashboard| BFF_DASHBOARD
+    FE -->|GET /search| SEARCH_BATTLES
+    FE -->|WebSocket| NOTIFY_WS
+
+    %% BFF calls
+    BFF_BATTLES -->|HTTP| BATTLE_API
+    BFF_BATTLES -->|HTTP| SEARCH_API
+    BFF_DASHBOARD -->|HTTP| BATTLE_API
+    BFF_DASHBOARD -->|HTTP| INGEST_API
+
+    %% Admin/internal calls
+    FE -.->|Admin Only| INGEST_STATS
+    FE -.->|Direct Call<br/>(if needed)| BATTLE_API
+
+    %% Styling
+    classDef frontend fill:#d4edda,stroke:#28a745
+    classDef api fill:#fff3cd,stroke:#ffc107
+    classDef endpoint fill:#f5f5f5,stroke:#6c757d
+
+    class FE frontend
+    class INGEST_API,ENRICH_API,BATTLE_API,SEARCH_API,NOTIFY_API,BFF_API api
+    class INGEST_HEALTH,INGEST_STATS,ENRICH_KM,ENRICH_HEALTH,BATTLE_ID,BATTLE_PARTICIPANTS,BATTLE_STATS,BATTLE_HEALTH,SEARCH_BATTLES,SEARCH_ENTITIES,SEARCH_HEALTH,NOTIFY_SUB,NOTIFY_WS,NOTIFY_HEALTH,BFF_BATTLES,BFF_DASHBOARD,BFF_HEALTH endpoint

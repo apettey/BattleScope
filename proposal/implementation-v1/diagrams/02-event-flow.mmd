@@ -1,0 +1,93 @@
+graph LR
+    subgraph "Data Sources"
+        ZKB[zKillboard<br/>RedisQ]
+        ESI[EVE ESI<br/>API]
+    end
+
+    subgraph "Ingestion Service"
+        POLL[Poll RedisQ]
+        FILTER[Apply Filters]
+        STORE_RAW[Store Raw<br/>Killmail]
+        PUB1[Publish Event]
+    end
+
+    subgraph "Enrichment Service"
+        SUB1[Subscribe]
+        FETCH[Fetch from<br/>zKill API]
+        ENRICH_DATA[Enrich with<br/>ESI Data]
+        STORE_ENRICHED[Store Enriched<br/>Killmail]
+        PUB2[Publish Event]
+    end
+
+    subgraph "Battle Service"
+        SUB2[Subscribe]
+        CLUSTER[Clustering<br/>Algorithm]
+        STORE_BATTLE[Store Battle]
+        PUB3[Publish Event]
+    end
+
+    subgraph "Search Service"
+        SUB3[Subscribe to<br/>Multiple Events]
+        INDEX[Index in<br/>Typesense]
+    end
+
+    subgraph "Notification Service"
+        SUB4[Subscribe<br/>(Filtered)]
+        PUSH[Push to<br/>WebSocket]
+    end
+
+    subgraph "Kafka Topics"
+        TOPIC1[killmail.ingested]
+        TOPIC2[killmail.enriched]
+        TOPIC3[battle.created<br/>battle.updated]
+    end
+
+    subgraph "Storage"
+        DB1[(ingestion_db)]
+        DB2[(enrichment_db)]
+        DB3[(battles_db)]
+        DB4[(Typesense)]
+    end
+
+    %% Flow
+    ZKB --> POLL
+    POLL --> FILTER
+    FILTER --> STORE_RAW
+    STORE_RAW --> DB1
+    STORE_RAW --> PUB1
+    PUB1 -.-> TOPIC1
+
+    TOPIC1 -.-> SUB1
+    SUB1 --> FETCH
+    FETCH --> ENRICH_DATA
+    ESI --> ENRICH_DATA
+    ENRICH_DATA --> STORE_ENRICHED
+    STORE_ENRICHED --> DB2
+    STORE_ENRICHED --> PUB2
+    PUB2 -.-> TOPIC2
+
+    TOPIC2 -.-> SUB2
+    SUB2 --> CLUSTER
+    CLUSTER --> STORE_BATTLE
+    STORE_BATTLE --> DB3
+    STORE_BATTLE --> PUB3
+    PUB3 -.-> TOPIC3
+
+    TOPIC2 -.-> SUB3
+    TOPIC3 -.-> SUB3
+    SUB3 --> INDEX
+    INDEX --> DB4
+
+    TOPIC3 -.-> SUB4
+    SUB4 --> PUSH
+
+    %% Styling
+    classDef source fill:#e1f5ff,stroke:#0366d6
+    classDef process fill:#fff3cd,stroke:#ffc107
+    classDef event fill:#e7d7ff,stroke:#6610f2
+    classDef storage fill:#f8d7da,stroke:#dc3545
+
+    class ZKB,ESI source
+    class POLL,FILTER,STORE_RAW,PUB1,SUB1,FETCH,ENRICH_DATA,STORE_ENRICHED,PUB2,SUB2,CLUSTER,STORE_BATTLE,PUB3,SUB3,INDEX,SUB4,PUSH process
+    class TOPIC1,TOPIC2,TOPIC3 event
+    class DB1,DB2,DB3,DB4 storage

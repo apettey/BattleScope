@@ -1,0 +1,119 @@
+graph TB
+    subgraph "Kubernetes Cluster - battlescope namespace"
+        subgraph "Application Services (Deployments)"
+            INGEST[Ingestion Service<br/>replicas: 1-2]
+            ENRICH[Enrichment Service<br/>replicas: 2-5]
+            BATTLE[Battle Service<br/>replicas: 2-3]
+            SEARCH[Search Service<br/>replicas: 2-3]
+            NOTIFY[Notification Service<br/>replicas: 2-3]
+            BFF[Frontend BFF<br/>replicas: 2-5]
+            FRONTEND[Frontend<br/>replicas: 2-3]
+        end
+
+        subgraph "Data Layer (StatefulSets)"
+            PG1[PostgreSQL: ingestion_db<br/>replicas: 1<br/>PVC: 20Gi]
+            PG2[PostgreSQL: enrichment_db<br/>replicas: 1<br/>PVC: 50Gi]
+            PG3[PostgreSQL: battles_db<br/>replicas: 1<br/>PVC: 100Gi]
+            TYPESENSE[Typesense<br/>replicas: 1<br/>PVC: 50Gi]
+            REDIS_NOTIFY[Redis: notifications<br/>replicas: 1<br/>PVC: 5Gi]
+            REDIS_CACHE[Redis: cache<br/>replicas: 1<br/>PVC: 10Gi]
+        end
+
+        subgraph "Event Streaming (StatefulSet)"
+            KAFKA[Kafka/Redpanda<br/>replicas: 3<br/>PVC: 100Gi each]
+        end
+
+        subgraph "Observability Stack"
+            PROM[Prometheus<br/>replicas: 1<br/>PVC: 50Gi]
+            LOKI[Loki<br/>replicas: 1<br/>PVC: 100Gi]
+            JAEGER[Jaeger<br/>replicas: 1]
+            GRAFANA[Grafana<br/>replicas: 1<br/>PVC: 1Gi]
+            PROMTAIL[Promtail<br/>DaemonSet]
+            OTEL[OTEL Collector<br/>replicas: 2]
+        end
+
+        subgraph "Network Services"
+            INGRESS[NGINX Ingress<br/>LoadBalancer]
+            DNS[ExternalDNS]
+            CERT[cert-manager]
+        end
+    end
+
+    subgraph "External Access"
+        USER[Users]
+        ZKB_EXT[zKillboard API]
+        ESI_EXT[EVE ESI API]
+    end
+
+    %% Service to database connections
+    INGEST --> PG1
+    ENRICH --> PG2
+    BATTLE --> PG3
+    SEARCH --> TYPESENSE
+    NOTIFY --> REDIS_NOTIFY
+    BFF --> REDIS_CACHE
+
+    %% Service to Kafka
+    INGEST --> KAFKA
+    ENRICH --> KAFKA
+    BATTLE --> KAFKA
+    KAFKA --> ENRICH
+    KAFKA --> BATTLE
+    KAFKA --> SEARCH
+    KAFKA --> NOTIFY
+
+    %% Frontend connections
+    FRONTEND --> BFF
+    FRONTEND --> NOTIFY
+
+    %% External connections
+    USER --> INGRESS
+    INGRESS --> FRONTEND
+    INGRESS --> BFF
+    INGRESS --> GRAFANA
+    INGEST --> ZKB_EXT
+    ENRICH --> ESI_EXT
+    SEARCH --> ESI_EXT
+
+    %% Observability connections
+    INGEST --> OTEL
+    ENRICH --> OTEL
+    BATTLE --> OTEL
+    SEARCH --> OTEL
+    NOTIFY --> OTEL
+    BFF --> OTEL
+    FRONTEND --> OTEL
+
+    OTEL --> PROM
+    OTEL --> JAEGER
+
+    PROMTAIL --> LOKI
+    INGEST --> PROMTAIL
+    ENRICH --> PROMTAIL
+    BATTLE --> PROMTAIL
+    SEARCH --> PROMTAIL
+    NOTIFY --> PROMTAIL
+    BFF --> PROMTAIL
+
+    PROM --> GRAFANA
+    LOKI --> GRAFANA
+    JAEGER --> GRAFANA
+
+    %% TLS
+    CERT -.->|Manages Certificates| INGRESS
+    DNS -.->|DNS Records| INGRESS
+
+    %% Styling
+    classDef app fill:#fff3cd,stroke:#ffc107
+    classDef data fill:#f8d7da,stroke:#dc3545
+    classDef event fill:#e7d7ff,stroke:#6610f2
+    classDef obs fill:#d7f3ff,stroke:#17a2b8
+    classDef network fill:#d4edda,stroke:#28a745
+    classDef external fill:#e1f5ff,stroke:#0366d6
+
+    class INGEST,ENRICH,BATTLE,SEARCH,NOTIFY,BFF,FRONTEND app
+    class PG1,PG2,PG3,TYPESENSE,REDIS_NOTIFY,REDIS_CACHE data
+    class KAFKA event
+    class PROM,LOKI,JAEGER,GRAFANA,PROMTAIL,OTEL obs
+    class INGRESS,DNS,CERT network
+    class USER,ZKB_EXT,ESI_EXT external

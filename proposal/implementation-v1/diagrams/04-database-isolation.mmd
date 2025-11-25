@@ -1,0 +1,83 @@
+graph TB
+    subgraph "Service 1: Ingestion"
+        INGEST_SVC[Ingestion Service]
+        INGEST_DB[(ingestion_db<br/>PostgreSQL)]
+        INGEST_SCHEMA["Tables:<br/>- killmail_events<br/>- ingestion_status<br/>- rulesets"]
+    end
+
+    subgraph "Service 2: Enrichment"
+        ENRICH_SVC[Enrichment Service]
+        ENRICH_DB[(enrichment_db<br/>PostgreSQL)]
+        ENRICH_SCHEMA["Tables:<br/>- enriched_killmails<br/>- esi_cache<br/>- enrichment_queue"]
+    end
+
+    subgraph "Service 3: Battle"
+        BATTLE_SVC[Battle Service]
+        BATTLE_DB[(battles_db<br/>PostgreSQL)]
+        BATTLE_SCHEMA["Tables:<br/>- battles<br/>- battle_participants<br/>- battle_killmails<br/>- battle_statistics"]
+    end
+
+    subgraph "Service 4: Search"
+        SEARCH_SVC[Search Service]
+        SEARCH_DB[(Typesense)]
+        SEARCH_SCHEMA["Collections:<br/>- battles<br/>- entities<br/>- killmails"]
+    end
+
+    subgraph "Service 5: Notification"
+        NOTIFY_SVC[Notification Service]
+        NOTIFY_DB[(Redis)]
+        NOTIFY_SCHEMA["Keys:<br/>- subscriptions:{userId}<br/>- connections:{userId}<br/>- preferences:{userId}"]
+    end
+
+    subgraph "Service 6: Frontend BFF"
+        BFF_SVC[Frontend BFF]
+        BFF_CACHE[(Redis Cache)]
+        BFF_SCHEMA["Keys:<br/>- cache:battles:{id}<br/>- cache:dashboard:*<br/>- cache:stats:*"]
+    end
+
+    %% Service to own database
+    INGEST_SVC --> INGEST_DB
+    INGEST_DB -.-> INGEST_SCHEMA
+
+    ENRICH_SVC --> ENRICH_DB
+    ENRICH_DB -.-> ENRICH_SCHEMA
+
+    BATTLE_SVC --> BATTLE_DB
+    BATTLE_DB -.-> BATTLE_SCHEMA
+
+    SEARCH_SVC --> SEARCH_DB
+    SEARCH_DB -.-> SEARCH_SCHEMA
+
+    NOTIFY_SVC --> NOTIFY_DB
+    NOTIFY_DB -.-> NOTIFY_SCHEMA
+
+    BFF_SVC --> BFF_CACHE
+    BFF_CACHE -.-> BFF_SCHEMA
+
+    %% Legend and Rules
+    subgraph "Architecture Rules"
+        RULE1["✅ Each service has exclusive access to its database"]
+        RULE2["❌ NO cross-database queries allowed"]
+        RULE3["❌ NO direct database access between services"]
+        RULE4["📨 Data synchronization via Kafka events ONLY"]
+    end
+
+    subgraph "Examples of FORBIDDEN Access"
+        FORBIDDEN1["❌ Ingestion → enrichment_db"]
+        FORBIDDEN2["❌ Enrichment → battles_db"]
+        FORBIDDEN3["❌ Battle → ingestion_db"]
+        FORBIDDEN4["❌ Any service → another's database"]
+    end
+
+    %% Styling
+    classDef service fill:#fff3cd,stroke:#ffc107
+    classDef database fill:#f8d7da,stroke:#dc3545
+    classDef schema fill:#f5f5f5,stroke:#6c757d
+    classDef rule fill:#d4edda,stroke:#28a745
+    classDef forbidden fill:#ffebee,stroke:#c62828
+
+    class INGEST_SVC,ENRICH_SVC,BATTLE_SVC,SEARCH_SVC,NOTIFY_SVC,BFF_SVC service
+    class INGEST_DB,ENRICH_DB,BATTLE_DB,SEARCH_DB,NOTIFY_DB,BFF_CACHE database
+    class INGEST_SCHEMA,ENRICH_SCHEMA,BATTLE_SCHEMA,SEARCH_SCHEMA,NOTIFY_SCHEMA,BFF_SCHEMA schema
+    class RULE1,RULE2,RULE3,RULE4 rule
+    class FORBIDDEN1,FORBIDDEN2,FORBIDDEN3,FORBIDDEN4 forbidden

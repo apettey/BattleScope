@@ -1,0 +1,66 @@
+sequenceDiagram
+    participant ZKB as zKillboard RedisQ
+    participant Ingest as Ingestion Service
+    participant IngestDB as ingestion_db
+    participant Kafka as Kafka Topic:<br/>killmail.ingested
+    participant Enrich as Enrichment Service
+    participant ESI as EVE ESI API
+    participant EnrichDB as enrichment_db
+    participant Kafka2 as Kafka Topic:<br/>killmail.enriched
+    participant Battle as Battle Service
+    participant BattleDB as battles_db
+    participant Kafka3 as Kafka Topic:<br/>battle.created
+
+    Note over ZKB,Ingest: Phase 1: Ingestion
+    loop Poll every 5s
+        Ingest->>ZKB: GET /listen.php
+        ZKB-->>Ingest: Killmail package
+    end
+
+    Ingest->>Ingest: Apply ruleset filters<br/>(min pilots, alliances, systems)
+
+    alt Killmail Accepted
+        Ingest->>IngestDB: INSERT INTO killmail_events<br/>(idempotency key: killmail_id)
+        IngestDB-->>Ingest: Success (or already exists)
+        Ingest->>Kafka: Publish killmail.ingested event
+        Note over Kafka: Event:<br/>{eventId, killmailId, timestamp}
+    else Killmail Rejected
+        Note over Ingest: Log rejection reason<br/>(metric: ingestion_rejected_total)
+    end
+
+    Note over Kafka,Enrich: Phase 2: Enrichment
+    Kafka->>Enrich: Consume killmail.ingested
+    Enrich->>Enrich: Check if already enriched<br/>(idempotency)
+
+    alt Not Yet Enriched
+        Enrich->>ZKB: GET /api/killID/{id}/<br/>(fetch full payload)
+        ZKB-->>Enrich: Full killmail JSON
+        Enrich->>ESI: Resolve ship types, systems<br/>(with caching)
+        ESI-->>Enrich: Entity names
+        Enrich->>EnrichDB: INSERT INTO enriched_killmails<br/>(with all participant data)
+        EnrichDB-->>Enrich: Success
+        Enrich->>Kafka2: Publish killmail.enriched event
+        Note over Kafka2: Event:<br/>{killmailId, victimId, attackers[], timestamp, system}
+    else Already Enriched
+        Note over Enrich: Skip (idempotent)
+    end
+
+    Note over Kafka2,Battle: Phase 3: Clustering
+    Kafka2->>Battle: Consume killmail.enriched
+    Battle->>Battle: Add to clustering buffer<br/>(sliding window: 30 min)
+    Battle->>Battle: Run clustering algorithm<br/>(check participant overlap, time proximity)
+
+    alt New Battle Detected
+        Battle->>BattleDB: INSERT INTO battles
+        Battle->>BattleDB: INSERT INTO battle_killmails
+        Battle->>BattleDB: INSERT INTO battle_participants
+        BattleDB-->>Battle: Success
+        Battle->>Kafka3: Publish battle.created event
+        Note over Kafka3: Event:<br/>{battleId, systemId, startTime, killmailIds[]}
+    else Existing Battle Updated
+        Battle->>BattleDB: UPDATE battles<br/>ADD battle_killmails
+        BattleDB-->>Battle: Success
+        Battle->>Kafka3: Publish battle.updated event
+    end
+
+    Note over ZKB,Kafka3: End-to-End Latency: ~30s<br/>(ingestion: 5s, enrichment: 10s, clustering: 15s)

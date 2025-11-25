@@ -1,0 +1,116 @@
+graph TB
+    subgraph "External Services"
+        ZKB[zKillboard RedisQ<br/>Real-time streaming]
+        ZKB_HIST[zKillboard History API<br/>Historical backfill]
+        ESI[EVE ESI API]
+    end
+
+    subgraph "Frontend Layer"
+        BROWSER[Web Browser]
+        FRONTEND[React Frontend SPA]
+    end
+
+    subgraph "Service Layer - Each Owns Its API"
+        BFF[Frontend BFF Service<br/>Aggregation Layer]
+        INGEST[Ingestion Service<br/>Domain: Raw Killmail Acquisition]
+        ENRICH[Enrichment Service<br/>Domain: Killmail Augmentation]
+        BATTLE[Battle Service<br/>Domain: Battle Aggregation]
+        SEARCH[Search Service<br/>Domain: Full-Text Search]
+        NOTIFY[Notification Service<br/>Domain: Real-Time Notifications]
+    end
+
+    subgraph "Data Layer - Isolated per Service"
+        INGEST_DB[(ingestion_db<br/>PostgreSQL)]
+        ENRICH_DB[(enrichment_db<br/>PostgreSQL)]
+        BATTLE_DB[(battles_db<br/>PostgreSQL)]
+        SEARCH_DB[(search indices<br/>Typesense)]
+        NOTIFY_DB[(notifications_db<br/>Redis)]
+        CACHE[(Cache<br/>Redis)]
+    end
+
+    subgraph "Event Streaming"
+        KAFKA[Kafka/Redpanda<br/>Event Bus]
+    end
+
+    subgraph "Observability Stack"
+        PROM[Prometheus]
+        LOKI[Loki]
+        JAEGER[Jaeger]
+        GRAFANA[Grafana]
+    end
+
+    %% External connections
+    ZKB -->|Poll RedisQ<br/>(every 5s)| INGEST
+    ZKB_HIST -->|Fetch History<br/>(batch jobs)| INGEST
+    ESI -->|Entity Names| ENRICH
+    ESI -->|System Data| SEARCH
+
+    %% Frontend connections
+    BROWSER --> FRONTEND
+    FRONTEND -->|HTTP| BFF
+    FRONTEND -->|WebSocket| NOTIFY
+
+    %% BFF to services
+    BFF -->|HTTP| BATTLE
+    BFF -->|HTTP| SEARCH
+    BFF -->|HTTP| ENRICH
+    BFF -->|Redis Cache| CACHE
+
+    %% Service to own database
+    INGEST --> INGEST_DB
+    ENRICH --> ENRICH_DB
+    BATTLE --> BATTLE_DB
+    SEARCH --> SEARCH_DB
+    NOTIFY --> NOTIFY_DB
+
+    %% Event publishing
+    INGEST -.->|Publish: killmail.ingested| KAFKA
+    ENRICH -.->|Publish: killmail.enriched| KAFKA
+    BATTLE -.->|Publish: battle.created<br/>battle.updated| KAFKA
+
+    %% Event consumption
+    KAFKA -.->|Consume: killmail.ingested| ENRICH
+    KAFKA -.->|Consume: killmail.enriched| BATTLE
+    KAFKA -.->|Consume: battle.created<br/>battle.updated| SEARCH
+    KAFKA -.->|Consume: battle.created<br/>(filtered by subscriptions)| NOTIFY
+
+    %% Observability
+    INGEST -->|Metrics| PROM
+    ENRICH -->|Metrics| PROM
+    BATTLE -->|Metrics| PROM
+    SEARCH -->|Metrics| PROM
+    NOTIFY -->|Metrics| PROM
+    BFF -->|Metrics| PROM
+
+    INGEST -->|Logs| LOKI
+    ENRICH -->|Logs| LOKI
+    BATTLE -->|Logs| LOKI
+    SEARCH -->|Logs| LOKI
+    NOTIFY -->|Logs| LOKI
+    BFF -->|Logs| LOKI
+
+    INGEST -->|Traces| JAEGER
+    ENRICH -->|Traces| JAEGER
+    BATTLE -->|Traces| JAEGER
+    SEARCH -->|Traces| JAEGER
+    NOTIFY -->|Traces| JAEGER
+    BFF -->|Traces| JAEGER
+
+    PROM --> GRAFANA
+    LOKI --> GRAFANA
+    JAEGER --> GRAFANA
+
+    %% Styling
+    classDef external fill:#e1f5ff,stroke:#0366d6
+    classDef frontend fill:#d4edda,stroke:#28a745
+    classDef service fill:#fff3cd,stroke:#ffc107
+    classDef data fill:#f8d7da,stroke:#dc3545
+    classDef event fill:#e7d7ff,stroke:#6610f2
+    classDef obs fill:#d7f3ff,stroke:#17a2b8
+
+    class ZKB,ZKB_HIST,ESI external
+    class BROWSER,FRONTEND frontend
+    class BFF,INGEST,ENRICH,BATTLE,SEARCH,NOTIFY service
+    class INGEST_DB,ENRICH_DB,BATTLE_DB,SEARCH_DB,NOTIFY_DB,CACHE data
+    class KAFKA event
+    class PROM,LOKI,JAEGER,GRAFANA obs

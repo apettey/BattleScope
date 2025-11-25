@@ -1,0 +1,63 @@
+sequenceDiagram
+    participant User as User Browser
+    participant Frontend as React Frontend
+    participant BFF as Frontend BFF
+    participant Cache as Redis Cache
+    participant Battle as Battle Service
+    participant BattleDB as battles_db
+    participant Search as Search Service
+    participant SearchDB as Typesense
+
+    Note over User,Frontend: User Action
+    User->>Frontend: Navigate to /battles
+
+    Note over Frontend,BFF: Frontend Request
+    Frontend->>BFF: GET /api/bff/battles?limit=20&space_type=jspace
+    Note over BFF: Aggregation layer
+
+    Note over BFF,Cache: Check Cache
+    BFF->>Cache: GET cache:battles:jspace:20
+    alt Cache Hit
+        Cache-->>BFF: Cached battle list
+        Note over BFF: TTL: 60 seconds
+    else Cache Miss
+        Note over BFF,Battle: Fetch from Battle Service
+        BFF->>Battle: GET /api/battles?limit=20&space_type=jspace
+        Battle->>BattleDB: SELECT * FROM battles<br/>WHERE space_type = 'jspace'<br/>ORDER BY start_time DESC<br/>LIMIT 20
+        BattleDB-->>Battle: Battle records
+        Battle-->>BFF: Battle list JSON
+
+        Note over BFF,Search: Optionally enrich with search data
+        BFF->>Search: GET /api/search/battles/facets
+        Search->>SearchDB: Facet query
+        SearchDB-->>Search: Facet counts
+        Search-->>BFF: Facets JSON
+
+        Note over BFF,Cache: Update Cache
+        BFF->>Cache: SET cache:battles:jspace:20<br/>TTL 60s
+    end
+
+    Note over BFF,Frontend: Return Aggregated Response
+    BFF-->>Frontend: Battle list with facets JSON
+    Frontend-->>User: Render battle list
+
+    Note over User,Frontend: User Clicks Battle Detail
+    User->>Frontend: Click battle ID abc123
+
+    Note over Frontend,BFF: Detail Request
+    Frontend->>BFF: GET /api/bff/battles/abc123
+    BFF->>Cache: GET cache:battle:abc123
+    alt Cache Hit
+        Cache-->>BFF: Cached battle detail
+    else Cache Miss
+        BFF->>Battle: GET /api/battles/abc123
+        Battle->>BattleDB: SELECT * FROM battles WHERE id = 'abc123'<br/>JOIN battle_killmails<br/>JOIN battle_participants
+        BattleDB-->>Battle: Battle with killmails and participants
+        Battle-->>BFF: Battle detail JSON
+        BFF->>Cache: SET cache:battle:abc123<br/>TTL 300s
+    end
+
+    BFF-->>Frontend: Battle detail JSON
+    Frontend-->>User: Render battle detail page
+
+    Note over User,SearchDB: Total Response Time:<br/>Cache hit: ~50ms<br/>Cache miss: ~200-400ms
