@@ -1,0 +1,82 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backfill-killmails
+  namespace: battlescope
+  labels:
+    app: ingestion-backfill
+    component: job
+spec:
+  # Keep last 3 jobs for history
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400  # Delete job after 24 hours
+  template:
+    metadata:
+      labels:
+        app: ingestion-backfill
+        component: job
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: dockerhub-secret
+
+      containers:
+        - name: backfill
+          image: petdog/battlescope-ingestion:latest
+          imagePullPolicy: Always
+          command: ["pnpm", "backfill"]
+
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+
+            # Database configuration
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "battlescope_ingestion"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+
+            # Kafka/Redpanda configuration
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: KAFKA_CLIENT_ID
+              value: "ingestion-backfill"
+
+            # Backfill configuration
+            # Number of days to backfill (default: 7)
+            - name: BACKFILL_DAYS
+              value: "7"
+
+            # Alternative: Use explicit date range
+            # - name: BACKFILL_START_DATE
+            #   value: "2025-01-01"
+            # - name: BACKFILL_END_DATE
+            #   value: "2025-01-07"
+
+            # Batch size for processing (default: 1000)
+            - name: BACKFILL_BATCH_SIZE
+              value: "1000"
+
+            # Whether to publish events for enrichment (default: true)
+            - name: BACKFILL_PUBLISH_EVENTS
+              value: "true"
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
