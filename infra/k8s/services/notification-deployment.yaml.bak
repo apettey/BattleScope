@@ -16,6 +16,36 @@ spec:
       imagePullSecrets:
         - name: dockerhub-secret
 
+      # Init container to run migrations before main container starts
+      initContainers:
+        - name: migrate
+          image: petdog/battlescope-notification:latest
+          command: ['npm', 'run', 'migrate']
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "battlescope_notifications"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+      # Main container starts only after migrations succeed
       containers:
         - name: notification-service
           image: petdog/battlescope-notification:latest

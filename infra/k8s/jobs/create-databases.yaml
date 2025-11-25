@@ -1,0 +1,29 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-databases
+  namespace: battlescope
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-dbs
+          image: postgres:15-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Creating databases..."
+              for db in battlescope_ingestion battlescope_enrichment battlescope_battles battlescope_notifications; do
+                echo "Creating database $db..."
+                PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U battlescope -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1 || \
+                PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U battlescope -d postgres -c "CREATE DATABASE $db"
+              done
+              echo "All databases created successfully!"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password

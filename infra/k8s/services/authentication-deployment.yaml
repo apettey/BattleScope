@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentication
+  namespace: battlescope
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: authentication
+  template:
+    metadata:
+      labels:
+        app: authentication
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      # Init container to run migrations before main container starts
+      initContainers:
+        - name: migrate
+          image: petdog/battlescope-authentication:latest
+          command: ['node', 'dist/database/migrate-cli.js']
+          envFrom:
+            - configMapRef:
+                name: authentication-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: encryption-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+      # Main container starts only after migrations succeed
+      containers:
+        - name: authentication
+          image: petdog/battlescope-authentication:latest
+          ports:
+            - containerPort: 3007
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: authentication-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: encryption-key
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: session-secret
+            - name: EVE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: eve-client-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3007
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3007
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentication-service
+  namespace: battlescope
+spec:
+  selector:
+    app: authentication
+  type: NodePort
+  ports:
+    - port: 3007
+      targetPort: 3007
+      nodePort: 30007
+      protocol: TCP
+      name: http

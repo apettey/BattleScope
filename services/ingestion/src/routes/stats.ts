@@ -10,6 +10,41 @@ export async function statsRoutes(
   // Get ingestion statistics
   fastify.get('/api/stats', async (request, reply) => {
     try {
+      // Check if table exists first
+      let tableExists;
+      try {
+        tableExists = await db.introspection.getTables();
+      } catch (dbError) {
+        // Database or connection error - return empty stats
+        request.log.warn({ error: dbError }, 'Database not available, returning empty stats');
+        return reply.status(200).send({
+          totalKillmails: 0,
+          processedKillmails: 0,
+          unprocessedKillmails: 0,
+          last24Hours: 0,
+          lastHour: 0,
+          totalIskDestroyed: 0,
+          topSystems: [],
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const hasKillmailTable = tableExists.some((t) => t.name === 'killmail_events');
+
+      // Return empty stats if table doesn't exist yet
+      if (!hasKillmailTable) {
+        return reply.status(200).send({
+          totalKillmails: 0,
+          processedKillmails: 0,
+          unprocessedKillmails: 0,
+          last24Hours: 0,
+          lastHour: 0,
+          totalIskDestroyed: 0,
+          topSystems: [],
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       // Total killmails
       const totalResult = await db
         .selectFrom('killmail_events')
@@ -34,14 +69,14 @@ export async function statsRoutes(
       const last24hResult = await db
         .selectFrom('killmail_events')
         .select((eb) => eb.fn.countAll<number>().as('last_24h'))
-        .where('occurred_at', '>=', sql`NOW() - INTERVAL '24 hours'`)
+        .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '24 hours'`)
         .executeTakeFirst();
 
       // Killmails in last hour
       const lastHourResult = await db
         .selectFrom('killmail_events')
         .select((eb) => eb.fn.countAll<number>().as('last_hour'))
-        .where('occurred_at', '>=', sql`NOW() - INTERVAL '1 hour'`)
+        .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '1 hour'`)
         .executeTakeFirst();
 
       // Total ISK destroyed
@@ -54,7 +89,7 @@ export async function statsRoutes(
       const topSystems = await db
         .selectFrom('killmail_events')
         .select(['system_id', (eb) => eb.fn.countAll<number>().as('kill_count')])
-        .where('occurred_at', '>=', sql`NOW() - INTERVAL '24 hours'`)
+        .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '24 hours'`)
         .groupBy('system_id')
         .orderBy('kill_count', 'desc')
         .limit(10)
@@ -74,10 +109,12 @@ export async function statsRoutes(
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      request.log.error('Failed to fetch stats', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      request.log.error({ error, errorMessage, errorStack }, 'Failed to fetch stats');
       return reply.status(500).send({
         error: 'Failed to fetch stats',
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage,
       });
     }
   });

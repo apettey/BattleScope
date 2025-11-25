@@ -33,7 +33,7 @@ async function main() {
 
     // Initialize Fastify
     const fastify = Fastify({
-      logger: logger,
+      logger: true,
       requestIdLogLabel: 'requestId',
       disableRequestLogging: false,
     });

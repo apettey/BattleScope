@@ -4,7 +4,7 @@ metadata:
   name: search-service
   namespace: battlescope
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: search-service
@@ -15,33 +15,59 @@ spec:
     spec:
       imagePullSecrets:
         - name: dockerhub-secret
+
+      # No init container - Search service doesn't have database migrations
       containers:
         - name: search-service
-          image: petdog/battlescope-search:v3.0.2
+          image: petdog/battlescope-search:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3004
+              protocol: TCP
           env:
+            - name: NODE_ENV
+              value: "production"
             - name: PORT
               value: "3004"
-            - name: DATABASE_HOST
-              value: postgres
-            - name: DATABASE_PORT
-              value: "5432"
-            - name: DATABASE_NAME
-              value: search_db
-            - name: DATABASE_USER
-              value: battlescope
-            - name: DATABASE_PASSWORD
-              value: battlescope_password
-            - name: REDIS_HOST
-              value: redis
-            - name: REDIS_PORT
-              value: "6379"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: TYPESENSE_HOST
+              value: "typesense"
+            - name: TYPESENSE_PORT
+              value: "8108"
+            - name: TYPESENSE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: typesense-secret
+                  key: api-key
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: KAFKA_CLIENT_ID
+              value: "search-service"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
 ---
 apiVersion: v1
 kind: Service
@@ -49,10 +75,11 @@ metadata:
   name: search-service
   namespace: battlescope
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: search-service
   ports:
     - port: 3004
       targetPort: 3004
-      nodePort: 30104
+      protocol: TCP
+      name: http

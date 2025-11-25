@@ -1,5 +1,5 @@
 import { Kysely } from 'kysely';
-import { createDatabase } from '@battlescope/database';
+import { createDatabase, getDatabaseConfigFromEnv } from '@battlescope/database';
 import type { Database } from './schema';
 import type { Logger } from '@battlescope/logger';
 
@@ -7,7 +7,8 @@ let dbInstance: Kysely<Database> | null = null;
 
 export function getDatabase(logger: Logger): Kysely<Database> {
   if (!dbInstance) {
-    dbInstance = createDatabase(logger) as Kysely<Database>;
+    const config = getDatabaseConfigFromEnv();
+    dbInstance = createDatabase<Database>(config);
     logger.info('Database connection established');
   }
   return dbInstance;

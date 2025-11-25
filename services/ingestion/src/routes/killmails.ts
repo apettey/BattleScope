@@ -76,7 +76,7 @@ export async function killmailRoutes(
         },
       });
     } catch (error) {
-      request.log.error('Failed to fetch killmails', error);
+      request.log.error({ error }, 'Failed to fetch killmails');
       return reply.status(500).send({
         error: 'Failed to fetch killmails',
         message: error instanceof Error ? error.message : String(error),
@@ -123,7 +123,7 @@ export async function killmailRoutes(
         battleId: killmail.battle_id,
       });
     } catch (error) {
-      request.log.error('Failed to fetch killmail', { killmailId, error });
+      request.log.error({ killmailId, error }, 'Failed to fetch killmail');
       return reply.status(500).send({
         error: 'Failed to fetch killmail',
         message: error instanceof Error ? error.message : String(error),

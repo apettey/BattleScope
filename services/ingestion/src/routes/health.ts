@@ -18,7 +18,7 @@ export async function healthRoutes(
         database: 'connected',
       });
     } catch (error) {
-      request.log.error('Health check failed', error);
+      request.log.error({ error }, 'Health check failed');
       return reply.status(503).send({
         status: 'unhealthy',
         service: 'ingestion',

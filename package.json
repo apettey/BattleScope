@@ -4,6 +4,7 @@
   "private": true,
   "description": "BattleScope V3 - Distributed Microservices Architecture",
   "workspaces": [
+    "packages/*",
     "services/*",
     "frontend"
   ],

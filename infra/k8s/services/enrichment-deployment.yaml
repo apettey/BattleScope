@@ -4,7 +4,7 @@ metadata:
   name: enrichment-service
   namespace: battlescope
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: enrichment-service
@@ -17,33 +17,63 @@ spec:
         - name: dockerhub-secret
       containers:
         - name: enrichment-service
-          image: petdog/battlescope-enrichment:v3.0.2
+          image: petdog/battlescope-enrichment:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3002
+              protocol: TCP
           env:
+            - name: NODE_ENV
+              value: "production"
             - name: PORT
               value: "3002"
-            - name: DATABASE_HOST
-              value: postgres
-            - name: DATABASE_PORT
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
               value: "5432"
-            - name: DATABASE_NAME
-              value: enrichment_db
-            - name: DATABASE_USER
-              value: battlescope
-            - name: DATABASE_PASSWORD
-              value: battlescope_password
-            - name: KAFKA_BROKERS
-              value: redpanda:9092
+            - name: DB_NAME
+              value: "battlescope_enrichment"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
             - name: REDIS_HOST
-              value: redis
+              value: "redis"
             - name: REDIS_PORT
               value: "6379"
+            - name: KAFKA_BROKERS
+              value: "redpanda:9092"
+            - name: KAFKA_CLIENT_ID
+              value: "enrichment-service"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
 ---
 apiVersion: v1
 kind: Service
@@ -51,10 +81,11 @@ metadata:
   name: enrichment-service
   namespace: battlescope
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: enrichment-service
   ports:
     - port: 3002
       targetPort: 3002
-      nodePort: 30102
+      protocol: TCP
+      name: http

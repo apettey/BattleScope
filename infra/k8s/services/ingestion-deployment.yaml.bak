@@ -1,33 +1,63 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: notification-service
+  name: ingestion-service
   namespace: battlescope
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: notification-service
+      app: ingestion-service
   template:
     metadata:
       labels:
-        app: notification-service
+        app: ingestion-service
     spec:
       imagePullSecrets:
         - name: dockerhub-secret
 
+      # Init container to run migrations before main container starts
+      initContainers:
+        - name: migrate
+          image: petdog/battlescope-ingestion:latest
+          command: ['npm', 'run', 'migrate']
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "battlescope_ingestion"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+      # Main container starts only after migrations succeed
       containers:
-        - name: notification-service
-          image: petdog/battlescope-notification:latest
+        - name: ingestion-service
+          image: petdog/battlescope-ingestion:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 3005
+            - containerPort: 3001
               protocol: TCP
           env:
             - name: NODE_ENV
               value: "production"
             - name: PORT
-              value: "3005"
+              value: "3001"
             - name: LOG_LEVEL
               value: "info"
             - name: DB_HOST
@@ -35,7 +65,7 @@ spec:
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
-              value: "battlescope_notifications"
+              value: "battlescope_ingestion"
             - name: DB_USER
               value: "battlescope"
             - name: DB_PASSWORD
@@ -50,11 +80,11 @@ spec:
             - name: KAFKA_BROKERS
               value: "redpanda:9092"
             - name: KAFKA_CLIENT_ID
-              value: "notification-service"
+              value: "ingestion-service"
           livenessProbe:
             httpGet:
               path: /health
-              port: 3005
+              port: 3001
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -62,7 +92,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 3005
+              port: 3001
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
@@ -79,14 +109,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: notification-service
+  name: ingestion-service
   namespace: battlescope
 spec:
   type: ClusterIP
   selector:
-    app: notification-service
+    app: ingestion-service
   ports:
-    - port: 3005
-      targetPort: 3005
+    - port: 3001
+      targetPort: 3001
       protocol: TCP
       name: http

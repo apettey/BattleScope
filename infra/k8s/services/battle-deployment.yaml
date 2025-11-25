@@ -4,7 +4,7 @@ metadata:
   name: battle-service
   namespace: battlescope
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: battle-service
@@ -17,33 +17,59 @@ spec:
         - name: dockerhub-secret
       containers:
         - name: battle-service
-          image: petdog/battlescope-battle:v3.0.2
+          image: petdog/battlescope-battle:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3003
+              protocol: TCP
           env:
+            - name: NODE_ENV
+              value: "production"
             - name: PORT
               value: "3003"
-            - name: DATABASE_HOST
-              value: postgres
-            - name: DATABASE_PORT
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
               value: "5432"
-            - name: DATABASE_NAME
-              value: battle_db
-            - name: DATABASE_USER
-              value: battlescope
-            - name: DATABASE_PASSWORD
-              value: battlescope_password
+            - name: DB_NAME
+              value: "battlescope_battles"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
             - name: KAFKA_BROKERS
-              value: redpanda:9092
-            - name: REDIS_HOST
-              value: redis
-            - name: REDIS_PORT
-              value: "6379"
+              value: "redpanda:9092"
+            - name: KAFKA_CLIENT_ID
+              value: "battle-service"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
 ---
 apiVersion: v1
 kind: Service
@@ -51,10 +77,11 @@ metadata:
   name: battle-service
   namespace: battlescope
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: battle-service
   ports:
     - port: 3003
       targetPort: 3003
-      nodePort: 30103
+      protocol: TCP
+      name: http

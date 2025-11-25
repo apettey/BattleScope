@@ -58,16 +58,22 @@ data:
       - job_name: 'postgres-exporter'
         static_configs:
           - targets: ['postgres-exporter:9187']
+            labels:
+              namespace: 'battlescope'
 
       # Redis Exporter
       - job_name: 'redis-exporter'
         static_configs:
           - targets: ['redis-exporter:9121']
+            labels:
+              namespace: 'battlescope'
 
-      # Kafka Exporter
-      - job_name: 'kafka-exporter'
+      # Redpanda Exporter
+      - job_name: 'redpanda-exporter'
         static_configs:
-          - targets: ['kafka-exporter:9308']
+          - targets: ['redpanda-exporter:9308']
+            labels:
+              namespace: 'battlescope'
 
       # Node Exporter
       - job_name: 'node-exporter'

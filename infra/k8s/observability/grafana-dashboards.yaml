@@ -1,0 +1,374 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: battlescope
+data:
+  # Dashboard provider configuration
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards
+
+  # Authentication Service Dashboard
+  authentication.json: |
+    {
+      "dashboard": {
+        "title": "BattleScope - Authentication Service",
+        "tags": ["battlescope", "authentication"],
+        "timezone": "browser",
+        "editable": true,
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"authentication\"}[5m])",
+                "legendFormat": "{{method}} {{path}}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Response Times (p95)",
+            "type": "graph",
+            "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"authentication\"}[5m]))",
+                "legendFormat": "{{method}} {{path}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"authentication\",status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors"
+              },
+              {
+                "expr": "rate(http_requests_total{job=\"authentication\",status=~\"4..\"}[5m])",
+                "legendFormat": "4xx errors"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Active Sessions (Redis)",
+            "type": "stat",
+            "gridPos": {"x": 12, "y": 8, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "redis_db_keys{db=\"db0\",namespace=\"battlescope\"}",
+                "legendFormat": "Active Sessions"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Database Connections",
+            "type": "stat",
+            "gridPos": {"x": 18, "y": 8, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends{datname=\"battlescope_auth\"}",
+                "legendFormat": "Active Connections"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "OAuth Success Rate",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"authentication\",path=\"/auth/callback\",status=\"200\"}[5m])",
+                "legendFormat": "Successful OAuth"
+              },
+              {
+                "expr": "rate(http_requests_total{job=\"authentication\",path=\"/auth/callback\",status!=\"200\"}[5m])",
+                "legendFormat": "Failed OAuth"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Recent Logs",
+            "type": "logs",
+            "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "{app=\"authentication\"}",
+                "refId": "A"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "wrapLogMessage": true
+            }
+          }
+        ],
+        "refresh": "5s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }
+
+  # Redis Dashboard
+  redis.json: |
+    {
+      "dashboard": {
+        "title": "BattleScope - Redis",
+        "tags": ["battlescope", "redis", "cache"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Connected Clients",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "redis_connected_clients{namespace=\"battlescope\"}",
+                "legendFormat": "Clients"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Memory Usage",
+            "type": "graph",
+            "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "redis_memory_used_bytes{namespace=\"battlescope\"}",
+                "legendFormat": "Used Memory"
+              },
+              {
+                "expr": "redis_memory_max_bytes{namespace=\"battlescope\"}",
+                "legendFormat": "Max Memory"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Commands Per Second",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "rate(redis_commands_total{namespace=\"battlescope\"}[1m])",
+                "legendFormat": "{{cmd}}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Hit Rate",
+            "type": "graph",
+            "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "rate(redis_keyspace_hits_total{namespace=\"battlescope\"}[5m]) / (rate(redis_keyspace_hits_total{namespace=\"battlescope\"}[5m]) + rate(redis_keyspace_misses_total{namespace=\"battlescope\"}[5m]))",
+                "legendFormat": "Hit Rate"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Keys by Database",
+            "type": "stat",
+            "gridPos": {"x": 0, "y": 16, "w": 24, "h": 4},
+            "targets": [
+              {
+                "expr": "redis_db_keys{namespace=\"battlescope\"}",
+                "legendFormat": "DB{{db}}: {{key_type}}"
+              }
+            ]
+          }
+        ],
+        "refresh": "5s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }
+
+  # Redpanda Dashboard
+  redpanda.json: |
+    {
+      "dashboard": {
+        "title": "BattleScope - Redpanda",
+        "tags": ["battlescope", "redpanda", "kafka"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Broker Status",
+            "type": "stat",
+            "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "kafka_brokers{namespace=\"battlescope\"}",
+                "legendFormat": "Active Brokers"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Topics Count",
+            "type": "stat",
+            "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "count(kafka_topic_partitions{namespace=\"battlescope\"}) by (topic)",
+                "legendFormat": "Topics"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Total Partitions",
+            "type": "stat",
+            "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "sum(kafka_topic_partitions{namespace=\"battlescope\"})",
+                "legendFormat": "Partitions"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Consumer Groups",
+            "type": "stat",
+            "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+            "targets": [
+              {
+                "expr": "count(kafka_consumergroup_members{namespace=\"battlescope\"})",
+                "legendFormat": "Groups"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Messages In Per Second",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "sum(rate(kafka_topic_partition_current_offset{namespace=\"battlescope\"}[1m])) by (topic)",
+                "legendFormat": "{{topic}}"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Consumer Lag",
+            "type": "graph",
+            "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+            "targets": [
+              {
+                "expr": "sum(kafka_consumergroup_lag{namespace=\"battlescope\"}) by (consumergroup, topic)",
+                "legendFormat": "{{consumergroup}} - {{topic}}"
+              }
+            ]
+          },
+          {
+            "id": 7,
+            "title": "Topic Size (bytes)",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+            "targets": [
+              {
+                "expr": "kafka_topic_partition_log_end_offset{namespace=\"battlescope\"}",
+                "legendFormat": "{{topic}} - partition {{partition}}"
+              }
+            ]
+          }
+        ],
+        "refresh": "5s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }
+
+  # Loki Dashboard
+  loki.json: |
+    {
+      "dashboard": {
+        "title": "BattleScope - Loki Logs",
+        "tags": ["battlescope", "loki", "logs"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Log Volume by Service",
+            "type": "graph",
+            "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+            "targets": [
+              {
+                "expr": "sum(rate({namespace=\"battlescope\"}[1m])) by (app)",
+                "legendFormat": "{{app}}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Error Logs",
+            "type": "logs",
+            "gridPos": {"x": 0, "y": 8, "w": 24, "h": 12},
+            "targets": [
+              {
+                "expr": "{namespace=\"battlescope\"} |~ \"(?i)(error|exception|fail)\"",
+                "refId": "A"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "wrapLogMessage": true,
+              "sortOrder": "Descending"
+            }
+          },
+          {
+            "id": 3,
+            "title": "Authentication Logs",
+            "type": "logs",
+            "gridPos": {"x": 0, "y": 20, "w": 12, "h": 12},
+            "targets": [
+              {
+                "expr": "{app=\"authentication\"}",
+                "refId": "A"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "OAuth Flow Logs",
+            "type": "logs",
+            "gridPos": {"x": 12, "y": 20, "w": 12, "h": 12},
+            "targets": [
+              {
+                "expr": "{app=\"authentication\"} |~ \"(?i)(oauth|callback|login)\"",
+                "refId": "A"
+              }
+            ]
+          }
+        ],
+        "refresh": "5s",
+        "time": {"from": "now-1h", "to": "now"}
+      }
+    }

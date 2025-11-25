@@ -91,27 +91,27 @@ spec:
     - port: 9121
       targetPort: 9121
 ---
-# Kafka Exporter
+# Redpanda Exporter (Kafka-compatible)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kafka-exporter
+  name: redpanda-exporter
   namespace: battlescope
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kafka-exporter
+      app: redpanda-exporter
   template:
     metadata:
       labels:
-        app: kafka-exporter
+        app: redpanda-exporter
     spec:
       containers:
-        - name: kafka-exporter
+        - name: redpanda-exporter
           image: danielqsj/kafka-exporter:v1.7.0
           args:
-            - --kafka.server=kafka:9092
+            - --kafka.server=redpanda:9092
           ports:
             - containerPort: 9308
               name: metrics
@@ -126,11 +126,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kafka-exporter
+  name: redpanda-exporter
   namespace: battlescope
 spec:
   selector:
-    app: kafka-exporter
+    app: redpanda-exporter
   ports:
     - port: 9308
       targetPort: 9308
