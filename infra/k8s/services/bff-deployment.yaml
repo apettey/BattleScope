@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff-service
+  namespace: battlescope
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bff-service
+  template:
+    metadata:
+      labels:
+        app: bff-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: bff-service
+          image: petdog/battlescope-bff:v3.0.2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3006
+          env:
+            - name: PORT
+              value: "3006"
+            - name: INGESTION_SERVICE_URL
+              value: http://ingestion-service:3001
+            - name: ENRICHMENT_SERVICE_URL
+              value: http://enrichment-service:3002
+            - name: BATTLE_SERVICE_URL
+              value: http://battle-service:3003
+            - name: SEARCH_SERVICE_URL
+              value: http://search-service:3004
+            - name: NOTIFICATION_SERVICE_URL
+              value: http://notification-service:3005
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-service
+  namespace: battlescope
+spec:
+  type: NodePort
+  selector:
+    app: bff-service
+  ports:
+    - port: 3006
+      targetPort: 3006
+      nodePort: 30106

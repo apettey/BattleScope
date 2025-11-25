@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "0"
+          - generic [ref=e15]: "1"
+        - generic [ref=e16]: Issue
+      - button "Collapse issues badge" [ref=e17]:
+        - img [ref=e18]
+  - alert [ref=e20]
+  - navigation [ref=e21]:
+    - generic [ref=e23]:
+      - link "B BattleScope" [ref=e24] [cursor=pointer]:
+        - /url: /dashboard
+        - generic [ref=e26]: B
+        - generic [ref=e27]: BattleScope
+      - button [ref=e28] [cursor=pointer]:
+        - img [ref=e29]
+  - generic [ref=e30]:
+    - generic [ref=e31]:
+      - heading "Dashboard" [level=1] [ref=e32]
+      - paragraph [ref=e33]: Welcome to BattleScope V3 - Your EVE Online battle intelligence hub
+    - generic [ref=e34]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - paragraph [ref=e39]: Total Battles
+          - paragraph [ref=e40]: "0"
+        - img [ref=e42]
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - paragraph [ref=e55]: Total Killmails
+          - paragraph [ref=e56]: "0"
+        - img [ref=e58]
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Active Users
+          - paragraph [ref=e65]: "0"
+        - img [ref=e67]
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - paragraph [ref=e76]: Recent Activity
+          - paragraph [ref=e77]: "0"
+        - img [ref=e79]
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - heading "Recent Battles" [level=3] [ref=e84]
+        - link "View all" [ref=e86] [cursor=pointer]:
+          - /url: /battles
+      - paragraph [ref=e88]: No recent battles found
+```

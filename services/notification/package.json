@@ -1,0 +1,40 @@
+{
+  "name": "@battlescope/notification",
+  "version": "1.0.0",
+  "description": "Notification service with WebSockets, webhooks, and user subscriptions",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "migrate": "tsx src/database/migrate-cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/logger": "workspace:*",
+    "@battlescope/types": "workspace:*",
+    "@battlescope/events": "workspace:*",
+    "@fastify/cookie": "^9.3.1",
+    "@fastify/cors": "^9.0.1",
+    "axios": "^1.6.4",
+    "fastify": "^4.25.2",
+    "fastify-type-provider-zod": "^1.1.9",
+    "ioredis": "^5.3.2",
+    "kysely": "^0.27.3",
+    "pg": "^8.11.3",
+    "socket.io": "^4.6.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

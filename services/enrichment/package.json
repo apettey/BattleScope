@@ -1,0 +1,38 @@
+{
+  "name": "@battlescope/enrichment",
+  "version": "1.0.0",
+  "description": "Enrichment service that consumes killmail events and enriches with ESI data",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "migrate": "tsx src/database/migrate-cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/logger": "workspace:*",
+    "@battlescope/types": "workspace:*",
+    "@battlescope/events": "workspace:*",
+    "@fastify/cors": "^9.0.1",
+    "axios": "^1.6.4",
+    "fastify": "^4.25.2",
+    "fastify-type-provider-zod": "^1.1.9",
+    "ioredis": "^5.3.2",
+    "kysely": "^0.27.3",
+    "pg": "^8.11.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

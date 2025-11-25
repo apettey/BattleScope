@@ -1,0 +1,38 @@
+{
+  "name": "@battlescope/battle",
+  "version": "1.0.0",
+  "description": "Battle clustering service - consumes enriched killmails, clusters into battles, tracks participants and ship history",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "migrate": "tsx src/database/migrate-cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@battlescope/database": "workspace:*",
+    "@battlescope/logger": "workspace:*",
+    "@battlescope/types": "workspace:*",
+    "@battlescope/events": "workspace:*",
+    "@fastify/cors": "^9.0.1",
+    "fastify": "^4.25.2",
+    "fastify-type-provider-zod": "^1.1.9",
+    "kysely": "^0.27.3",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.11.0",
+    "@types/uuid": "^9.0.7",
+    "@vitest/coverage-v8": "^1.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

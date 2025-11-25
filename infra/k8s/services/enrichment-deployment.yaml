@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enrichment-service
+  namespace: battlescope
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enrichment-service
+  template:
+    metadata:
+      labels:
+        app: enrichment-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: enrichment-service
+          image: petdog/battlescope-enrichment:v3.0.2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: DATABASE_HOST
+              value: postgres
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_NAME
+              value: enrichment_db
+            - name: DATABASE_USER
+              value: battlescope
+            - name: DATABASE_PASSWORD
+              value: battlescope_password
+            - name: KAFKA_BROKERS
+              value: redpanda:9092
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enrichment-service
+  namespace: battlescope
+spec:
+  type: NodePort
+  selector:
+    app: enrichment-service
+  ports:
+    - port: 3002
+      targetPort: 3002
+      nodePort: 30102

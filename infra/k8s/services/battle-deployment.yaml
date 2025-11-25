@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: battle-service
+  namespace: battlescope
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: battle-service
+  template:
+    metadata:
+      labels:
+        app: battle-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: battle-service
+          image: petdog/battlescope-battle:v3.0.2
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3003
+          env:
+            - name: PORT
+              value: "3003"
+            - name: DATABASE_HOST
+              value: postgres
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_NAME
+              value: battle_db
+            - name: DATABASE_USER
+              value: battlescope
+            - name: DATABASE_PASSWORD
+              value: battlescope_password
+            - name: KAFKA_BROKERS
+              value: redpanda:9092
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: battle-service
+  namespace: battlescope
+spec:
+  type: NodePort
+  selector:
+    app: battle-service
+  ports:
+    - port: 3003
+      targetPort: 3003
+      nodePort: 30103
