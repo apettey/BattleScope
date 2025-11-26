@@ -47,14 +47,18 @@ export class ZKillboardHistoryClient {
     try {
       this.logger.info('Fetching historical killmails', { date: dateStr, url });
 
-      const response = await axios.get<HistoricalKillmail[]>(url, {
+      const response = await axios.get<Record<string, string>>(url, {
         timeout: 30000,
         headers: {
           'User-Agent': this.userAgent,
         },
       });
 
-      const killmails = response.data;
+      // Transform object to array of tuples
+      const killmails: HistoricalKillmail[] = Object.entries(response.data).map(
+        ([killmailId, hash]) => [parseInt(killmailId, 10), hash]
+      );
+
       this.logger.info('Fetched historical killmails', {
         date: dateStr,
         count: killmails.length,

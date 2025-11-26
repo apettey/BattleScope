@@ -6,12 +6,14 @@ import { getConfig } from './config';
 import { getDatabase, closeDatabase } from './database';
 import { healthRoutes, killmailRoutes, statsRoutes } from './routes';
 import { ZKillboardPoller } from './poller';
+import { getEnrichedKillmailConsumer } from './consumers/enriched-killmail-consumer';
 
 const logger = createLogger({ serviceName: 'ingestion' });
 const config = getConfig();
 
 let poller: ZKillboardPoller | null = null;
 let eventBus: EventBus | null = null;
+let enrichedConsumer: ReturnType<typeof getEnrichedKillmailConsumer> | null = null;
 
 async function main() {
   try {
@@ -60,6 +62,11 @@ async function main() {
       url: `http://localhost:${config.service.port}`,
     });
 
+    // Start enriched killmail consumer
+    enrichedConsumer = getEnrichedKillmailConsumer(db);
+    await enrichedConsumer.start();
+    logger.info('Enriched killmail consumer started');
+
     // Start ZKillboard poller
     poller = new ZKillboardPoller(db, eventBus, logger, config.zkillboard);
     await poller.start();
@@ -75,6 +82,12 @@ async function main() {
         if (poller) {
           await poller.stop();
           logger.info('Poller stopped');
+        }
+
+        // Stop enriched consumer
+        if (enrichedConsumer) {
+          await enrichedConsumer.stop();
+          logger.info('Enriched consumer stopped');
         }
 
         // Close HTTP server

@@ -75,9 +75,9 @@ export class KillmailConsumer {
           victim: {
             ...killmail.victim,
             shipTypeName: enriched.ship_type_name,
-            characterName: enriched.victim_character_name,
-            corporationName: enriched.victim_corp_name,
-            allianceName: enriched.victim_alliance_name,
+            characterName: enriched.victim_character_name || undefined,
+            corporationName: enriched.victim_corp_name || undefined,
+            allianceName: enriched.victim_alliance_name || undefined,
           },
           attackers: enriched.attacker_data.map((attacker) => ({
             characterId: attacker.characterId,
@@ -93,21 +93,7 @@ export class KillmailConsumer {
             damageDone: attacker.damageDone,
             finalBlow: attacker.finalBlow,
           })),
-          // Add location data
-          system: {
-            systemId: enriched.system_id,
-            systemName: enriched.system_name,
-            regionId: enriched.region_id,
-            regionName: enriched.region_name,
-            securityStatus: enriched.security_status,
-          },
-          // Add ship data
-          ship: {
-            shipTypeId: enriched.ship_type_id,
-            shipTypeName: enriched.ship_type_name,
-            shipGroupName: enriched.ship_group_name,
-          },
-        },
+        } as any,
         timestamp: new Date(),
       });
 

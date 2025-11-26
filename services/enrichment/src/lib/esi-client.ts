@@ -1,7 +1,8 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { createLogger } from '@battlescope/logger';
 import { getRedis } from './redis';
 import { getDatabase } from '../database/client';
+import { getRateLimiter } from './rate-limiter';
 
 const logger = createLogger({ serviceName: 'esi-client' });
 
@@ -67,31 +68,58 @@ export interface ESIAlliance {
   executor_corporation_id: number;
 }
 
+interface ESIRateLimitHeaders {
+  group: string;
+  limit: string;
+  remaining: number;
+  used: number;
+  reset?: number;
+}
+
 export class ESIClient {
   private client: AxiosInstance;
   private redis = getRedis();
   private db = getDatabase();
-  private requestQueue: Promise<any> = Promise.resolve();
-  private lastRequestTime = 0;
-  private readonly MIN_REQUEST_INTERVAL = 10; // 10ms = 100 requests/second (under ESI limit of 150/s)
+  private rateLimiter = getRateLimiter();
+
+  // Default rate limit assumptions if headers are missing
+  private readonly DEFAULT_RATE_LIMIT_GROUP = 'default';
+  private readonly DEFAULT_RATE_LIMIT = '150/15m';
 
   constructor() {
     this.client = axios.create({
       baseURL: 'https://esi.evetech.net/latest',
-      timeout: 10000,
+      timeout: 30000, // Increased timeout for rate-limited requests
       headers: {
-        'User-Agent': 'BattleScope/3.0 (github.com/yourusername/battlescope)',
+        'User-Agent': 'BattleScope/3.0 (contact@battlescope.io)',
       },
     });
 
-    // Add response interceptor for rate limiting
+    // Add response interceptor to handle rate limit errors
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (error.response?.status === 420) {
-          logger.warn('ESI rate limit hit, backing off...');
-          await this.sleep(60000); // Wait 1 minute on rate limit
+        const status = error.response?.status;
+
+        if (status === 420) {
+          // Legacy error limit exceeded (100 errors/minute)
+          logger.error({
+            msg: 'ESI legacy error limit (420) exceeded',
+            url: error.config?.url,
+          });
+          // Wait 60 seconds for error window to reset
+          await this.sleep(60000);
+        } else if (status === 429) {
+          // Rate limit exceeded
+          const retryAfter = parseInt(error.response?.headers?.['retry-after'] || '60', 10);
+          logger.warn({
+            msg: 'ESI rate limit (429) exceeded',
+            url: error.config?.url,
+            retryAfter,
+          });
+          await this.sleep(retryAfter * 1000);
         }
+
         throw error;
       }
     );
@@ -101,13 +129,29 @@ export class ESIClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private async rateLimit(): Promise<void> {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
-      await this.sleep(this.MIN_REQUEST_INTERVAL - timeSinceLastRequest);
+  /**
+   * Parse ESI rate limit headers from response
+   */
+  private parseRateLimitHeaders(response: AxiosResponse): ESIRateLimitHeaders | null {
+    const headers = response.headers;
+
+    const group = headers['x-esi-error-limit-remain'] || headers['x-ratelimit-group'];
+    const limit = headers['x-esi-error-limit-reset'] || headers['x-ratelimit-limit'];
+    const remaining = headers['x-esi-error-limit-remain'] || headers['x-ratelimit-remaining'];
+    const used = headers['x-ratelimit-used'];
+    const reset = headers['x-esi-error-limit-reset'] || headers['x-ratelimit-reset'];
+
+    if (!group || !limit) {
+      return null;
     }
-    this.lastRequestTime = Date.now();
+
+    return {
+      group,
+      limit,
+      remaining: parseInt(remaining, 10) || 0,
+      used: parseInt(used, 10) || 0,
+      reset: reset ? parseInt(reset, 10) : undefined,
+    };
   }
 
   private async getCached<T>(key: string): Promise<T | null> {
@@ -172,38 +216,86 @@ export class ESIClient {
     }
   }
 
+  /**
+   * Fetch from ESI with proper token bucket rate limiting
+   *
+   * This implementation:
+   * - Waits for tokens to be available before making request
+   * - Parses rate limit headers from response
+   * - Updates rate limit state based on server's view
+   * - Tracks legacy error limit (100 errors/minute)
+   * - Handles 420 and 429 errors with backoff
+   */
   private async fetchWithCache<T>(
     cacheKey: string,
     url: string,
     ttlSeconds: number = 3600
   ): Promise<T> {
-    // Check cache
+    // Check cache first
     const cached = await this.getCached<T>(cacheKey);
     if (cached !== null) {
       return cached;
     }
 
-    // Queue the request to respect rate limits
-    return this.requestQueue = this.requestQueue.then(async () => {
-      await this.rateLimit();
+    // Use default rate limit group assumption
+    // In production, these should come from previous responses or configuration
+    const rateLimitGroup = this.DEFAULT_RATE_LIMIT_GROUP;
+    const rateLimit = this.DEFAULT_RATE_LIMIT;
 
-      try {
-        const response = await this.client.get<T>(url);
-        const data = response.data;
+    try {
+      // Wait for tokens to become available (coordinated across all instances via Redis)
+      await this.rateLimiter.waitForTokens(rateLimitGroup, rateLimit, 2);
 
-        // Cache the result
-        await this.setCache(cacheKey, data, ttlSeconds);
+      // Make the request
+      const response = await this.client.get<T>(url);
+      const data = response.data;
+      const statusCode = response.status;
 
-        return data;
-      } catch (error: any) {
-        if (error.response?.status === 404) {
-          logger.debug(`ESI 404 for ${url}`);
-          return null as T;
-        }
-        logger.error(`ESI fetch error for ${url}:`, error.message);
-        throw error;
+      // Parse rate limit headers
+      const rateLimitHeaders = this.parseRateLimitHeaders(response);
+
+      if (rateLimitHeaders) {
+        // Update rate limiter state with server's view
+        await this.rateLimiter.updateRateLimitState(
+          rateLimitHeaders.group,
+          rateLimitHeaders.limit,
+          rateLimitHeaders.remaining,
+          rateLimitHeaders.used,
+          statusCode
+        );
       }
-    });
+
+      // Track errors for legacy error limit
+      if (statusCode >= 400) {
+        await this.rateLimiter.trackError(statusCode);
+      }
+
+      // Cache the result
+      await this.setCache(cacheKey, data, ttlSeconds);
+
+      return data;
+    } catch (error: any) {
+      const statusCode = error.response?.status;
+
+      // Track error for legacy limit
+      if (statusCode) {
+        await this.rateLimiter.trackError(statusCode);
+      }
+
+      if (statusCode === 404) {
+        logger.debug(`ESI 404 for ${url}`);
+        return null as T;
+      }
+
+      logger.error({
+        msg: `ESI fetch error for ${url}`,
+        errorMessage: error.message,
+        statusCode,
+        url,
+      });
+
+      throw error;
+    }
   }
 
   async getShipType(typeId: number): Promise<ESIShipType | null> {

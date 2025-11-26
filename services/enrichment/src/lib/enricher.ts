@@ -36,6 +36,24 @@ export class KillmailEnricher {
     try {
       logger.info(`Enriching killmail ${killmail.killmailId}`);
 
+      // Validate killmail data before enriching
+      if (!killmail.solarSystemId || killmail.solarSystemId === 0) {
+        logger.warn({
+          msg: 'Skipping killmail with invalid solarSystemId',
+          killmailId: killmail.killmailId,
+          solarSystemId: killmail.solarSystemId,
+        });
+        throw new Error(`Invalid solarSystemId: ${killmail.solarSystemId}`);
+      }
+
+      if (!killmail.victim || !killmail.victim.shipTypeId) {
+        logger.warn({
+          msg: 'Skipping killmail with invalid victim data',
+          killmailId: killmail.killmailId,
+        });
+        throw new Error('Invalid victim data');
+      }
+
       // Enrich victim ship type
       const shipType = await this.esiClient.getShipType(killmail.victim.shipTypeId);
       if (!shipType) {
@@ -155,6 +173,7 @@ export class KillmailEnricher {
           attacker_data: JSON.stringify(enriched.attacker_data),
           raw_killmail_data: JSON.stringify(enriched.raw_killmail_data),
           enriched_at: new Date(),
+          version: 1,
         })
         .onConflict((oc) =>
           oc.column('killmail_id').doUpdateSet({
@@ -162,6 +181,7 @@ export class KillmailEnricher {
             attacker_data: JSON.stringify(enriched.attacker_data),
             raw_killmail_data: JSON.stringify(enriched.raw_killmail_data),
             enriched_at: new Date(),
+            version: 1,
           })
         )
         .execute();
@@ -175,8 +195,14 @@ export class KillmailEnricher {
       await this.updateStats(processingTime);
 
       return enriched;
-    } catch (error) {
-      logger.error(`Failed to enrich killmail ${killmail.killmailId}:`, error);
+    } catch (error: any) {
+      logger.error({
+        msg: `Failed to enrich killmail ${killmail.killmailId}`,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorName: error.name,
+        killmailId: killmail.killmailId,
+      });
       await this.incrementErrorCount();
       throw error;
     }
@@ -198,15 +224,7 @@ export class KillmailEnricher {
           avg_processing_time_ms: processingTimeMs,
         })
         .onConflict((oc) =>
-          oc.column('date').doUpdateSet((eb) => ({
-            killmails_processed: eb('killmails_processed', '+', 1),
-            avg_processing_time_ms: eb(
-              eb('avg_processing_time_ms', '*', 'killmails_processed'),
-              '+',
-              processingTimeMs
-            ).over((ob) => ob.partitionBy('date')),
-            updated_at: new Date(),
-          }))
+          oc.column('date').doNothing()
         )
         .execute();
     } catch (error) {
@@ -280,7 +298,7 @@ export class KillmailEnricher {
       const todayStats = await this.db
         .selectFrom('enrichment_stats')
         .selectAll()
-        .where('date', '=', new Date().toISOString().split('T')[0])
+        .where('date', '=', new Date())
         .executeTakeFirst();
 
       return {

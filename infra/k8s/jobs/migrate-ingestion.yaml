@@ -1,0 +1,56 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-ingestion
+  namespace: battlescope
+  labels:
+    app: ingestion-migrations
+    component: job
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400  # Delete job after 24 hours
+  template:
+    metadata:
+      labels:
+        app: ingestion-migrations
+        component: job
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: dockerhub-secret
+
+      containers:
+        - name: migrate
+          image: petdog/battlescope-ingestion:latest
+          imagePullPolicy: Always
+          command: ["node", "dist/database/migrate-cli.js"]
+
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+
+            # Database configuration
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "battlescope_ingestion"
+            - name: DB_USER
+              value: "battlescope"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentication-secrets
+                  key: db-password
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

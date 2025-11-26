@@ -7,8 +7,11 @@ let redis: Redis | null = null;
 
 export function getRedis(): Redis {
   if (!redis) {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    redis = new Redis(redisUrl, {
+    const redisHost = process.env.REDIS_HOST || 'localhost';
+    const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+    redis = new Redis({
+      host: redisHost,
+      port: redisPort,
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
       lazyConnect: false,
