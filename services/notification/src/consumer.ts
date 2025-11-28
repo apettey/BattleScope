@@ -1,11 +1,11 @@
-import { createConsumer } from '@battlescope/events';
+import { Kafka } from 'kafkajs';
 import { createLogger } from '@battlescope/logger';
 import { config } from './config';
 import { SubscriptionsRepository, NotificationsRepository } from './database';
 import { WebSocketManager } from './websocket';
 import { WebhookDeliveryService } from './webhook-delivery';
 
-const logger = createLogger('event-consumer');
+const logger = createLogger({ serviceName: 'notification-consumer' });
 
 export interface EventConsumerDependencies {
   subscriptionsRepo: SubscriptionsRepository;
@@ -17,12 +17,12 @@ export interface EventConsumerDependencies {
 export async function startEventConsumer(deps: EventConsumerDependencies) {
   const { subscriptionsRepo, notificationsRepo, wsManager, webhookService } = deps;
 
-  const consumer = createConsumer({
-    brokers: config.kafka.brokers,
-    groupId: config.kafka.groupId,
+  const kafka = new Kafka({
     clientId: config.kafka.clientId,
+    brokers: config.kafka.brokers,
   });
 
+  const consumer = kafka.consumer({ groupId: config.kafka.groupId });
   await consumer.connect();
 
   // Subscribe to topics
@@ -38,12 +38,12 @@ export async function startEventConsumer(deps: EventConsumerDependencies) {
       try {
         const value = message.value?.toString();
         if (!value) {
-          logger.warn('Received empty message', { topic, partition });
+          logger.warn({ topic, partition }, 'Received empty message');
           return;
         }
 
         const event = JSON.parse(value);
-        logger.debug('Processing event', { topic, eventType: event.type });
+        logger.debug({ topic, eventType: event.type }, 'Processing event');
 
         // Process different event types
         switch (topic) {
@@ -57,10 +57,10 @@ export async function startEventConsumer(deps: EventConsumerDependencies) {
             await handleKillmailEnriched(event, deps);
             break;
           default:
-            logger.warn('Unknown topic', { topic });
+            logger.warn({ topic }, 'Unknown topic');
         }
       } catch (error) {
-        logger.error('Error processing event', { error, topic, partition });
+        logger.error({ error, topic, partition }, 'Error processing event');
       }
     },
   });
@@ -73,7 +73,7 @@ async function handleBattleCreated(event: any, deps: EventConsumerDependencies) 
   const { subscriptionsRepo, notificationsRepo, wsManager, webhookService } = deps;
   const battleData = event.data;
 
-  logger.info('Processing battle.created event', { battleId: battleData.id });
+  logger.info({ battleId: battleData.id }, 'Processing battle.created event');
 
   // Find subscriptions for this system
   const systemSubscriptions = await subscriptionsRepo.findActiveByType(
@@ -105,7 +105,7 @@ async function handleBattleEnded(event: any, deps: EventConsumerDependencies) {
   const { subscriptionsRepo, notificationsRepo, wsManager, webhookService } = deps;
   const battleData = event.data;
 
-  logger.info('Processing battle.ended event', { battleId: battleData.id });
+  logger.info({ battleId: battleData.id }, 'Processing battle.ended event');
 
   // Find subscriptions for this system
   const systemSubscriptions = await subscriptionsRepo.findActiveByType(
@@ -137,9 +137,7 @@ async function handleKillmailEnriched(event: any, deps: EventConsumerDependencie
   const { subscriptionsRepo, notificationsRepo, wsManager, webhookService } = deps;
   const killmailData = event.data;
 
-  logger.debug('Processing killmail.enriched event', {
-    killmailId: killmailData.killmailId,
-  });
+  logger.debug({ killmailId: killmailData.killmailId }, 'Processing killmail.enriched event');
 
   // Find subscriptions for victim
   const victimSubscriptions: any[] = [];
@@ -256,10 +254,7 @@ async function sendNotification({
           data: eventData,
           timestamp: notification.sent_at,
         });
-        logger.debug('Sent WebSocket notification', {
-          userId: subscription.user_id,
-          notificationId: notification.id,
-        });
+        logger.debug({ userId: subscription.user_id, notificationId: notification.id }, 'Sent WebSocket notification');
       } else if (channel === 'webhook' && subscription.webhook_url) {
         await webhookService.enqueue({
           notificationId: notification.id,
@@ -272,18 +267,10 @@ async function sendNotification({
             timestamp: notification.sent_at,
           },
         });
-        logger.debug('Queued webhook delivery', {
-          userId: subscription.user_id,
-          notificationId: notification.id,
-          webhookUrl: subscription.webhook_url,
-        });
+        logger.debug({ userId: subscription.user_id, notificationId: notification.id, webhookUrl: subscription.webhook_url }, 'Queued webhook delivery');
       }
     } catch (error) {
-      logger.error('Error sending notification', {
-        error,
-        subscriptionId: subscription.id,
-        channel,
-      });
+      logger.error({ error, subscriptionId: subscription.id, channel }, 'Error sending notification');
     }
   }
 }

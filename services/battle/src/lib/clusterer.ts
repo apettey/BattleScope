@@ -211,6 +211,8 @@ export class BattleClusterer {
         total_kills: 1,
         total_isk_destroyed: BigInt(killmail.zkb?.totalValue || 0),
         zkill_related_url: `https://zkillboard.com/system/${killmail.solarSystemId}/`,
+        created_at: new Date(),
+        updated_at: new Date(),
       })
       .execute();
 

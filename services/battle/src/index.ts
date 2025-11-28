@@ -22,8 +22,7 @@ async function start() {
     // Initialize event bus
     const eventBusConfig = getEventBusConfigFromEnv();
     const eventBus = new EventBus(eventBusConfig);
-    await eventBus.connect();
-    logger.info('Event bus connected');
+    logger.info('Event bus initialized');
 
     // Start killmail consumer
     const consumer = new KillmailConsumer(eventBus, db);

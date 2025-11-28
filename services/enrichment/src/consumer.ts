@@ -115,8 +115,7 @@ export class KillmailConsumer {
                 })),
               },
               timestamp: new Date(),
-            },
-            String(killmail.killmailId)
+            }
           );
 
           span.setAttribute('enrichment.success', true);

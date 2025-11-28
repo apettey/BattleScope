@@ -71,11 +71,11 @@ export class KillmailConsumer {
     logger.info('Starting killmail consumer...');
 
     // Subscribe to killmail.enriched events
-    await this.eventBus.subscribe<EnrichedKillmailEvent>(
-      Topics.KILLMAIL_ENRICHED,
-      async (message) => {
+    await this.eventBus.subscribe(
+      Topics.KILLMAILS_ENRICHED,
+      'battle-clusterer',
+      async (event) => {
         try {
-          const event = message.value;
           if (!event || event.type !== 'killmail.enriched') {
             logger.warn('Received invalid event format');
             return;
@@ -91,12 +91,8 @@ export class KillmailConsumer {
 
           await this.clusterer.processKillmail(killmail);
         } catch (error) {
-          logger.error('Error processing killmail:', error);
+          logger.error({ error }, 'Error processing killmail');
         }
-      },
-      {
-        groupId: 'battle-clusterer',
-        fromBeginning: false,
       }
     );
 
