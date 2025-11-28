@@ -30,16 +30,75 @@ export class KillmailEnricher {
   private esiClient = getESIClient();
   private db = getDatabase();
 
+  /**
+   * Transform ESI killmail format to our Killmail type
+   */
+  private transformESIKillmail(esiKillmail: any, hash: string): Killmail {
+    return {
+      killmailId: esiKillmail.killmail_id,
+      killmailHash: hash,
+      killmailTime: new Date(esiKillmail.killmail_time),
+      solarSystemId: esiKillmail.solar_system_id,
+      victim: {
+        characterId: esiKillmail.victim.character_id,
+        corporationId: esiKillmail.victim.corporation_id,
+        allianceId: esiKillmail.victim.alliance_id,
+        shipTypeId: esiKillmail.victim.ship_type_id,
+        damageTaken: esiKillmail.victim.damage_taken,
+        position: esiKillmail.victim.position,
+      },
+      attackers: esiKillmail.attackers.map((attacker: any) => ({
+        characterId: attacker.character_id,
+        corporationId: attacker.corporation_id,
+        allianceId: attacker.alliance_id,
+        shipTypeId: attacker.ship_type_id,
+        weaponTypeId: attacker.weapon_type_id,
+        damageDone: attacker.damage_done,
+        finalBlow: attacker.final_blow || false,
+      })),
+      zkb: {
+        totalValue: 0, // Will be filled in by zKillboard data if available
+        points: 0,
+        npc: false,
+        solo: esiKillmail.attackers.length === 1,
+        awox: false,
+      },
+    };
+  }
+
   async enrichKillmail(killmail: Killmail): Promise<EnrichedKillmail> {
     const startTime = Date.now();
 
     try {
       logger.info(`Enriching killmail ${killmail.killmailId}`);
 
+      // Check if we need to fetch complete killmail data from ESI
+      if (!killmail.solarSystemId || killmail.solarSystemId === 0) {
+        logger.info({
+          msg: 'Killmail data incomplete, fetching from ESI',
+          killmailId: killmail.killmailId,
+          solarSystemId: killmail.solarSystemId,
+        });
+
+        // Fetch full killmail from ESI
+        const esiKillmail = await this.esiClient.getKillmail(
+          killmail.killmailId,
+          killmail.killmailHash
+        );
+
+        if (!esiKillmail) {
+          throw new Error(`Failed to fetch killmail ${killmail.killmailId} from ESI`);
+        }
+
+        // Transform ESI killmail to our Killmail format
+        killmail = this.transformESIKillmail(esiKillmail, killmail.killmailHash);
+        logger.info(`Fetched complete killmail data from ESI for ${killmail.killmailId}`);
+      }
+
       // Validate killmail data before enriching
       if (!killmail.solarSystemId || killmail.solarSystemId === 0) {
         logger.warn({
-          msg: 'Skipping killmail with invalid solarSystemId',
+          msg: 'Killmail still has invalid solarSystemId after ESI fetch',
           killmailId: killmail.killmailId,
           solarSystemId: killmail.solarSystemId,
         });
@@ -48,7 +107,7 @@ export class KillmailEnricher {
 
       if (!killmail.victim || !killmail.victim.shipTypeId) {
         logger.warn({
-          msg: 'Skipping killmail with invalid victim data',
+          msg: 'Killmail has invalid victim data',
           killmailId: killmail.killmailId,
         });
         throw new Error('Invalid victim data');

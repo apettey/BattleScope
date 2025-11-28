@@ -27,7 +27,7 @@ export function getConfig(): Config {
     database: getDatabaseConfigFromEnv(),
     eventBus: getEventBusConfigFromEnv(),
     zkillboard: {
-      redisqUrl: process.env.ZKILL_REDISQ_URL || 'https://redisq.zkillboard.com/listen.php',
+      redisqUrl: process.env.ZKILL_REDISQ_URL || 'https://zkillredisq.stream/listen.php?queueID=battlescope',
       pollIntervalMs: parseInt(process.env.ZKILL_POLL_INTERVAL_MS || '1000', 10),
       maxRetries: parseInt(process.env.ZKILL_MAX_RETRIES || '5', 10),
       retryDelayMs: parseInt(process.env.ZKILL_RETRY_DELAY_MS || '5000', 10),

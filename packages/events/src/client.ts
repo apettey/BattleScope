@@ -40,13 +40,13 @@ export class EventBus {
     return this.consumer;
   }
 
-  async publish(topic: string, event: Event): Promise<void> {
+  async publish(topic: string, event: Event, partitionKey?: string): Promise<void> {
     const producer = await this.getProducer();
     await producer.send({
       topic,
       messages: [
         {
-          key: event.type,
+          key: partitionKey || event.type,
           value: JSON.stringify({
             ...event,
             timestamp: event.timestamp.toISOString(),
@@ -62,7 +62,7 @@ export class EventBus {
     handler: (event: Event) => Promise<void>
   ): Promise<void> {
     const consumer = await this.getConsumer(groupId);
-    await consumer.subscribe({ topic, fromBeginning: false });
+    await consumer.subscribe({ topic, fromBeginning: true });
 
     await consumer.run({
       eachMessage: async ({ message }) => {

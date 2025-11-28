@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import { createLogger } from '@battlescope/logger';
 import { authRoutes } from './routes/auth';
 import { meRoutes } from './routes/me';
+import { internalRoutes } from './routes/internal';
 
 export async function buildServer() {
   const app = Fastify({
@@ -36,6 +37,7 @@ export async function buildServer() {
   // Register routes
   await app.register(authRoutes);
   await app.register(meRoutes);
+  await app.register(internalRoutes);
 
   return app;
 }

@@ -94,7 +94,7 @@ const searchRoute: FastifyPluginAsync = async (fastify) => {
                   .documents()
                   .search({
                     q,
-                    query_by: this.getQueryFields(collection),
+                    query_by: getQueryFields(collection),
                     per_page: 5, // Limit results per collection
                   });
 
@@ -120,13 +120,13 @@ const searchRoute: FastifyPluginAsync = async (fastify) => {
           total = searches.reduce((sum, s) => sum + s.found, 0);
         } else {
           // Search specific collection
-          const collection = this.getCollectionForType(type);
+          const collection = getCollectionForType(type);
           const searchResults = await fastify.typesense
             .collections(collection)
             .documents()
             .search({
               q,
-              query_by: this.getQueryFields(collection),
+              query_by: getQueryFields(collection),
               page,
               per_page,
             });
@@ -135,16 +135,17 @@ const searchRoute: FastifyPluginAsync = async (fastify) => {
           total = searchResults.found || 0;
         }
 
-        return {
+        return reply.send({
           results,
           page,
           per_page,
           total,
           type,
-        };
+        });
       } catch (error: any) {
         fastify.log.error({ error: error.message, query: request.query }, 'Search failed');
-        return reply.code(500).send({ error: 'Search failed', message: error.message });
+        reply.code(500).send({ error: 'Search failed', message: error.message } as any);
+        return;
       }
     }
   );
@@ -161,13 +162,13 @@ const searchRoute: FastifyPluginAsync = async (fastify) => {
       const { q, type, limit } = request.query;
 
       try {
-        const collection = this.getCollectionForType(type);
+        const collection = getCollectionForType(type);
         const searchResults = await fastify.typesense
           .collections(collection)
           .documents()
           .search({
             q,
-            query_by: this.getQueryFields(collection),
+            query_by: getQueryFields(collection),
             per_page: limit,
             prefix: true, // Enable prefix matching for autocomplete
           });

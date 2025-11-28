@@ -1,7 +1,9 @@
 import { EventBus, getEventBusConfigFromEnv, Topics } from '@battlescope/events';
 import type { Event } from '@battlescope/types';
 import { Indexer, BattleDocument, KillmailDocument, CharacterDocument } from './indexer';
-import { logger } from '@battlescope/logger';
+import { createLogger } from '@battlescope/logger';
+
+const logger = createLogger({ serviceName: 'search-consumer' });
 import { Config } from './config';
 
 export class EventConsumer {
@@ -118,16 +120,15 @@ export class EventConsumer {
             return;
           }
 
-          const { data } = event;
-
           if (event.type === 'battle.detected') {
             // Initial battle detection - create minimal document
+            const detectedData = event.data as { battleId: string; systemId: number; startTime: Date };
             const battleDoc: BattleDocument = {
-              id: data.battleId,
-              system_name: this.extractSystemName(data.systemId),
-              region_name: this.extractRegionName(data.systemId),
-              security_type: this.determineSecurityType(data.systemId),
-              start_time: Math.floor(data.startTime.getTime() / 1000),
+              id: detectedData.battleId,
+              system_name: this.extractSystemName(detectedData.systemId),
+              region_name: this.extractRegionName(detectedData.systemId),
+              security_type: this.determineSecurityType(detectedData.systemId),
+              start_time: Math.floor(detectedData.startTime.getTime() / 1000),
               total_kills: 0,
               total_isk_destroyed: 0,
               alliance_names: [],
@@ -135,24 +136,38 @@ export class EventConsumer {
             };
 
             await this.indexer.indexBattle(battleDoc);
-            logger.debug({ battleId: data.battleId }, 'Battle detected and indexed');
+            logger.debug({ battleId: detectedData.battleId }, 'Battle detected and indexed');
           } else if (event.type === 'battle.updated') {
             // Battle updated - full document
+            const updatedData = event.data as {
+              id: string;
+              systemId: number;
+              systemName: string;
+              regionId: number;
+              regionName: string;
+              startTime: Date;
+              endTime?: Date;
+              totalKills: number;
+              totalValue: number;
+              participants: number;
+              alliances: string[];
+              corporations: string[];
+            };
             const battleDoc: BattleDocument = {
-              id: data.id,
-              system_name: data.systemName,
-              region_name: data.regionName,
-              security_type: this.determineSecurityType(data.systemId),
-              start_time: Math.floor(data.startTime.getTime() / 1000),
-              end_time: data.endTime ? Math.floor(data.endTime.getTime() / 1000) : undefined,
-              total_kills: data.totalKills,
-              total_isk_destroyed: data.totalValue,
-              alliance_names: data.alliances || [],
+              id: updatedData.id,
+              system_name: updatedData.systemName,
+              region_name: updatedData.regionName,
+              security_type: this.determineSecurityType(updatedData.systemId),
+              start_time: Math.floor(updatedData.startTime.getTime() / 1000),
+              end_time: updatedData.endTime ? Math.floor(updatedData.endTime.getTime() / 1000) : undefined,
+              total_kills: updatedData.totalKills,
+              total_isk_destroyed: updatedData.totalValue,
+              alliance_names: updatedData.alliances || [],
               participant_names: [], // This would need to be populated from participants
             };
 
             await this.indexer.indexBattle(battleDoc);
-            logger.debug({ battleId: data.id }, 'Battle updated and indexed');
+            logger.debug({ battleId: updatedData.id }, 'Battle updated and indexed');
           }
         } catch (error: any) {
           logger.error({ error: error.message, event }, 'Failed to process battle event');

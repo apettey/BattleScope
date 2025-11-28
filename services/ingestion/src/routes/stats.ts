@@ -18,14 +18,10 @@ export async function statsRoutes(
         // Database or connection error - return empty stats
         request.log.warn({ error: dbError }, 'Database not available, returning empty stats');
         return reply.status(200).send({
-          totalKillmails: 0,
-          processedKillmails: 0,
-          unprocessedKillmails: 0,
-          last24Hours: 0,
-          lastHour: 0,
-          totalIskDestroyed: 0,
-          topSystems: [],
-          timestamp: new Date().toISOString(),
+          total_battles: 0,
+          total_killmails: 0,
+          active_users: 0,
+          recent_activity: 0,
         });
       }
 
@@ -34,14 +30,10 @@ export async function statsRoutes(
       // Return empty stats if table doesn't exist yet
       if (!hasKillmailTable) {
         return reply.status(200).send({
-          totalKillmails: 0,
-          processedKillmails: 0,
-          unprocessedKillmails: 0,
-          last24Hours: 0,
-          lastHour: 0,
-          totalIskDestroyed: 0,
-          topSystems: [],
-          timestamp: new Date().toISOString(),
+          total_battles: 0,
+          total_killmails: 0,
+          active_users: 0,
+          recent_activity: 0,
         });
       }
 
@@ -51,62 +43,18 @@ export async function statsRoutes(
         .select((eb) => eb.fn.countAll<number>().as('total'))
         .executeTakeFirst();
 
-      // Processed killmails
-      const processedResult = await db
-        .selectFrom('killmail_events')
-        .select((eb) => eb.fn.countAll<number>().as('processed'))
-        .where('processed_at', 'is not', null)
-        .executeTakeFirst();
-
-      // Unprocessed killmails
-      const unprocessedResult = await db
-        .selectFrom('killmail_events')
-        .select((eb) => eb.fn.countAll<number>().as('unprocessed'))
-        .where('processed_at', 'is', null)
-        .executeTakeFirst();
-
-      // Killmails in last 24 hours
+      // Killmails in last 24 hours (recent activity)
       const last24hResult = await db
         .selectFrom('killmail_events')
         .select((eb) => eb.fn.countAll<number>().as('last_24h'))
         .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '24 hours'`)
         .executeTakeFirst();
 
-      // Killmails in last hour
-      const lastHourResult = await db
-        .selectFrom('killmail_events')
-        .select((eb) => eb.fn.countAll<number>().as('last_hour'))
-        .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '1 hour'`)
-        .executeTakeFirst();
-
-      // Total ISK destroyed
-      const iskResult = await db
-        .selectFrom('killmail_events')
-        .select((eb) => eb.fn.sum<number>('isk_value').as('total_isk'))
-        .executeTakeFirst();
-
-      // Most active systems (top 10)
-      const topSystems = await db
-        .selectFrom('killmail_events')
-        .select(['system_id', (eb) => eb.fn.countAll<number>().as('kill_count')])
-        .where('occurred_at', '>=', sql<Date>`NOW() - INTERVAL '24 hours'`)
-        .groupBy('system_id')
-        .orderBy('kill_count', 'desc')
-        .limit(10)
-        .execute();
-
       return reply.status(200).send({
-        totalKillmails: Number(totalResult?.total ?? 0),
-        processedKillmails: Number(processedResult?.processed ?? 0),
-        unprocessedKillmails: Number(unprocessedResult?.unprocessed ?? 0),
-        last24Hours: Number(last24hResult?.last_24h ?? 0),
-        lastHour: Number(lastHourResult?.last_hour ?? 0),
-        totalIskDestroyed: Number(iskResult?.total_isk ?? 0),
-        topSystems: topSystems.map((s) => ({
-          systemId: s.system_id,
-          killCount: Number(s.kill_count),
-        })),
-        timestamp: new Date().toISOString(),
+        total_battles: 0, // TODO: Implement when battle service is ready
+        total_killmails: Number(totalResult?.total ?? 0),
+        active_users: 0, // TODO: Implement when auth service tracking is ready
+        recent_activity: Number(last24hResult?.last_24h ?? 0),
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

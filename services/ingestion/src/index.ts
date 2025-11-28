@@ -7,6 +7,10 @@ import { getDatabase, closeDatabase } from './database';
 import { healthRoutes, killmailRoutes, statsRoutes } from './routes';
 import { ZKillboardPoller } from './poller';
 import { getEnrichedKillmailConsumer } from './consumers/enriched-killmail-consumer';
+import { initializeTracing } from './lib/tracing';
+
+// Initialize tracing before anything else
+initializeTracing();
 
 const logger = createLogger({ serviceName: 'ingestion' });
 const config = getConfig();

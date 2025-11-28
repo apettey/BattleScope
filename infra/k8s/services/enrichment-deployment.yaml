@@ -4,7 +4,7 @@ metadata:
   name: enrichment-service
   namespace: battlescope
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: enrichment-service
@@ -50,6 +50,14 @@ spec:
               value: "redpanda:9092"
             - name: KAFKA_CLIENT_ID
               value: "enrichment-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://tempo:4318/v1/traces"
+            - name: OTEL_SERVICE_NAME
+              value: "enrichment-service"
+            - name: OTEL_SERVICE_VERSION
+              value: "1.0.0"
+            - name: OTEL_TRACING_ENABLED
+              value: "true"
           livenessProbe:
             httpGet:
               path: /health

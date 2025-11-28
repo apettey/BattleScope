@@ -1,8 +1,10 @@
 import Typesense from 'typesense';
-import { Client } from 'typesense/lib/Typesense/Client';
+import type Client from 'typesense/lib/Typesense/Client';
 import { Config } from './config';
 import { ALL_SCHEMAS } from './schemas';
-import { logger } from '@battlescope/logger';
+import { createLogger } from '@battlescope/logger';
+
+const logger = createLogger({ serviceName: 'search-typesense' });
 
 let client: Client | null = null;
 

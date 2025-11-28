@@ -64,6 +64,10 @@ COPY --from=builder /app/services/ingestion/dist ./services/ingestion/dist
 # Copy migrations
 COPY services/ingestion/migrations ./services/ingestion/migrations
 
+# Copy entrypoint script
+COPY services/ingestion/docker-entrypoint.sh ./services/ingestion/docker-entrypoint.sh
+RUN chmod +x ./services/ingestion/docker-entrypoint.sh
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
@@ -82,5 +86,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Start service
-CMD ["node", "dist/index.js"]
+# Start service with entrypoint that runs migrations first
+CMD ["./docker-entrypoint.sh"]

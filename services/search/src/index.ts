@@ -1,13 +1,15 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
-import { logger } from '@battlescope/logger';
+import { createLogger } from '@battlescope/logger';
+
+const logger = createLogger({ serviceName: 'search-service' });
 import { loadConfig } from './config';
 import { createTypesenseClient, initializeCollections } from './typesense-client';
 import { Indexer } from './indexer';
 import { EventConsumer } from './consumer';
 import { healthRoute, searchRoute, adminRoute } from './routes';
-import { Client } from 'typesense/lib/Typesense/Client';
+import type Client from 'typesense/lib/Typesense/Client';
 
 // Extend Fastify instance with custom properties
 declare module 'fastify' {

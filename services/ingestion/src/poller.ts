@@ -68,10 +68,12 @@ export class ZKillboardPoller {
     }
 
     this.isRunning = true;
-    this.logger.info('Starting ZKillboard RedisQ poller', {
+    this.logger.info({
       url: this.config.redisqUrl,
-      interval: this.config.pollIntervalMs,
-    });
+      pollInterval: this.config.pollIntervalMs,
+      maxRetries: this.config.maxRetries,
+      retryDelay: this.config.retryDelayMs,
+    }, 'Starting ZKillboard RedisQ poller');
 
     await this.poll();
   }
@@ -123,8 +125,20 @@ export class ZKillboardPoller {
     const { killmail, zkb } = pkg.package;
     const killmailId = killmail.killmail_id;
 
+    // Generate a correlation ID for tracing this specific killmail through the system
+    const correlationId = `km-${killmailId}-${Date.now()}`;
+
+    this.logger.debug('Processing killmail', {
+      killmailId,
+      correlationId,
+      systemId: killmail.solar_system_id,
+      victimShipTypeId: killmail.victim.ship_type_id,
+      attackerCount: killmail.attackers.length,
+    });
+
     try {
       // Check if killmail already exists (deduplication)
+      this.logger.trace('Checking for duplicate killmail', { killmailId, correlationId });
       const existing = await this.db
         .selectFrom('killmail_events')
         .select('killmail_id')
@@ -132,10 +146,11 @@ export class ZKillboardPoller {
         .executeTakeFirst();
 
       if (existing) {
-        this.logger.debug('Killmail already exists, skipping', { killmailId });
+        this.logger.debug('Killmail already exists, skipping', { killmailId, correlationId });
         return;
       }
 
+      this.logger.trace('Extracting attacker alliance IDs', { killmailId, correlationId });
       // Extract attacker alliance IDs
       const attackerAllianceIds = Array.from(
         new Set(
@@ -144,6 +159,12 @@ export class ZKillboardPoller {
             .filter((id): id is number => id !== undefined)
         )
       );
+
+      this.logger.trace('Creating killmail event record', {
+        killmailId,
+        correlationId,
+        attackerAllianceCount: attackerAllianceIds.length,
+      });
 
       // Create killmail event record
       const newKillmail: NewKillmailEvent = {
@@ -160,64 +181,131 @@ export class ZKillboardPoller {
       };
 
       // Insert into database
+      this.logger.trace('Inserting killmail into database', { killmailId, correlationId });
       await this.db.insertInto('killmail_events').values(newKillmail).execute();
 
       this.logger.info('Killmail ingested', {
         killmailId,
+        correlationId,
         systemId: killmail.solar_system_id,
         iskValue: zkb.totalValue,
       });
 
       // Publish event to Redpanda
+      this.logger.trace('Publishing killmail event to Kafka', { killmailId, correlationId });
       await this.publishKillmailEvent(pkg);
 
-      this.logger.debug('Killmail event published', { killmailId });
+      this.logger.debug('Killmail event published', { killmailId, correlationId });
     } catch (error) {
-      this.logger.error('Failed to process killmail', {
+      // Enhanced error logging with full details
+      const errorDetails: Record<string, any> = {
         killmailId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+        correlationId,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        systemId: killmail.solar_system_id,
+        victimShipTypeId: killmail.victim.ship_type_id,
+        attackerCount: killmail.attackers.length,
+        iskValue: zkb.totalValue,
+      };
+
+      // Add stack trace if available
+      if (error instanceof Error && error.stack) {
+        errorDetails.stack = error.stack;
+      }
+
+      // Add database-specific error details if available
+      if (error && typeof error === 'object' && 'code' in error) {
+        errorDetails.dbErrorCode = (error as any).code;
+        errorDetails.dbErrorDetail = (error as any).detail;
+        errorDetails.dbErrorHint = (error as any).hint;
+      }
+
+      // Log the raw killmail data for debugging (only in case of error)
+      errorDetails.rawKillmail = {
+        killmail_id: killmail.killmail_id,
+        killmail_time: killmail.killmail_time,
+        solar_system_id: killmail.solar_system_id,
+        victim: {
+          character_id: killmail.victim.character_id,
+          corporation_id: killmail.victim.corporation_id,
+          alliance_id: killmail.victim.alliance_id,
+          ship_type_id: killmail.victim.ship_type_id,
+        },
+        attackerCount: killmail.attackers.length,
+      };
+
+      this.logger.error(errorDetails, 'Failed to process killmail');
+
+      // Re-throw certain critical errors that should stop the poller
+      if (error instanceof Error && error.message.includes('Connection terminated')) {
+        this.logger.fatal('Database connection lost, throwing error to trigger restart', {
+          killmailId,
+          correlationId,
+        });
+        throw error;
+      }
     }
   }
 
   private async publishKillmailEvent(pkg: ZKillboardPackage): Promise<void> {
     const { killmail, zkb } = pkg.package;
+    const killmailId = killmail.killmail_id;
 
-    const event: KillmailEvent = {
-      type: 'killmail.received',
-      timestamp: new Date(),
-      data: {
-        killmailId: killmail.killmail_id,
-        killmailHash: zkb.hash,
-        killmailTime: new Date(killmail.killmail_time),
-        solarSystemId: killmail.solar_system_id,
-        victim: {
-          characterId: killmail.victim.character_id,
-          corporationId: killmail.victim.corporation_id,
-          allianceId: killmail.victim.alliance_id,
-          shipTypeId: killmail.victim.ship_type_id,
-          damageTaken: killmail.victim.damage_taken,
+    try {
+      const event: KillmailEvent = {
+        type: 'killmail.received',
+        timestamp: new Date(),
+        data: {
+          killmailId: killmail.killmail_id,
+          killmailHash: zkb.hash,
+          killmailTime: new Date(killmail.killmail_time),
+          solarSystemId: killmail.solar_system_id,
+          victim: {
+            characterId: killmail.victim.character_id,
+            corporationId: killmail.victim.corporation_id,
+            allianceId: killmail.victim.alliance_id,
+            shipTypeId: killmail.victim.ship_type_id,
+            damageTaken: killmail.victim.damage_taken,
+          },
+          attackers: killmail.attackers.map((attacker) => ({
+            characterId: attacker.character_id,
+            corporationId: attacker.corporation_id,
+            allianceId: attacker.alliance_id,
+            shipTypeId: attacker.ship_type_id,
+            weaponTypeId: attacker.weapon_type_id,
+            damageDone: attacker.damage_done,
+            finalBlow: attacker.final_blow,
+          })),
+          zkb: {
+            totalValue: zkb.totalValue,
+            points: zkb.points,
+            npc: zkb.npc,
+            solo: zkb.solo,
+            awox: zkb.awox,
+          },
         },
-        attackers: killmail.attackers.map((attacker) => ({
-          characterId: attacker.character_id,
-          corporationId: attacker.corporation_id,
-          allianceId: attacker.alliance_id,
-          shipTypeId: attacker.ship_type_id,
-          weaponTypeId: attacker.weapon_type_id,
-          damageDone: attacker.damage_done,
-          finalBlow: attacker.final_blow,
-        })),
-        zkb: {
-          totalValue: zkb.totalValue,
-          points: zkb.points,
-          npc: zkb.npc,
-          solo: zkb.solo,
-          awox: zkb.awox,
-        },
-      },
-    };
+      };
 
-    await this.eventBus.publish(Topics.KILLMAILS, event);
+      // Use killmailId as partition key for even distribution across partitions
+      await this.eventBus.publish(Topics.KILLMAILS, event);
+
+      this.logger.trace('Event published to Kafka successfully', {
+        killmailId,
+        topic: Topics.KILLMAILS,
+      });
+    } catch (error) {
+      // Log Kafka publishing errors with full details
+      this.logger.error('Failed to publish killmail event to Kafka', {
+        killmailId,
+        topic: Topics.KILLMAILS,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      // Re-throw to be caught by processKillmail
+      throw error;
+    }
   }
 
   private handleError(error: unknown): void {
@@ -229,10 +317,20 @@ export class ZKillboardPoller {
       ? error.message
       : String(error);
 
+    const errorDetails = error instanceof AxiosError
+      ? {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+        }
+      : {};
+
     this.logger.error('Error polling ZKillboard', {
       error: errorMessage,
       retryCount: this.retryCount,
       maxRetries: this.config.maxRetries,
+      ...errorDetails,
     });
 
     if (this.retryCount >= this.config.maxRetries) {

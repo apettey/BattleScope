@@ -4,7 +4,7 @@ metadata:
   name: ingestion-service
   namespace: battlescope
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ingestion-service
@@ -29,7 +29,7 @@ spec:
             - name: PORT
               value: "3001"
             - name: LOG_LEVEL
-              value: "info"
+              value: "trace"
             - name: DB_HOST
               value: "postgres"
             - name: DB_PORT
@@ -51,6 +51,15 @@ spec:
               value: "redpanda:9092"
             - name: KAFKA_CLIENT_ID
               value: "ingestion-service"
+            # OpenTelemetry Configuration
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://tempo:4318/v1/traces"
+            - name: OTEL_SERVICE_NAME
+              value: "ingestion-service"
+            - name: OTEL_SERVICE_VERSION
+              value: "1.0.0"
+            - name: OTEL_TRACING_ENABLED
+              value: "true"
           livenessProbe:
             httpGet:
               path: /health

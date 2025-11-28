@@ -1,3 +1,8 @@
+// IMPORTANT: Initialize tracing first, before any other imports
+// This ensures all auto-instrumentation is properly set up
+import { initializeTracing } from './lib/tracing';
+initializeTracing();
+
 import path from 'path';
 import { runMigrations } from '@battlescope/database';
 import { createLogger } from '@battlescope/logger';

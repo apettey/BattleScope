@@ -63,7 +63,8 @@ export class ESIRateLimiter {
   async waitForTokens(
     group: string,
     limit: string,
-    requiredTokens: number = 2
+    requiredTokens: number = 2,
+    maxWaitMs: number = 60000 // Maximum 60 seconds wait
   ): Promise<number> {
     const startTime = Date.now();
     const [limitCount, windowStr] = limit.split('/');
@@ -71,9 +72,22 @@ export class ESIRateLimiter {
     const windowSeconds = this.parseWindow(windowStr);
 
     const redisKey = `esi:ratelimit:${group}`;
-    const now = Date.now();
 
     while (true) {
+      const now = Date.now();
+      const elapsed = now - startTime;
+
+      // Check timeout
+      if (elapsed >= maxWaitMs) {
+        logger.warn({
+          msg: 'Rate limiter timeout exceeded, proceeding anyway',
+          group,
+          waitedMs: elapsed,
+          maxWaitMs,
+        });
+        // Proceed without tokens - let ESI handle rate limiting with 429/420
+        return elapsed;
+      }
       // Get current bucket state from Redis
       const bucketState = await this.redis.get(redisKey);
       let currentTokens = limitNum;
@@ -130,12 +144,20 @@ export class ESIRateLimiter {
           currentTokens,
           requiredTokens,
           waitMs,
+          tokensInBucket: tokens.length,
         });
 
         await this.sleep(Math.min(waitMs, 5000)); // Max 5s wait per iteration
       } else {
-        // Should not happen, but wait a bit just in case
-        await this.sleep(1000);
+        // No tokens in bucket means we're at full capacity - wait for window to reset
+        logger.warn({
+          msg: 'Token bucket is empty, waiting for window reset',
+          group,
+          currentTokens,
+          requiredTokens,
+          windowSeconds,
+        });
+        await this.sleep(Math.min(windowSeconds * 1000, 5000));
       }
     }
   }
@@ -271,7 +293,12 @@ export class ESIRateLimiter {
    * Parse window string to seconds
    * Examples: "15m" -> 900, "1h" -> 3600
    */
-  private parseWindow(windowStr: string): number {
+  private parseWindow(windowStr: string | undefined): number {
+    if (!windowStr || typeof windowStr !== 'string') {
+      logger.warn(`Invalid window format: ${windowStr}, defaulting to 900s`);
+      return 900; // Default 15 minutes
+    }
+
     const match = windowStr.match(/^(\d+)([smh])$/);
     if (!match) {
       logger.warn(`Unknown window format: ${windowStr}, defaulting to 900s`);

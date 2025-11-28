@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.pnpm-debug.log
 
 # Testing
 coverage/
@@ -11,24 +12,48 @@ coverage/
 dist/
 build/
 *.tsbuildinfo
+out/
+.output/
+
+# Next.js
+.next/
+frontend/.next/
+next-env.d.ts
 
 # Environment
 .env
 .env.local
 .env.*.local
+.env.production
+*.env.backup
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
 # OS
 .DS_Store
 Thumbs.db
+*.tmp
+*.temp
 
 # Docker
 .dockerignore
 
 # Kubernetes
 *.secret.yaml
+*.secret.yml
+
+# Archives (old/backup directories)
+.archive/
+*.backup/
+backup-*/
+*-backup-*/
+
+# Deployment artifacts
+*.bak
+*.old

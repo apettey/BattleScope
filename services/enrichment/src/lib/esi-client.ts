@@ -3,6 +3,7 @@ import { createLogger } from '@battlescope/logger';
 import { getRedis } from './redis';
 import { getDatabase } from '../database/client';
 import { getRateLimiter } from './rate-limiter';
+import { getTokenManager } from './token-manager';
 
 const logger = createLogger({ serviceName: 'esi-client' });
 
@@ -81,6 +82,7 @@ export class ESIClient {
   private redis = getRedis();
   private db = getDatabase();
   private rateLimiter = getRateLimiter();
+  private tokenManager = getTokenManager();
 
   // Default rate limit assumptions if headers are missing
   private readonly DEFAULT_RATE_LIMIT_GROUP = 'default';
@@ -217,41 +219,61 @@ export class ESIClient {
   }
 
   /**
-   * Fetch from ESI with proper token bucket rate limiting
+   * Fetch from ESI with authenticated requests and proper token bucket rate limiting
    *
    * This implementation:
+   * - Gets ESI access token from token manager
+   * - Makes authenticated requests with Authorization header
    * - Waits for tokens to be available before making request
    * - Parses rate limit headers from response
    * - Updates rate limit state based on server's view
    * - Tracks legacy error limit (100 errors/minute)
+   * - Handles 401/403 by marking token as failed and retrying
    * - Handles 420 and 429 errors with backoff
    */
   private async fetchWithCache<T>(
     cacheKey: string,
     url: string,
-    ttlSeconds: number = 3600
+    ttlSeconds: number = 3600,
+    retryCount: number = 0
   ): Promise<T> {
-    // Check cache first
+    // Check cache first - cache hits don't count against rate limits
     const cached = await this.getCached<T>(cacheKey);
     if (cached !== null) {
+      logger.debug({ msg: 'Cache hit, skipping ESI request', cacheKey });
       return cached;
     }
 
-    // Use default rate limit group assumption
-    // In production, these should come from previous responses or configuration
-    const rateLimitGroup = this.DEFAULT_RATE_LIMIT_GROUP;
-    const rateLimit = this.DEFAULT_RATE_LIMIT;
+    // Cache miss - need to fetch from ESI
+    // Get ESI token from token manager
+    const token = await this.tokenManager.getNextToken();
+    if (!token) {
+      throw new Error('No ESI tokens available from authentication service');
+    }
 
     try {
-      // Wait for tokens to become available (coordinated across all instances via Redis)
-      await this.rateLimiter.waitForTokens(rateLimitGroup, rateLimit, 2);
+      // Skip pre-request rate limiting - let ESI rate limit headers guide us
+      // We'll update rate limit state after the response
 
-      // Make the request
-      const response = await this.client.get<T>(url);
+      // Make the authenticated request
+      const response = await this.client.get<T>(url, {
+        headers: {
+          Authorization: `Bearer ${token.accessToken}`,
+        },
+      });
       const data = response.data;
       const statusCode = response.status;
 
-      // Parse rate limit headers
+      // Debug logging for complete ESI response
+      logger.debug({
+        msg: 'ESI response received',
+        url,
+        statusCode,
+        headers: response.headers,
+        body: data,
+      });
+
+      // Parse rate limit headers (should be present with authenticated requests)
       const rateLimitHeaders = this.parseRateLimitHeaders(response);
 
       if (rateLimitHeaders) {
@@ -282,6 +304,32 @@ export class ESIClient {
         await this.rateLimiter.trackError(statusCode);
       }
 
+      // Handle authentication failures
+      if (statusCode === 401 || statusCode === 403) {
+        logger.warn({
+          msg: 'ESI authentication failed, marking token as failed',
+          statusCode,
+          characterId: token.characterId,
+          url,
+        });
+
+        // Mark token as failed and refresh token pool
+        await this.tokenManager.markTokenFailed(
+          token.characterId,
+          `HTTP ${statusCode} ${error.message}`
+        );
+
+        // Retry once with a new token
+        if (retryCount < 1) {
+          logger.info({
+            msg: 'Retrying ESI request with new token',
+            url,
+            retryCount: retryCount + 1,
+          });
+          return this.fetchWithCache(cacheKey, url, ttlSeconds, retryCount + 1);
+        }
+      }
+
       if (statusCode === 404) {
         logger.debug(`ESI 404 for ${url}`);
         return null as T;
@@ -292,6 +340,7 @@ export class ESIClient {
         errorMessage: error.message,
         statusCode,
         url,
+        characterId: token.characterId,
       });
 
       throw error;
@@ -359,6 +408,18 @@ export class ESIClient {
       `alliance:${allianceId}`,
       `/alliances/${allianceId}`,
       3600 // 1 hour
+    );
+  }
+
+  /**
+   * Fetch full killmail data from ESI
+   * https://esi.evetech.net/latest/killmails/{killmail_id}/{killmail_hash}/
+   */
+  async getKillmail(killmailId: number, killmailHash: string): Promise<any | null> {
+    return this.fetchWithCache(
+      `killmail:${killmailId}:${killmailHash}`,
+      `/killmails/${killmailId}/${killmailHash}/`,
+      86400 // 24 hours - killmails never change
     );
   }
 

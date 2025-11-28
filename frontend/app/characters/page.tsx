@@ -27,9 +27,10 @@ export default function CharactersPage() {
   const fetchCharacters = async () => {
     try {
       const response = await api.get('/api/me/characters');
-      setCharacters(response.data.characters);
+      setCharacters(response.data.characters || []);
     } catch (error) {
       console.error('Failed to fetch characters:', error);
+      setCharacters([]);
     } finally {
       setIsLoading(false);
     }

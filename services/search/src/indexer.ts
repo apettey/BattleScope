@@ -1,6 +1,8 @@
-import { Client } from 'typesense/lib/Typesense/Client';
+import type Client from 'typesense/lib/Typesense/Client';
 import { Collections } from './schemas';
-import { logger } from '@battlescope/logger';
+import { createLogger } from '@battlescope/logger';
+
+const logger = createLogger({ serviceName: 'search-indexer' });
 
 // Battle document interface
 export interface BattleDocument {
@@ -78,7 +80,7 @@ export class Indexer {
         .documents()
         .import(battles, { action: 'upsert' });
 
-      const failedCount = results.filter((r) => !r.success).length;
+      const failedCount = results.filter((r: any) => !r.success).length;
       if (failedCount > 0) {
         logger.warn({ failedCount, total: battles.length }, 'Some battles failed to index');
       } else {
@@ -112,7 +114,7 @@ export class Indexer {
         .documents()
         .import(killmails, { action: 'upsert' });
 
-      const failedCount = results.filter((r) => !r.success).length;
+      const failedCount = results.filter((r: any) => !r.success).length;
       if (failedCount > 0) {
         logger.warn({ failedCount, total: killmails.length }, 'Some killmails failed to index');
       } else {

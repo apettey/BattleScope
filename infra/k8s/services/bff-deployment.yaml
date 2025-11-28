@@ -34,7 +34,7 @@ spec:
             - name: BATTLE_SERVICE_URL
               value: "http://battle:3003"
             - name: INGESTION_SERVICE_URL
-              value: "http://ingestion:3001"
+              value: "http://ingestion-service:3001"
             - name: SEARCH_SERVICE_URL
               value: "http://search:3004"
             - name: NOTIFICATION_SERVICE_URL

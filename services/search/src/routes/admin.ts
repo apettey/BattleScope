@@ -54,14 +54,15 @@ const adminRoute: FastifyPluginAsync = async (fastify) => {
           fastify.log.info({ collection: coll }, 'Reindex requested');
         }
 
-        return {
+        return reply.send({
           message: `Reindex initiated for ${collection}`,
           collection,
           cleared: clear_existing,
-        };
+        });
       } catch (error: any) {
         fastify.log.error({ error: error.message }, 'Reindex failed');
-        return reply.code(500).send({ error: 'Reindex failed', message: error.message });
+        reply.code(500).send({ error: 'Reindex failed', message: error.message } as any);
+        return;
       }
     }
   );

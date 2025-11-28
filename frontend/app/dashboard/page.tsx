@@ -49,7 +49,7 @@ export default function DashboardPage() {
       </>
     );
   }
-
+  console.error(stats);
   return (
     <>
       <Navbar />
@@ -104,18 +104,13 @@ export default function DashboardPage() {
         <Card
           title="Recent Battles"
           action={
-            <Link
-              href="/battles"
-              className="text-sm text-eve-blue hover:text-eve-blue/80"
-            >
+            <Link href="/battles" className="text-sm text-eve-blue hover:text-eve-blue/80">
               View all
             </Link>
           }
         >
           {recentBattles.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              No recent battles found
-            </p>
+            <p className="text-gray-500 text-center py-8">No recent battles found</p>
           ) : (
             <div className="space-y-4">
               {recentBattles.map((battle) => (
@@ -127,14 +122,10 @@ export default function DashboardPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-white">
-                          {battle.system_name}
-                        </h3>
+                        <h3 className="text-lg font-semibold text-white">{battle.system_name}</h3>
                         <Badge variant="info">{battle.security_type}</Badge>
                       </div>
-                      <p className="text-sm text-gray-400">
-                        {battle.region_name}
-                      </p>
+                      <p className="text-sm text-gray-400">{battle.region_name}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {formatRelativeTime(battle.start_time)}
                       </p>
@@ -143,9 +134,7 @@ export default function DashboardPage() {
                       <div className="text-lg font-bold text-red-400">
                         {formatISK(battle.total_isk_destroyed)}
                       </div>
-                      <div className="text-sm text-gray-400">
-                        {battle.total_kills} kills
-                      </div>
+                      <div className="text-sm text-gray-400">{battle.total_kills} kills</div>
                     </div>
                   </div>
                 </Link>
@@ -182,13 +171,7 @@ function StatCard({
   );
 }
 
-function ServiceStatus({
-  name,
-  status,
-}: {
-  name: string;
-  status: string;
-}) {
+function ServiceStatus({ name, status }: { name: string; status: string }) {
   const getVariant = () => {
     if (status === 'healthy' || status === 'ok') return 'success';
     if (status === 'degraded') return 'warning';

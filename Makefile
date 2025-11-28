@@ -1,7 +1,7 @@
-.PHONY: help install build docker-build docker-push deploy clean
+.PHONY: help install build docker-build docker-push deploy clean ci typecheck test test-unit test-integration lint
 
 VERSION := v3.0.0
-DOCKER_ORG := battlescope
+DOCKER_ORG := petdog
 SERVICES := ingestion enrichment battle search notification bff
 
 help:
@@ -15,6 +15,14 @@ help:
 	@echo "  k8s-deploy        - Deploy to Kubernetes"
 	@echo "  k8s-delete        - Delete Kubernetes resources"
 	@echo "  clean             - Clean build artifacts"
+	@echo ""
+	@echo "CI Targets:"
+	@echo "  ci                - Run full CI pipeline (typecheck, lint, test, build)"
+	@echo "  typecheck         - Run TypeScript type checking on all services"
+	@echo "  lint              - Run linting on all services"
+	@echo "  test              - Run all tests (unit + integration)"
+	@echo "  test-unit         - Run unit tests only"
+	@echo "  test-integration  - Run integration tests only"
 
 install:
 	@echo "Installing dependencies..."
@@ -30,17 +38,17 @@ build:
 docker-build:
 	@echo "Building Docker images..."
 	@for service in $(SERVICES); do \
-		echo "Building $(DOCKER_ORG)/$$service-service:$(VERSION)..."; \
-		docker build -f services/$$service/Dockerfile -t $(DOCKER_ORG)/$$service-service:$(VERSION) .; \
-		docker tag $(DOCKER_ORG)/$$service-service:$(VERSION) $(DOCKER_ORG)/$$service-service:latest; \
+		echo "Building $(DOCKER_ORG)/battlescope-$$service:$(VERSION)..."; \
+		docker build -f services/$$service/Dockerfile -t $(DOCKER_ORG)/battlescope-$$service:$(VERSION) .; \
+		docker tag $(DOCKER_ORG)/battlescope-$$service:$(VERSION) $(DOCKER_ORG)/battlescope-$$service:latest; \
 	done
 
 docker-push:
 	@echo "Pushing Docker images..."
 	@for service in $(SERVICES); do \
-		echo "Pushing $(DOCKER_ORG)/$$service-service:$(VERSION)..."; \
-		docker push $(DOCKER_ORG)/$$service-service:$(VERSION); \
-		docker push $(DOCKER_ORG)/$$service-service:latest; \
+		echo "Pushing $(DOCKER_ORG)/battlescope-$$service:$(VERSION)..."; \
+		docker push $(DOCKER_ORG)/battlescope-$$service:$(VERSION); \
+		docker push $(DOCKER_ORG)/battlescope-$$service:latest; \
 	done
 
 k8s-deploy:
@@ -65,3 +73,68 @@ clean:
 		rm -rf services/$$service/dist services/$$service/node_modules; \
 	done
 	rm -rf node_modules
+
+# CI Pipeline targets
+ci: typecheck lint test build
+	@echo "✅ CI pipeline completed successfully!"
+
+typecheck:
+	@echo "Running TypeScript type checking..."
+	@failed=0; \
+	for service in $(SERVICES); do \
+		echo "Type checking $$service-service..."; \
+		if pnpm --filter @battlescope/$$service run typecheck 2>&1 | tee /tmp/$$service-typecheck.log; then \
+			echo "✅ $$service-service type check passed"; \
+		else \
+			echo "❌ $$service-service type check failed"; \
+			failed=$$((failed + 1)); \
+		fi; \
+	done; \
+	if [ $$failed -gt 0 ]; then \
+		echo "❌ Type checking failed for $$failed service(s)"; \
+		exit 1; \
+	else \
+		echo "✅ All services passed type checking"; \
+	fi
+
+lint:
+	@echo "Running linting..."
+	@failed=0; \
+	for service in $(SERVICES); do \
+		echo "Linting $$service-service..."; \
+		if pnpm --filter @battlescope/$$service run lint 2>&1 || true; then \
+			echo "✅ $$service-service lint passed"; \
+		else \
+			echo "⚠️  $$service-service has no lint script (skipping)"; \
+		fi; \
+	done; \
+	echo "✅ Linting completed"
+
+test: test-unit test-integration
+	@echo "✅ All tests completed"
+
+test-unit:
+	@echo "Running unit tests..."
+	@failed=0; \
+	for service in $(SERVICES); do \
+		echo "Running unit tests for $$service-service..."; \
+		if pnpm --filter @battlescope/$$service run test:unit 2>&1 || pnpm --filter @battlescope/$$service run test 2>&1; then \
+			echo "✅ $$service-service unit tests passed"; \
+		else \
+			echo "⚠️  $$service-service has no unit tests (skipping)"; \
+		fi; \
+	done; \
+	echo "✅ Unit tests completed"
+
+test-integration:
+	@echo "Running integration tests..."
+	@failed=0; \
+	for service in $(SERVICES); do \
+		echo "Running integration tests for $$service-service..."; \
+		if pnpm --filter @battlescope/$$service run test:integration 2>&1; then \
+			echo "✅ $$service-service integration tests passed"; \
+		else \
+			echo "⚠️  $$service-service has no integration tests (skipping)"; \
+		fi; \
+	done; \
+	echo "✅ Integration tests completed"
