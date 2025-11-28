@@ -1,8 +1,8 @@
-.PHONY: help install build docker-build docker-push deploy clean ci typecheck test test-unit test-integration lint
+.PHONY: help install build docker-build docker-push docker-build-service docker-push-service deploy clean ci typecheck test test-unit test-integration lint
 
 VERSION := v3.0.0
 DOCKER_ORG := petdog
-SERVICES := ingestion enrichment battle search notification bff
+SERVICES := ingestion enrichment battle search notification bff authentication
 
 help:
 	@echo "BattleScope V3 Build and Deploy"
@@ -50,6 +50,28 @@ docker-push:
 		docker push $(DOCKER_ORG)/battlescope-$$service:$(VERSION); \
 		docker push $(DOCKER_ORG)/battlescope-$$service:latest; \
 	done
+
+# Build a single service's Docker image
+# Usage: make docker-build-service SERVICE=authentication
+docker-build-service:
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "Error: SERVICE variable is required. Usage: make docker-build-service SERVICE=authentication"; \
+		exit 1; \
+	fi
+	@echo "Building $(DOCKER_ORG)/battlescope-$(SERVICE):$(VERSION)..."
+	docker build -f services/$(SERVICE)/Dockerfile -t $(DOCKER_ORG)/battlescope-$(SERVICE):$(VERSION) .
+	docker tag $(DOCKER_ORG)/battlescope-$(SERVICE):$(VERSION) $(DOCKER_ORG)/battlescope-$(SERVICE):latest
+
+# Push a single service's Docker image
+# Usage: make docker-push-service SERVICE=authentication
+docker-push-service:
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "Error: SERVICE variable is required. Usage: make docker-push-service SERVICE=authentication"; \
+		exit 1; \
+	fi
+	@echo "Pushing $(DOCKER_ORG)/battlescope-$(SERVICE):$(VERSION)..."
+	docker push $(DOCKER_ORG)/battlescope-$(SERVICE):$(VERSION)
+	docker push $(DOCKER_ORG)/battlescope-$(SERVICE):latest
 
 k8s-deploy:
 	@echo "Deploying to Kubernetes..."
