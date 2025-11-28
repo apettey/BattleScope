@@ -4,7 +4,7 @@ import Redis from 'ioredis';
 import { createLogger } from '@battlescope/logger';
 import { config } from './config';
 
-const logger = createLogger('websocket');
+const logger = createLogger({ serviceName: 'websocket' });
 
 export class WebSocketManager {
   private io: SocketIOServer;

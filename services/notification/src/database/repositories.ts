@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { getDatabase } from './client';
 import {
   UserSubscription,
@@ -41,7 +42,7 @@ export class SubscriptionsRepository {
     let query = db
       .selectFrom('user_subscriptions')
       .selectAll()
-      .where('subscription_type', '=', type)
+      .where('subscription_type', '=', type as any)
       .where('is_active', '=', true);
 
     if (filterValue !== undefined) {
@@ -187,7 +188,7 @@ export class WebhookDeliveriesRepository {
       .selectAll()
       .where('status', '=', 'retrying')
       .where('next_retry_at', '<=', new Date())
-      .where('attempt_count', '<', db.fn('max_attempts', []))
+      .where('attempt_count', '<', db.fn('max_attempts', []) as any)
       .execute();
   }
 
@@ -257,14 +258,14 @@ export class WebhookDeliveriesRepository {
     const db = getDatabase();
     await db
       .updateTable('webhook_deliveries')
-      .set({
-        attempt_count: db.fn('attempt_count', []).plus(1),
+      .set((eb) => ({
+        attempt_count: sql`${eb.ref('attempt_count')} + 1`,
         status: 'retrying',
         last_attempt_at: new Date(),
         next_retry_at: nextRetryAt,
         error_message: errorMessage,
         http_status_code: httpStatusCode,
-      })
+      }))
       .where('id', '=', id)
       .execute();
   }

@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { createLogger } from '@battlescope/logger';
 
-const logger = createLogger('auth-middleware');
+const logger = createLogger({ serviceName: 'auth-middleware' });
 
 // Extended request with user info
 export interface AuthenticatedRequest extends FastifyRequest {
@@ -44,14 +44,14 @@ export async function requireAuth(
         characterName: sessionData.characterName,
       };
     } catch (error) {
-      logger.error('Invalid session cookie', { error });
+      logger.error({ error }, 'Invalid session cookie');
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'Invalid session',
       });
     }
   } catch (error) {
-    logger.error('Auth middleware error', { error });
+    logger.error({ error }, 'Auth middleware error');
     return reply.status(500).send({
       error: 'Internal Server Error',
       message: 'Authentication check failed',

@@ -81,15 +81,21 @@ export class KillmailConsumer {
             return;
           }
 
-          // Convert date strings to Date objects
-          const killmail = {
+          // Extract enriched data - the enrichment service sends system info separately
+          // We need to add systemName, regionName, securityStatus which aren't in the base killmail
+          const killmail: EnrichedKillmailEvent['data'] = {
             ...event.data,
             killmailTime: new Date(event.data.killmailTime),
+            // These fields should be added by enrichment service but are missing
+            // For now, use placeholder values - enrichment service needs to add these
+            systemName: (event.data as any).systemName || 'Unknown System',
+            regionName: (event.data as any).regionName || 'Unknown Region',
+            securityStatus: (event.data as any).securityStatus || 0,
           };
 
-          logger.info(`Processing killmail ${killmail.killmailId} in ${killmail.systemName}`);
+          logger.info({ killmailId: killmail.killmailId, systemName: killmail.systemName }, 'Processing killmail');
 
-          await this.clusterer.processKillmail(killmail);
+          await this.clusterer.processKillmail(killmail as any);
         } catch (error) {
           logger.error({ error }, 'Error processing killmail');
         }

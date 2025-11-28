@@ -45,7 +45,7 @@ export async function notificationsRoutes(
           unreadCount,
         });
       } catch (error) {
-        request.log.error('Error fetching notifications', { error });
+        request.log.error({ error }, 'Error fetching notifications');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to fetch notifications',
@@ -96,7 +96,7 @@ export async function notificationsRoutes(
           notification: updated,
         });
       } catch (error) {
-        request.log.error('Error marking notification as read', { error });
+        request.log.error({ error }, 'Error marking notification as read');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to mark notification as read',
@@ -122,7 +122,7 @@ export async function notificationsRoutes(
           count,
         });
       } catch (error) {
-        request.log.error('Error marking all notifications as read', { error });
+        request.log.error({ error }, 'Error marking all notifications as read');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to mark all notifications as read',
@@ -165,7 +165,7 @@ export async function notificationsRoutes(
           message: 'Notification deleted',
         });
       } catch (error) {
-        request.log.error('Error deleting notification', { error });
+        request.log.error({ error }, 'Error deleting notification');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to delete notification',

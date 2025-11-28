@@ -11,17 +11,17 @@ import { WebhookDeliveryService } from './webhook-delivery';
 import { startEventConsumer } from './consumer';
 import { config } from './config';
 
-const logger = createLogger('notification-service');
+const logger = createLogger({ serviceName: 'notification-service' });
 
 async function main() {
   try {
     logger.info('Starting BattleScope Notification Service...');
-    logger.info('Configuration', {
+    logger.info({
       port: config.port,
       nodeEnv: config.nodeEnv,
       database: config.database.database,
       kafkaBrokers: config.kafka.brokers,
-    });
+    }, 'Configuration');
 
     // Initialize database
     logger.info('Connecting to database...');
@@ -37,7 +37,7 @@ async function main() {
       port: config.port,
       host: '0.0.0.0',
     });
-    logger.info('HTTP server started', { address });
+    logger.info({ address }, 'HTTP server started');
 
     // Initialize WebSocket manager
     logger.info('Initializing WebSocket server...');
@@ -93,7 +93,7 @@ async function main() {
         logger.info('Graceful shutdown complete');
         process.exit(0);
       } catch (error) {
-        logger.error('Error during shutdown', { error });
+        logger.error({ error }, 'Error during shutdown');
         process.exit(1);
       }
     };
@@ -102,31 +102,31 @@ async function main() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
 
-    logger.info('BattleScope Notification Service is running', {
+    logger.info({
       wsConnections: wsManager.getTotalConnectionsCount(),
       wsUsers: wsManager.getConnectedUsersCount(),
-    });
+    }, 'BattleScope Notification Service is running');
 
     // Log stats periodically
     setInterval(() => {
-      logger.info('Service stats', {
+      logger.info({
         wsConnections: wsManager.getTotalConnectionsCount(),
         wsUsers: wsManager.getConnectedUsersCount(),
-      });
+      }, 'Service stats');
     }, 60000); // Every minute
   } catch (error) {
-    logger.error('Failed to start service', { error });
+    logger.error({ error }, 'Failed to start service');
     process.exit(1);
   }
 }
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection', { reason, promise });
+  logger.error({ reason, promise }, 'Unhandled Rejection');
 });
 
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception', { error });
+  logger.error({ error }, 'Uncaught Exception');
   process.exit(1);
 });
 

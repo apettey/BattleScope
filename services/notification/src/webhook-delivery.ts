@@ -3,7 +3,7 @@ import { createLogger } from '@battlescope/logger';
 import { config } from './config';
 import { WebhookDeliveriesRepository } from './database';
 
-const logger = createLogger('webhook-delivery');
+const logger = createLogger({ serviceName: 'webhook-delivery' });
 
 export interface WebhookPayload {
   notificationId: string;

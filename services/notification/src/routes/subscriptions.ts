@@ -44,7 +44,7 @@ export async function subscriptionsRoutes(
           subscriptions,
         });
       } catch (error) {
-        request.log.error('Error fetching subscriptions', { error });
+        request.log.error({ error }, 'Error fetching subscriptions');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to fetch subscriptions',
@@ -97,7 +97,7 @@ export async function subscriptionsRoutes(
           });
         }
 
-        request.log.error('Error creating subscription', { error });
+        request.log.error({ error }, 'Error creating subscription');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to create subscription',
@@ -162,7 +162,7 @@ export async function subscriptionsRoutes(
           });
         }
 
-        request.log.error('Error updating subscription', { error });
+        request.log.error({ error }, 'Error updating subscription');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to update subscription',
@@ -205,7 +205,7 @@ export async function subscriptionsRoutes(
           message: 'Subscription deleted',
         });
       } catch (error) {
-        request.log.error('Error deleting subscription', { error });
+        request.log.error({ error }, 'Error deleting subscription');
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to delete subscription',
